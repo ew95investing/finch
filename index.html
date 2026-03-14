@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
-<title>FINCH v11 — 全维度市场分析</title>
+<title>FINCH v12 — 全维度市场分析</title>
 
 <!-- ═══ PWA / iOS APP META ═══ -->
 <meta name="mobile-web-app-capable" content="yes">
@@ -542,20 +542,94 @@ canvas.main-c{width:100%!important;}
 
 .disclaimer{font-size:11px;color:var(--dim);padding:10px 14px;border-top:1px solid var(--line);line-height:1.7;}
 
-/* Responsive */
+/* ══ RESPONSIVE — FULL MOBILE REDESIGN ══ */
 @media(max-width:1400px){.shell{grid-template-columns:180px 1fr 300px;}}
-@media(max-width:1000px){.shell{grid-template-columns:1fr 280px;}.left-panel{display:none;}}
-@media(max-width:680px){
+@media(max-width:1000px){.shell{grid-template-columns:1fr 260px;}.left-panel{display:none;}}
+
+/* Tablet portrait + large phones landscape */
+@media(max-width:768px){
   .shell{grid-template-columns:1fr;grid-template-rows:auto 1fr;}
   .right-panel{display:none;}
-  .finch-bar{height:auto;flex-wrap:wrap;padding:6px 10px;gap:6px;}
-  .fb-stat{border:none;padding:2px 8px;}
-  .fb-pos-strip{padding:4px 0;}
+  .finch-bar{height:auto;flex-wrap:wrap;padding:6px 10px;gap:4px;}
+  .fb-stat{border:none;padding:2px 6px;min-width:0;}
+  .fb-stat-v{font-size:13px;}
+  .fb-pos-strip{flex:1 1 100%;order:10;padding:4px 0;}
 }
+
+/* Phone portrait — dedicated mobile view */
+@media(max-width:480px){
+  /* Kill the desktop overflow:hidden so content is scrollable */
+  body{overflow:auto !important;}
+  .topbar{height:46px;padding:0 12px;}
+  .brand{font-size:20px;letter-spacing:3px;}
+  .ticker-strip{display:none;}
+  /* Shell becomes vertical stack */
+  .shell{
+    display:flex;flex-direction:column;
+    height:auto;overflow:visible;
+  }
+  .finch-bar{
+    height:auto;flex-wrap:wrap;gap:6px;
+    padding:8px 12px;
+    grid-template-columns:none;
+  }
+  .fb-brand{padding:0 8px 0 0;border-right:1px solid var(--line2);}
+  .fb-brand-text{font-size:13px;letter-spacing:2px;}
+  .fb-stat{padding:0 8px;min-width:0;border-right:1px solid var(--line);}
+  .fb-stat-v{font-size:13px;}
+  .fb-stat-k{font-size:9px;}
+  .fb-pos-strip{flex:1 1 100%;order:10;}
+  .fb-open-btn{font-size:11px;padding:5px 10px;}
+  /* Left panel hidden on phone */
+  .left-panel{display:none;}
+  /* Right panel hidden on phone */
+  .right-panel{display:none;}
+  /* Analysis col takes full width, auto height */
+  .analysis-col{
+    border:none;overflow:visible;
+    flex:1;
+  }
+  /* Make strategy scroll not clip content */
+  .strategy-scroll{overflow:visible;height:auto;}
+  .strat-area{padding:10px 12px;}
+  /* Chart col */
+  .chart-col{flex:0 0 auto;}
+  /* Larger tap targets */
+  .strat-tab{padding:10px 11px;font-size:12px;}
+  .tf-seg-btn{padding:6px 10px;font-size:11px;}
+  /* Price header */
+  .ph-price{font-size:28px;}
+  .ph-meta{font-size:11px;gap:8px;}
+  /* Entry banner 2-col on phone */
+  .eb-grid{grid-template-columns:1fr 1fr;gap:8px;}
+  .eb-price{font-size:18px;}
+  /* TP/SL grid stack on phone */
+  .tp-sl-grid{grid-template-columns:1fr;}
+  /* Dir hero */
+  .dir-main{font-size:22px;}
+  .conf-num{font-size:22px;}
+  /* Strategy matrix 1 col */
+  .comp-matrix-grid{grid-template-columns:1fr !important;}
+  /* Signal tags wrap properly */
+  .sigs-row{gap:4px;}
+  .sig{font-size:10px;padding:2px 6px;}
+  /* FAI overlay full screen on phone */
+  .finch-ai-panel{width:100vw;max-height:100dvh;border-radius:0;border:none;}
+  /* Paper overlay */
+  .paper-overlay-panel{width:100vw;max-height:100dvh;border-radius:0;}
+  /* Mobile verdict card — make it big and clear */
+  .mobile-verdict{display:block !important;}
+}
+
 /* iPhone notch / Dynamic Island */
 @supports(padding-top:env(safe-area-inset-top)){
   .topbar{padding-top:max(0px,env(safe-area-inset-top));height:calc(50px + env(safe-area-inset-top));}
   .shell{height:calc(100dvh - 50px - env(safe-area-inset-top));}
+}
+@media(max-width:480px){
+  @supports(padding-top:env(safe-area-inset-top)){
+    .shell{height:auto;min-height:calc(100dvh - 46px - env(safe-area-inset-top));}
+  }
 }
 
 /* iOS Install Banner */
@@ -778,7 +852,7 @@ canvas.main-c{width:100%!important;}
   <div class="brand-wrap">
     <div style="display:flex;flex-direction:column;justify-content:center;">
       <div class="brand">FINCH</div>
-      <div class="brand-sub">全维度分析 v11</div>
+      <div class="brand-sub">全维度分析 v12</div>
     </div>
   </div>
 
@@ -2321,7 +2395,211 @@ function getLunar(){
   return{name,icon,bias,note,phase:ph.toFixed(1),pf:(pf*100).toFixed(0),dTN:dTN.toFixed(1),dTF:dTF.toFixed(1),sun,phaseFrac:pf};
 }
 
-// ═══ RIGHT MODULE PANELS ═══
+// ═══════════════════════════════════════════════════════════════
+// FINCH VERDICT ENGINE — 顶级分析师裁决系统
+// Cuts through signal noise to deliver ONE clear actionable verdict
+// like a professional analyst: definitive, structured, risk-aware
+// ═══════════════════════════════════════════════════════════════
+function buildFINCHVerdict(res){
+  if(!res)return null;
+  try{
+    const {isBull,conf,score,rsi,macdD,vegas,chan,adx,obv,cvd,mktStr,mtf,
+           hv,candles,supertrend,tps,sls,rr,entry,price,
+           conflictRatio,fundingRate,tr1d,tr1w,stoch,bbPos,nF618} = res;
+
+    // ── Step 1: Determine PRIMARY BIAS from high-timeframe evidence ──
+    // Weight: 1D trend 40%, 4H trend 30%, structure 20%, Vegas 10%
+    let htfScore = 0;
+    if(tr1d>0) htfScore+=2; else if(tr1d<0) htfScore-=2;
+    if(tr1w>0) htfScore+=1.5; else if(tr1w<0) htfScore-=1.5;
+    if(vegas?.above) htfScore+=1.5; else if(vegas?.below) htfScore-=1.5;
+    if(mktStr?.hhhl) htfScore+=1; else if(mktStr?.lllh) htfScore-=1;
+    if(chan?.bullDiv) htfScore+=2; else if(chan?.bearDiv) htfScore-=2;
+    if(mtf?.alignment>0.6) htfScore+=1; else if(mtf?.alignment<-0.6) htfScore-=1;
+
+    const htfBull = htfScore>0;
+    const htfStrong = Math.abs(htfScore)>=4;
+
+    // ── Step 2: Current timeframe momentum ──
+    let momentumScore = 0;
+    if(macdD?.hist>0) momentumScore+=1.5; else momentumScore-=1.5;
+    if(macdD?.bullDiv) momentumScore+=3; else if(macdD?.bearDiv) momentumScore-=3;
+    if(rsi<30) momentumScore+=2.5; else if(rsi<38) momentumScore+=1;
+    else if(rsi>72) momentumScore-=2.5; else if(rsi>62) momentumScore-=1;
+    if(obv?.obvTrend===1) momentumScore+=1; else if(obv?.obvTrend===-1) momentumScore-=1;
+    if(obv?.obvDiv&&obv?.obvTrend===1) momentumScore+=1.5;
+    else if(obv?.obvDiv&&obv?.obvTrend===-1) momentumScore-=1.5;
+    if(cvd?.bullishDelta) momentumScore+=0.8; else momentumScore-=0.8;
+    if(supertrend?.bull) momentumScore+=1; else if(supertrend?.bear) momentumScore-=1;
+    if(stoch?.bullCross) momentumScore+=1.2; else if(stoch?.bearCross) momentumScore-=1.2;
+    if(bbPos<0.15) momentumScore+=1.5; else if(bbPos>0.85) momentumScore-=1.5;
+    if(candles?.hasBull) momentumScore+=0.8; else if(candles?.hasBear) momentumScore-=0.8;
+    if(nF618) momentumScore+=1.2;
+
+    const momentumBull = momentumScore>0;
+    const momentumStrong = Math.abs(momentumScore)>=4;
+
+    // ── Step 3: Market condition ──
+    const isRanging = adx?.ranging || (conflictRatio>0.45);
+    const isTrending = adx?.strong || (Math.abs(htfScore)>=5 && conflictRatio<0.3);
+    const volatilityExpanding = hv?.expanding && hv?.ratio>1.2;
+    const extremeFG = S.fg?parseInt(S.fg.value):50;
+    const fundingExtreme = Math.abs(fundingRate||0)>0.06;
+
+    // ── Step 4: VERDICT LOGIC ──
+    // Align HTF + momentum = high conviction
+    // Conflict = wait or reduce size
+    let verdict, action, urgency, reasoning, keyLevels, watchFor;
+
+    const aligned = htfBull===momentumBull;
+    const htfBullLabel = htfBull?'多头':'空头';
+    const momBullLabel = momentumBull?'多头':'空头';
+
+    if(isRanging && conflictRatio>0.45){
+      // WAIT state
+      verdict='等待 WAIT';
+      action='observe';
+      urgency='low';
+      reasoning=`多空信号严重分歧（分歧率${(conflictRatio*100).toFixed(0)}%），ADX ${adx?.adx?.toFixed(0)||'--'} 处于震荡市。此时入场等于赌博，顶级交易员在这种环境下选择观望。等待方向明确后再出手。`;
+      keyLevels=`关键突破价: ${fmtP(tps[0].p)} (多头确认) / ${fmtP(sls[0].p)} (空头确认)`;
+      watchFor=`等待: 1) 价格明确突破 ${fmtP(tps[0].p)} 放量，或 2) 跌破 ${fmtP(sls[0].p)} 确认转势`;
+    } else if(aligned && htfStrong && momentumStrong){
+      // STRONG signal
+      const dir = htfBull?'LONG 做多':'SHORT 做空';
+      verdict=`强信号 ${dir}`;
+      action=htfBull?'long':'short';
+      urgency='high';
+      reasoning=`高时框架${htfBullLabel}（日线+周线一致）配合当前动能${momBullLabel}，双重共振。${chan?.bullDiv?'缠论底背驰确认，' : chan?.bearDiv?'缠论顶背驰确认，':''}${obv?.obvDiv?'OBV量价背驰领先信号，':''}ADX ${adx?.adx?.toFixed(0)||'--'} ${adx?.strong?'强趋势确认':''}。当前是${htfBull?'高质量做多':'高质量做空'}机会。`;
+      keyLevels=`入场: ${fmtP(entry)} · TP1: ${fmtP(tps[0].p)} · SL: ${fmtP(sls[0].p)} · R:R=${rr.toFixed(2)}`;
+      watchFor=`止损: 跌破 ${fmtP(sls[0].p)} 立即离场。TP1 ${fmtP(tps[0].p)} 后移动止损至成本价。`;
+    } else if(aligned && (htfStrong || momentumStrong)){
+      // MODERATE signal
+      const dir = htfBull?'LONG 做多':'SHORT 做空';
+      verdict=`中等信号 ${dir}`;
+      action=htfBull?'long':'short';
+      urgency='medium';
+      reasoning=`${htfBullLabel}偏向，但信号强度中等。${adx?.trending?'ADX确认趋势存在，':'震荡市环境需谨慎，'}R:R=${rr.toFixed(2)} ${rr>=1.5?'达到入场标准':'偏低建议等待更好位置'}。建议轻仓或等待回调确认后入场。`;
+      keyLevels=`入场区: ${fmtP(entry)}±${fmtP(res.atrRaw*0.3)} · TP1: ${fmtP(tps[0].p)} · SL: ${fmtP(sls[0].p)}`;
+      watchFor=`关注: ${htfBull?`回调到 ${fmtP(entry)} 附近支撑再买，比追高更安全`:`反弹到 ${fmtP(entry)} 附近阻力再空，比追空更安全`}`;
+    } else if(!aligned){
+      // CONFLICT between HTF and momentum
+      verdict=`方向分歧 · 以${htfStrong?'大框架':'动能'}为主`;
+      action=htfStrong?(htfBull?'lean-long':'lean-short'):'observe';
+      urgency='low';
+      const dominant = htfStrong?`大框架偏${htfBullLabel}`:`当前动能偏${momBullLabel}`;
+      reasoning=`大框架信号${htfBull?'多头':'空头'}，但当前动能${momentumBull?'多头':'空头'}，两者矛盾。${dominant}更值得信任。${htfStrong?`等待当前${momentumBull?'多头':'空头'}动能衰竭后顺大框架方向入场`:`等待大框架确认后再操作`}。`;
+      keyLevels=`大框架${htfBull?'多头':' 空头'}关键位: ${htfBull?fmtP(sls[0].p)+' 支撑':fmtP(sls[0].p)+' 阻力'}`;
+      watchFor=`等待: 大框架方向（${htfBull?'多头':'空头'}）信号在当前时框出现后再入场`;
+    } else {
+      // WEAK aligned signal
+      verdict=isBull?'弱多 · 轻仓观望':'弱空 · 轻仓观望';
+      action='observe';
+      urgency='low';
+      reasoning=`信号方向${isBull?'多头':'空头'}但强度不足（得分${score.toFixed(1)}，置信度${conf}%）。市场处于过渡期，此时入场风险收益比不理想。建议观望或极小仓位试探。`;
+      keyLevels=`观察价位: ${fmtP(tps[0].p)} 突破看多 / ${fmtP(sls[0].p)} 跌破看空`;
+      watchFor=`等待置信度升至70%以上或出现明确K线形态信号再行动`;
+    }
+
+    // ── Step 5: Risk flags ──
+    const riskFlags=[];
+    if(conflictRatio>0.4) riskFlags.push(`⚠️ 信号分歧${(conflictRatio*100).toFixed(0)}%`);
+    if(rr<1.5) riskFlags.push(`⚠️ R:R偏低(${rr.toFixed(2)})`);
+    if(volatilityExpanding) riskFlags.push(`⚠️ 波动率扩张(${hv?.hv?.toFixed(1)}%)`);
+    if(fundingExtreme) riskFlags.push(`⚠️ 资金费率极端(${(fundingRate||0).toFixed(3)}%)`);
+    if(extremeFG>80) riskFlags.push('⚠️ 极度贪婪(易见顶)');
+    else if(extremeFG<20) riskFlags.push('⚠️ 极度恐惧(易见底)');
+    if(isRanging) riskFlags.push('⚠️ 震荡市慎追');
+
+    // ── Step 6: Three-scenario analysis (like top analyst) ──
+    const scenarios=[
+      {
+        name:`📈 ${htfBull?'顺势多头':'反转多头'}方案`,
+        trigger:`价格站稳 ${fmtP(entry)} 并放量`,
+        target:`TP1 ${fmtP(tps[0].p)} (+${tps[0].pct?.toFixed(1)}%)`,
+        stop:`SL ${fmtP(sls[0].p)}`,
+        prob: aligned&&htfBull&&momentumBull?'高':htfBull&&!momentumBull?'中':'低',
+        color:'var(--green)'
+      },
+      {
+        name:`📉 ${htfBull?'反转空头':'顺势空头'}方案`,
+        trigger:`跌破 ${fmtP(sls[0].p)} 并收盘确认`,
+        target:`下方 ${fmtP(tps[0].p*(htfBull?0.97:1.03))} 区域`,
+        stop:`回破 ${fmtP(sls[0].p*(htfBull?1.005:0.995))}`,
+        prob: !htfBull&&!momentumBull?'高':!htfBull&&momentumBull?'中':'低',
+        color:'var(--red)'
+      },
+      {
+        name:'🔄 震荡整理方案',
+        trigger:`在 ${fmtP(sls[0].p)}–${fmtP(tps[0].p)} 区间来回`,
+        target:'等待区间突破方向确认',
+        stop:'突破哪侧跟哪侧',
+        prob: isRanging?'高':conflictRatio>0.35?'中':'低',
+        color:'var(--amber)'
+      }
+    ];
+
+    return {verdict,action,urgency,reasoning,keyLevels,watchFor,
+            riskFlags,scenarios,htfBull,htfScore,momentumBull,momentumScore,
+            aligned,isRanging,isTrending};
+  }catch(e){
+    console.error('buildFINCHVerdict error:',e);
+    return null;
+  }
+}
+
+function renderFINCHVerdict(res){
+  const v=buildFINCHVerdict(res);
+  if(!v)return'';
+
+  const urgencyColor = v.urgency==='high'?'var(--green)':v.urgency==='medium'?'var(--amber)':'var(--muted)';
+  const actionColor = v.action==='long'?'var(--green)':v.action==='short'?'var(--red)':v.action.includes('lean')?'var(--amber)':'var(--muted)';
+  const bgColor = v.action==='long'?'rgba(26,107,58,0.05)':v.action==='short'?'rgba(160,20,32,0.05)':'rgba(0,0,0,0.02)';
+  const borderColor = v.action==='long'?'var(--green)':v.action==='short'?'var(--red)':'var(--amber)';
+
+  const probColor=(p)=>p==='高'?'var(--green)':p==='中'?'var(--amber)':'var(--muted)';
+
+  return`
+  <div style="background:${bgColor};border:2px solid ${borderColor};border-radius:8px;padding:16px;margin-bottom:12px;">
+    <!-- Verdict Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <div>
+        <div style="font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:4px">🦅 FINCH 裁决</div>
+        <div style="font-size:22px;font-weight:700;color:${actionColor};line-height:1.2">${v.verdict}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:2px">紧迫度</div>
+        <div style="font-size:13px;font-weight:700;color:${urgencyColor}">${v.urgency==='high'?'🔴 立即关注':v.urgency==='medium'?'🟡 准备就绪':'⚪ 耐心等待'}</div>
+      </div>
+    </div>
+
+    <!-- Reasoning -->
+    <div style="font-size:12px;color:var(--text);line-height:1.8;margin-bottom:12px;padding:10px;background:rgba(255,255,255,0.5);border-radius:5px;">
+      ${v.reasoning}
+    </div>
+
+    <!-- Key Levels -->
+    <div style="font-size:12px;color:var(--bright);font-weight:700;margin-bottom:4px">${v.keyLevels}</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:12px">${v.watchFor}</div>
+
+    <!-- Three Scenarios -->
+    <div style="font-size:10px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:6px">📊 三种情景分析</div>
+    <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px">
+      ${v.scenarios.map(s=>`
+        <div style="display:flex;align-items:flex-start;gap:8px;padding:8px 10px;background:rgba(255,255,255,0.6);border-radius:5px;border-left:3px solid ${s.color};">
+          <div style="flex:1">
+            <div style="font-size:12px;font-weight:700;color:var(--bright);margin-bottom:3px">${s.name} <span style="color:${probColor(s.prob)};font-size:11px">· 概率${s.prob}</span></div>
+            <div style="font-size:11px;color:var(--muted);line-height:1.7">触发: ${s.trigger}<br>目标: ${s.target} · 止损: ${s.stop}</div>
+          </div>
+        </div>`).join('')}
+    </div>
+
+    <!-- Risk Flags -->
+    ${v.riskFlags.length?`
+    <div style="display:flex;flex-wrap:wrap;gap:5px;">
+      ${v.riskFlags.map(f=>`<span style="font-size:11px;padding:3px 8px;border-radius:3px;background:rgba(128,80,0,0.08);color:var(--amber);border:1px solid rgba(128,80,0,0.2)">${f}</span>`).join('')}
+    </div>`:'<div style="font-size:11px;color:var(--green)">✅ 无主要风险标记</div>'}
+  </div>`;
+}
 function renderTech(kl,price){
   if(!kl||!kl.length)return;
   const prices=kl.map(k=>k.c);const n=prices.length;
@@ -3428,6 +3706,8 @@ function _doRenderStrategy(res){
 
   document.getElementById('stratArea').innerHTML=`
     ${mockBanner}
+
+    ${renderFINCHVerdict(res)}
 
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding:6px 10px;background:var(--bg2);border-radius:4px;border:1px solid var(--line);">
       <span style="font-size:11px;color:var(--muted)" id="lastRefreshLbl">🔄 更新: ${mh3}:${mm3}:${ms4} MYT · 10s自动刷新</span>
@@ -5132,8 +5412,149 @@ function toggleChartCollapse(){
   }
 })();
 
+// ═══ MOBILE DETECTION & ADAPTIVE LAYOUT ═══
+const isMobileDevice=()=>window.innerWidth<=480;
+
+function initMobileLayout(){
+  if(!isMobileDevice())return;
+  const nav=document.getElementById('mobileNav');
+  if(nav)nav.style.display='block';
+  // Add padding to body so content doesn't hide behind bottom nav
+  document.body.style.paddingBottom='calc(56px + env(safe-area-inset-bottom))';
+  // Show signal tab by default
+  mobileTab('signal');
+}
+
+let _mobileCurrentTab='signal';
+function mobileTab(tab){
+  _mobileCurrentTab=tab;
+  // Update nav button colors
+  document.querySelectorAll('.mnav-btn').forEach(b=>{
+    b.style.color='var(--muted)';
+    const span=b.querySelector('span:last-child');
+    if(span)span.style.fontWeight='400';
+  });
+  const activeBtn=document.getElementById('mnav-'+tab);
+  if(activeBtn){
+    activeBtn.style.color='var(--gold)';
+    const span=activeBtn.querySelector('span:last-child');
+    if(span)span.style.fontWeight='700';
+  }
+
+  // Show/hide sections
+  const analysisCol=document.querySelector('.analysis-col');
+  const chartCol=document.getElementById('chartCol');
+  const rightPanel=document.querySelector('.right-panel');
+  const leftPanel=document.querySelector('.left-panel');
+
+  // Reset all
+  if(analysisCol)analysisCol.style.display='flex';
+  if(chartCol)chartCol.style.display='flex';
+  if(rightPanel)rightPanel.style.display='none'; // always hidden on phone
+  if(leftPanel)leftPanel.style.display='none';   // always hidden on phone
+
+  if(tab==='signal'){
+    // Show analysis, hide chart
+    if(chartCol){chartCol.style.display='none';}
+    // Scroll strategy area to top
+    const ss=document.querySelector('.strategy-scroll');
+    if(ss)ss.scrollTop=0;
+  } else if(tab==='chart'){
+    // Show chart only
+    if(analysisCol)analysisCol.style.display='none';
+    if(chartCol){
+      chartCol.style.display='flex';
+      // Expand chart if collapsed
+      if(_chartCollapsed)toggleChartCollapse();
+    }
+  } else if(tab==='modules'){
+    // Show right panel modules in a mobile-friendly overlay
+    showMobileModules();
+  } else if(tab==='watchlist'){
+    // Show watchlist drawer
+    showMobileWatchlist();
+  }
+}
+
+function showMobileModules(){
+  // Create a fullscreen overlay showing the right panel content
+  let overlay=document.getElementById('mobileModulesOverlay');
+  if(!overlay){
+    overlay=document.createElement('div');
+    overlay.id='mobileModulesOverlay';
+    overlay.style.cssText='position:fixed;inset:0;z-index:450;background:var(--bg1);overflow-y:auto;padding:12px;padding-bottom:70px;';
+    overlay.innerHTML=`
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 4px 16px;">
+        <div style="font-size:16px;font-weight:700;color:var(--bright)">🔬 技术指标面板</div>
+        <button onclick="document.getElementById('mobileModulesOverlay').remove();mobileTab('signal');" style="padding:6px 14px;border:1px solid var(--line2);border-radius:5px;background:var(--bg2);color:var(--text);font-family:inherit;font-size:12px;cursor:pointer;">✕ 关闭</button>
+      </div>
+      <div id="mobileModulesContent"></div>`;
+    document.body.appendChild(overlay);
+  }
+  overlay.style.display='block';
+  // Clone right panel content
+  const rp=document.querySelector('.right-panel');
+  const mc=document.getElementById('mobileModulesContent');
+  if(rp&&mc){mc.innerHTML=rp.innerHTML;}
+}
+
+function showMobileWatchlist(){
+  let overlay=document.getElementById('mobileWatchlistOverlay');
+  if(!overlay){
+    overlay=document.createElement('div');
+    overlay.id='mobileWatchlistOverlay';
+    overlay.style.cssText='position:fixed;inset:0;z-index:450;background:var(--bg1);overflow-y:auto;padding-bottom:70px;';
+    overlay.innerHTML=`
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line2);background:var(--bg2);">
+        <div style="font-size:16px;font-weight:700;color:var(--bright)">⭐ 自选列表</div>
+        <button onclick="document.getElementById('mobileWatchlistOverlay').remove();mobileTab('signal');" style="padding:6px 14px;border:1px solid var(--line2);border-radius:5px;background:var(--bg1);color:var(--text);font-family:inherit;font-size:12px;cursor:pointer;">✕ 关闭</button>
+      </div>
+      <div id="mobileSymList"></div>
+      <div style="padding:12px 14px;border-top:1px solid var(--line2);">
+        <input id="mobileCustomInput" placeholder="如 DOTUSDT" style="width:100%;background:var(--bg);border:1px solid var(--line2);border-radius:5px;padding:10px 12px;font-family:inherit;font-size:13px;color:var(--text);outline:none;margin-bottom:8px;" onkeydown="if(event.key==='Enter'){document.getElementById('custInput').value=this.value;addCustom();}">
+        <button onclick="const v=document.getElementById('mobileCustomInput').value;document.getElementById('custInput').value=v;addCustom();" style="width:100%;background:var(--gold);border:none;border-radius:5px;padding:10px;color:#fff;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">＋ 添加</button>
+      </div>`;
+    document.body.appendChild(overlay);
+  }
+  // Clone watchlist
+  const sl=document.getElementById('symList');
+  const ml=document.getElementById('mobileSymList');
+  if(sl&&ml){
+    ml.innerHTML=sl.innerHTML;
+    // Make items clickable in mobile overlay
+    ml.querySelectorAll('.sym-item').forEach(item=>{
+      const onclick=item.getAttribute('onclick');
+      if(onclick)item.addEventListener('click',()=>{
+        eval(onclick);
+        overlay.style.display='none';
+        mobileTab('signal');
+      });
+    });
+  }
+  overlay.style.display='block';
+}
+
+// Re-init on resize
+window.addEventListener('resize',()=>{
+  const nav=document.getElementById('mobileNav');
+  if(isMobileDevice()){
+    if(nav)nav.style.display='block';
+    document.body.style.paddingBottom='calc(56px + env(safe-area-inset-bottom))';
+  } else {
+    if(nav)nav.style.display='none';
+    document.body.style.paddingBottom='';
+    // Restore desktop layout
+    const analysisCol=document.querySelector('.analysis-col');
+    const chartCol=document.getElementById('chartCol');
+    const rightPanel=document.querySelector('.right-panel');
+    if(analysisCol)analysisCol.style.display='';
+    if(chartCol)chartCol.style.display='';
+    if(rightPanel)rightPanel.style.display='';
+  }
+});
 async function init(){
   buildSymList();buildFilters();renderLunar();
+  initMobileLayout(); // adaptive layout
 
   // Step 1: Fast price bootstrap — try to get BTC price ASAP via any method
   // This ensures S.lastPx > 0 before klines load
@@ -5256,6 +5677,32 @@ init();
 
   </div>
 </div>
+<!-- ══ MOBILE BOTTOM NAV (phone only) ══ -->
+<div id="mobileNav" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:500;background:var(--bg1);border-top:1px solid var(--line2);padding:0 0 env(safe-area-inset-bottom);box-shadow:0 -2px 12px rgba(0,0,0,0.08);">
+  <div style="display:flex;justify-content:space-around;align-items:center;height:56px;">
+    <button onclick="mobileTab('signal')" id="mnav-signal" class="mnav-btn active" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border:none;background:transparent;cursor:pointer;padding:8px 4px;color:var(--gold);">
+      <span style="font-size:18px">📊</span>
+      <span style="font-size:10px;font-weight:700">信号</span>
+    </button>
+    <button onclick="mobileTab('chart')" id="mnav-chart" class="mnav-btn" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border:none;background:transparent;cursor:pointer;padding:8px 4px;color:var(--muted);">
+      <span style="font-size:18px">📈</span>
+      <span style="font-size:10px">图表</span>
+    </button>
+    <button onclick="openAssistant()" id="mnav-ask" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border:none;background:transparent;cursor:pointer;padding:8px 4px;color:var(--muted);">
+      <span style="font-size:18px">🐦</span>
+      <span style="font-size:10px">问FINCH</span>
+    </button>
+    <button onclick="mobileTab('modules')" id="mnav-modules" class="mnav-btn" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border:none;background:transparent;cursor:pointer;padding:8px 4px;color:var(--muted);">
+      <span style="font-size:18px">🔬</span>
+      <span style="font-size:10px">指标</span>
+    </button>
+    <button onclick="mobileTab('watchlist')" id="mnav-watchlist" class="mnav-btn" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border:none;background:transparent;cursor:pointer;padding:8px 4px;color:var(--muted);">
+      <span style="font-size:18px">⭐</span>
+      <span style="font-size:10px">自选</span>
+    </button>
+  </div>
+</div>
+
 <div class="ios-install-banner" id="iosInstallBanner">
   📲 在 Safari 中点击 <strong>分享</strong> → <strong>添加到主屏幕</strong><br>
   <span style="font-size:11px;opacity:.7">即可像 App 一样使用 FINCH · Add to Home Screen for app experience</span>
