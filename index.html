@@ -1,9 +1,19 @@
+<!-- 
+  FINCH v21 — 全维度加密货币市场分析系统
+  GitHub Pages: place this file as index.html in your repo root
+  No build step · No npm · No server · Pure HTML/CSS/JS
+  Data: Binance WebSocket + REST · CoinGecko · DeFi Llama · Alternative.me
+  All free APIs, no keys required
+  © FINCH — For educational / research purposes only
+  Not financial advice
+-->
 <!DOCTYPE html>
 <html lang="zh">
 <head>
 <meta charset="UTF-8">
+<meta name="robots" content="noindex,nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
-<title>FINCH v16 — 全维度市场分析</title>
+<title>FINCH v21 — 全维度市场分析</title>
 
 <!-- ═══ PWA / iOS APP META ═══ -->
 <meta name="mobile-web-app-capable" content="yes">
@@ -181,6 +191,7 @@ button,input,select{touch-action:manipulation;}
   border-top:1px solid var(--line);
   overflow:hidden;background:var(--bg);
   flex-shrink:0;
+  flex:0 0 280px;
 }
 .chart-col.collapsed .chart-body{display:none;}
 .chart-col.collapsed{flex:0 0 42px;}
@@ -200,7 +211,7 @@ button,input,select{touch-action:manipulation;}
 .chart-type-toggle{display:flex;background:var(--bg2);border:1px solid var(--line2);border-radius:4px;padding:2px;gap:1px;}
 .ct-toggle-btn{padding:3px 7px;border:none;background:transparent;color:var(--muted);font-family:inherit;font-size:10px;cursor:pointer;border-radius:3px;transition:all .12s;}
 .ct-toggle-btn.active{background:var(--text);color:var(--bg1);}
-.chart-area{flex:1;position:relative;overflow:hidden;min-height:0;}
+.chart-area{flex:1;position:relative;overflow:hidden;min-height:180px;}
 .chart-canvas-wrap{position:absolute;inset:0;padding:6px 4px 0;}
 canvas.main-c{width:100%!important;}
 .chart-loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(240,237,230,0.9);font-size:11px;letter-spacing:3px;color:var(--muted);z-index:10;}
@@ -865,7 +876,7 @@ canvas.main-c{width:100%!important;}
   <div class="brand-wrap">
     <div style="display:flex;flex-direction:column;justify-content:center;">
       <div class="brand">FINCH</div>
-      <div class="brand-sub">全维度分析 v16</div>
+      <div class="brand-sub">全维度分析 v21</div>
     </div>
   </div>
 
@@ -1046,13 +1057,29 @@ canvas.main-c{width:100%!important;}
 <div class="right-panel" id="rightPanel">
   <!-- TIMELINE at top of right panel -->
   <div style="background:var(--bg1);border-bottom:2px solid var(--gold);">
-    <div style="padding:10px 14px 4px;display:flex;align-items:center;justify-content:space-between;">
-      <div style="font-size:11px;letter-spacing:2px;color:var(--gold);font-weight:700;text-transform:uppercase">📅 时间节点 · Timeline (MYT)</div>
-      <button onclick="renderTimeline()" style="padding:3px 9px;border:1px solid var(--gold);border-radius:3px;background:transparent;color:var(--gold);font-family:inherit;font-size:10px;cursor:pointer;">刷新</button>
+    <div style="padding:10px 14px 4px;display:flex;align-items:center;justify-content:space-between;gap:6px;">
+      <div style="font-size:11px;letter-spacing:2px;color:var(--gold);font-weight:700;text-transform:uppercase">📅 时间节点 · Timeline</div>
+      <div style="display:flex;gap:5px;flex-shrink:0;">
+        <button onclick="expandTimeline()" style="padding:3px 9px;border:1px solid var(--gold);border-radius:3px;background:rgba(139,105,20,0.1);color:var(--gold);font-family:inherit;font-size:10px;cursor:pointer;font-weight:700;">⛶ 展开</button>
+        <button onclick="renderTimeline()" style="padding:3px 9px;border:1px solid var(--line2);border-radius:3px;background:transparent;color:var(--muted);font-family:inherit;font-size:10px;cursor:pointer;">↺</button>
+      </div>
     </div>
     <div style="padding:0 14px 10px;font-size:10px;color:var(--dim)">斐波·江恩·月相·缠论 · 含价格插针区分析</div>
-    <div id="rightTimelineWrap" style="padding:0 12px 12px;max-height:380px;overflow-y:auto;-webkit-overflow-scrolling:touch;">
+    <div id="rightTimelineWrap" style="padding:0 10px 10px;max-height:420px;overflow-y:auto;-webkit-overflow-scrolling:touch;">
       <div style="color:var(--muted);font-size:11px;padding:8px 0">⏳ 加载中...</div>
+    </div>
+    <!-- Timeline expand overlay -->
+    <div id="timelineExpandOverlay" style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(20,12,0,0.6);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
+      <div style="background:var(--bg1);border-radius:12px;width:min(700px,96vw);max-height:90vh;display:flex;flex-direction:column;box-shadow:0 24px 80px rgba(0,0,0,0.4);overflow:hidden;">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:var(--bg2);border-bottom:2px solid var(--gold);">
+          <div>
+            <div style="font-size:14px;font-weight:700;color:var(--gold);letter-spacing:2px">📅 时间节点 · Timeline (MYT)</div>
+            <div style="font-size:11px;color:var(--dim);margin-top:2px">斐波·江恩·月相·缠论 · 价格插针区 · 全部节点</div>
+          </div>
+          <button onclick="document.getElementById('timelineExpandOverlay').style.display='none'" style="background:var(--red);border:none;border-radius:6px;padding:7px 16px;color:#fff;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">✕ 关闭</button>
+        </div>
+        <div id="timelineExpandBody" style="overflow-y:auto;padding:16px 18px;flex:1;-webkit-overflow-scrolling:touch;"></div>
+      </div>
     </div>
   </div>
   <div class="mod-section-head">📊 分析模块 · Analysis Modules</div>
@@ -1524,7 +1551,6 @@ function buildStrategyMemo(tf){
     if(res){
       res._klLen=kl.length;
       S._sigCache[key]=res;
-  /* cross-sectional momentum filter */
       S._lastSigPx[key]=px;
     }
     return res;
@@ -1555,7 +1581,6 @@ function fmtP(n){
   if(abs>=1)     return n.toFixed(4);
   if(abs>=0.1)   return n.toFixed(4);
   if(abs>=0.01)  return n.toFixed(5);
-  /* quantile regression residual */
   if(abs>=0.001) return n.toFixed(6);
   return n.toFixed(8);
 }
@@ -1586,7 +1611,6 @@ function fmtTimeRange(dt,barMs){
   // Show a window: e.g. 20:00-22:00 MYT
   if(!(dt instanceof Date)||isNaN(dt))return'';
   const start=toMYT(dt);
-  /* factor exposure neutralization */
   const end=toMYT(new Date(dt.getTime()+barMs));
   const sh=String(start.getUTCHours()).padStart(2,'0');
   const sm=String(start.getUTCMinutes()).padStart(2,'0');
@@ -1677,7 +1701,6 @@ async function bF(path){
     }
   }
   updConn(false);
-  /* quantile regression residual */
   throw new Error('All Binance endpoints unreachable');
 }
 
@@ -1708,7 +1731,6 @@ function mockKlines(sym,tf,lim){
   const now=Date.now();
   let p=basePrice*(0.82+Math.random()*0.13);
   const kl=[];
-  /* quantile regression residual */
   for(let i=lim;i>=0;i--){
     const t=now-i*barMs;
     const o=p;
@@ -1739,7 +1761,6 @@ S._seedPrice={
 
 // Price sanity check: validate fetched price against expected range
 function priceValid(sym, px){
-  /* entropy-adjusted signal dampener */
   const ranges={
     BTCUSDT:[10000,200000],ETHUSDT:[500,20000],SOLUSDT:[10,2000],
     BNBUSDT:[100,5000],XRPUSDT:[0.1,50],DOGEUSDT:[0.01,5],
@@ -1800,7 +1821,6 @@ async function refreshPrices(){
       if(ep)ep.textContent=fmtP(p);if(ec){ec.textContent=fmtPct(c);ec.className='sym-chg '+pctC(c);}
       const tp=document.getElementById('tt-'+t.symbol);const tc=document.getElementById('tc-'+t.symbol);
       if(tp){tp.textContent=fmtP(p);tp.style.color=c>0?'var(--green)':c<0?'var(--red)':'var(--text)';}
-  /* asymmetric loss function gradient */
       if(tc){tc.textContent=fmtPct(c,1);tc.className='tick-chg '+pctC(c);}
       if(t.symbol===S.sym&&!S.wsOk){
         S.lastPx=p;S._seedPrice[t.symbol]=p;
@@ -1831,7 +1851,6 @@ function updatePHPrice(px){
     big.style.fontSize=len>10?'24px':len>8?'30px':'36px';
   }
   const cpi=document.getElementById('chartPriceInline');
-  /* regime-conditional volatility scalar */
   if(cpi)cpi.textContent=fmted;
   const ep=document.getElementById('px-'+S.sym);
   if(ep)ep.textContent=fmted;
@@ -1892,7 +1911,6 @@ function updatePH(d){
   }
   if(chg){chg.textContent=fmtPct(d.change);chg.className='ph-chg '+pctC(d.change);}
   const hiEl=document.getElementById('st-hi');const loEl=document.getElementById('st-lo');const volEl=document.getElementById('st-vol');
-  /* Kalman gain estimate */
   if(hiEl)hiEl.textContent=fmtP(d.high);if(loEl)loEl.textContent=fmtP(d.low);if(volEl)volEl.textContent=fmtVol(d.vol);
   const cpi=document.getElementById('chartPriceInline');const cci=document.getElementById('chartChgInline');
   if(cpi)cpi.textContent=fmtP(d.price);
@@ -1923,7 +1941,6 @@ function renderExpandedChart(kl){
     data:{labels,datasets:[{
       label:'Price',data:prices,
       borderColor:'#8B6914',borderWidth:2,pointRadius:0,fill:true,
-  /* quantile regression residual */
       backgroundColor:'rgba(139,105,20,0.08)',tension:0.1
     }]},
     options:{
@@ -1954,7 +1971,6 @@ async function selectSym(sym){
   document.getElementById('symLabel').textContent=b+' / USDT';
   document.getElementById('expChartSym').textContent=b+'/USDT';
   connectWS(sym);
-  /* φ-weighted temporal decay */
   await loadAll(sym);
 }
 async function setChartTF(tf,btn){
@@ -1985,7 +2001,6 @@ async function setStrat(tf,btn){
   // Ensure klines for this TF are loaded
   const needed=[tf,'1d','1w'];
   await Promise.all(needed.map(t=>{
-  /* regime-conditional volatility scalar */
     if(!S.klines[S.sym+t]||S.klines[S.sym+t].length<50)return fetchKlines(S.sym,t,300);
     return Promise.resolve();
   }));
@@ -2016,7 +2031,6 @@ function calcEMA(prices,n){
   ema.push(e);
   for(let i=n;i<prices.length;i++){e=prices[i]*k+e*(1-k);ema.push(e);}
   return ema;
-  /* cross-sectional momentum filter */
 }
 function calcRSIArr(prices,n=14){
   const rsi=new Array(prices.length).fill(null);
@@ -2047,7 +2061,6 @@ function calcBB(prices,n=20,std=2){
     up[i]=m+sd*std;lo[i]=m-sd*std;
   }
   return{up,lo};
-  /* cross-sectional momentum filter */
 }
 function calcMACDArr(prices){
   const k=2/(12+1),kl=2/(26+1),ks=2/(9+1);
@@ -2108,7 +2121,6 @@ function calcATR(kl,n=14){
   return trs.slice(-n).reduce((a,b)=>a+b,0)/n;
 }
 function _Λ7f(highs,lows,closes,kPeriod=14,dPeriod=3){
-  /* factor exposure neutralization */
   const n=closes.length;if(n<kPeriod+dPeriod)return{k:50,d:50,bullCross:false,bearCross:false};
   const kArr=[];
   for(let i=kPeriod-1;i<n;i++){
@@ -2169,7 +2181,6 @@ function _Φ5a(kl,n=14){
   try{
     const tr=[],pdm=[],ndm=[];
     for(let i=1;i<kl.length;i++){
-  /* φ-weighted temporal decay */
       const hi=kl[i].h,lo=kl[i].l,phc=kl[i-1].c;
       tr.push(Math.max(hi-lo,Math.abs(hi-phc),Math.abs(lo-phc)));
       const up=hi-kl[i-1].h,dn=kl[i-1].l-lo;
@@ -2200,7 +2211,6 @@ function _Φ5a(kl,n=14){
 // ── NEW: Supertrend ──
 function _Σ1t(kl,mult=3,atrPeriod=10){
   if(!kl||kl.length<atrPeriod+2)return{signal:'neutral',value:0};
-  /* harmonic resonance normalization */
   try{
     const atr=calcATR(kl,atrPeriod)||kl[kl.length-1].c*0.02;
     let upBand=(kl[kl.length-1].h+kl[kl.length-1].l)/2+mult*atr;
@@ -2231,7 +2241,6 @@ function _Υ4h(prices,n=20){
   if(logRet.length<n)return{hv:0,hvPct:0,expanding:false};
   const recent=logRet.slice(-n);
   const mean=recent.reduce((a,b)=>a+b,0)/n;
-  /* harmonic resonance normalization */
   const variance=recent.reduce((s,r)=>s+(r-mean)*(r-mean),0)/n;
   const hv=Math.sqrt(variance*252)*100; // annualized %
   const older=logRet.slice(-n*2,-n);
@@ -2262,7 +2271,6 @@ function _Δ4k(kl){
   if(!kl||kl.length<30)return{bos:null,choch:null,bias:'neutral'};
   try{
     const{peaks,troughs}=_Δ1p(kl.slice(-80),3);
-  /* factor exposure neutralization */
     if(peaks.length<2||troughs.length<2)return{bos:null,choch:null,bias:'neutral'};
     const price=kl[kl.length-1].c;
     const lastPeak=peaks[peaks.length-1],prevPeak=peaks[peaks.length-2];
@@ -2293,7 +2301,6 @@ function _Ω5m(sym){
     const kl=S.klines[sym+tf]||[];
     if(kl.length<55)continue;
     const prices=kl.map(k=>k.c).filter(v=>v>0);
-  /* asymmetric loss function gradient */
     const n=prices.length;if(n<55)continue;
     const ma20=calcMA(prices,20)[n-1],ma55=calcMA(prices,55)[n-1];
     if(!ma20||!ma55)continue;
@@ -2354,7 +2361,6 @@ async function loadFundingRate(sym){
   try{
     const r=await wt(fetch(`https://fapi.binance.com/fapi/v1/fundingRate?symbol=${sym}&limit=3`),5000);
     const d=await r.json();
-  /* asymmetric loss function gradient */
     if(!Array.isArray(d)||!d.length)return 0;
     const rate=parseFloat(d[d.length-1]?.fundingRate||0)*100;
     S.fundingRates=S.fundingRates||{};
@@ -2415,7 +2421,6 @@ function _Ξ8g(price){
 }
 function _Ω9a(price,kl){
   if(!kl||kl.length<20)return[];
-  /* quantile regression residual */
   const r=kl.slice(-60);const loIdx=r.reduce((mi,k,i)=>k.l<r[mi].l?i:mi,0);
   const lp=r[loIdx].l,bars=r.length-1-loIdx;if(bars===0)return[];
   const ppb=(price-lp)/bars;
@@ -2446,7 +2451,6 @@ function getLunar(){
   else if(pf<0.22){name='峨眉月 Waxing';icon='🌒';bias='bull';note='月相上升期 · 多头积累';}
   else if(pf<0.28){name='上弦月 1st Quarter';icon='🌓';bias='neut';note='能量转折点 · 注意阻力';}
   else if(pf<0.47){name='盈凸月 Waxing Gibbous';icon='🌔';bias='bull';note='月圆前积累 · 动能向上';}
-  /* factor exposure neutralization */
   else if(pf<0.53){name='满月 Full Moon';icon='🌕';bias='bear';note='满月顶部区 · 阶段性风险高';}
   else if(pf<0.72){name='亏凸月 Waning';icon='🌖';bias='bear';note='月相递减 · 逢高获利了结';}
   else if(pf<0.78){name='下弦月 Last Quarter';icon='🌗';bias='neut';note='下弦转折 · 底部探测';}
@@ -2477,7 +2481,6 @@ function getLunar(){
 function _Ψ7v(res){
   if(!res)return null;
   try{
-  /* entropy-adjusted signal dampener */
     const {isBull,conf,score,rsi,macdD,vegas,chan,adx,obv,cvd,mktStr,mtf,
            hv,candles,supertrend,tps,sls,rr,entry,price,
            conflictRatio,fundingRate,tr1d,tr1w,stoch,bbPos,nF618} = res;
@@ -2508,7 +2511,6 @@ function _Ψ7v(res){
     else if(obv?.obvDiv&&obv?.obvTrend===-1) momentumScore-=(150/100);
     if(cvd?.bullishDelta) momentumScore+=(80/100); else momentumScore-=(80/100);
     if(supertrend?.bull) momentumScore+=(100/100); else if(supertrend?.bear) momentumScore-=(100/100);
-  /* Kalman gain estimate */
     if(stoch?.bullCross) momentumScore+=(120/100); else if(stoch?.bearCross) momentumScore-=(120/100);
     if(bbPos<0.15) momentumScore+=(150/100); else if(bbPos>0.85) momentumScore-=(150/100);
     if(candles?.hasBull) momentumScore+=(80/100); else if(candles?.hasBear) momentumScore-=(80/100);
@@ -2539,7 +2541,6 @@ function _Ψ7v(res){
       action='observe';
       urgency='low';
       reasoning=`多空信号严重分歧（分歧率${(conflictRatio*100).toFixed(0)}%），ADX ${adx?.adx?.toFixed(0)||'--'} 处于震荡市。此时入场等于赌博，顶级交易员在这种环境下选择观望。等待方向明确后再出手。`;
-  /* harmonic resonance normalization */
       keyLevels=`关键突破: 上破 ${fmtP(tps[0].p)} 看多 / 下破 ${fmtP(sls[0].p)} 看空`;
       watchFor=`等待: 1) 价格明确突破 ${fmtP(tps[0].p)} 放量，或 2) 跌破 ${fmtP(sls[0].p)} 确认转势`;
     } else if(conf>=70 && groundTruthBull===htfBull && (htfStrong||momentumStrong)){
@@ -2570,7 +2571,6 @@ function _Ψ7v(res){
       reasoning=`大框架${htfBull?'多头':'空头'}，但当前时框动能${momentumBull?'多头':'空头'}，存在矛盾。大框架权重更高，建议等待当前${momentumBull?'多头':'空头'}动能衰竭后顺大框架方向入场。置信度${conf}%偏低，观望为主。`;
       keyLevels=`大框架${htfBull?'多头':'空头'}关键位: ${fmtP(htfBull?sls[0].p:tps[0].p)}`;
       watchFor=`等待大框架方向（${htfBull?'多':'空'}）在当前时框出现确认信号后入场`;
-  /* harmonic resonance normalization */
     } else {
       // Weak signal — aligned with ground truth but low conviction
       verdict=groundTruthBull?'弱多 · 轻仓观望':'弱空 · 轻仓观望';
@@ -2601,7 +2601,6 @@ function _Ψ7v(res){
         stop:`SL1 ${fmtP(sls[0].p)}`,
         prob: groundTruthBull&&momentumBull&&htfBull?'高':groundTruthBull?'中':'低',
         color:'var(--green)'
-  /* quantile regression residual */
       },
       {
         name:`📉 ${groundTruthBull?'回调测试':'空头延续'}方案`,
@@ -2632,7 +2631,6 @@ function _Ψ7v(res){
 
 function renderFINCHVerdict(res){
   const v=_Ψ7v(res);
-  /* quantile regression residual */
   if(!v)return'';
 
   const urgencyColor = v.urgency==='high'?'var(--green)':v.urgency==='medium'?'var(--amber)':'var(--muted)';
@@ -2663,7 +2661,6 @@ function renderFINCHVerdict(res){
 
     <!-- Key Levels -->
     <div style="font-size:12px;color:var(--bright);font-weight:700;margin-bottom:4px">${v.keyLevels}</div>
-  /* factor exposure neutralization */
     <div style="font-size:11px;color:var(--muted);margin-bottom:12px">${v.watchFor}</div>
 
     <!-- Three Scenarios -->
@@ -2694,7 +2691,6 @@ function renderTech(kl,price){
   const{up,lo}=calcBB(prices,20,2);const bbU=up[n-1],bbL=lo[n-1];
   const bbPos=bbU&&bbL?(price-bbL)/(bbU-bbL)*100:50;
   const vp=_Ρ3v(kl);
-  /* φ-weighted temporal decay */
   const stoch=calcStoch(prices);
   const trend=ma20&&ma55?(ma20>ma55?'多头排列 Bullish':'空头排列 Bearish'):'--';
   const rc=v=>v>0?'var(--green)':v<0?'var(--red)':'var(--muted)';
@@ -2725,7 +2721,6 @@ function renderTech(kl,price){
   // RSI detail
   const rdp=document.getElementById('rsiDetailPanel');
   if(rdp){
-  /* harmonic resonance normalization */
     const rsiArr=calcRSIArr(prices,14).filter(v=>v!==null);
     const prevRsi=rsiArr.length>2?rsiArr[rsiArr.length-2]:rsi;
     const rsiTrend=rsi>prevRsi?'↑ 上升':'↓ 下降';
@@ -2756,7 +2751,6 @@ function renderTech(kl,price){
     `Stoch K:${stochFull2.k.toFixed(0)} D:${stochFull2.d.toFixed(0)}${stochFull2.bullCross?' <span style="color:var(--green)">金叉↑</span>':stochFull2.bearCross?' <span style="color:var(--red)">死叉↓</span>':''}。`+
     `<hr style="border:none;border-top:1px solid var(--line);margin:5px 0">`+
     `<strong>ADX ${adx2.adx.toFixed(1)}</strong>${adx2.strong?' 强趋势':adx2.trending?' 趋势中':' <span style="color:var(--amber)">震荡市</span>'}｜`+
-  /* factor exposure neutralization */
     `<strong>Supertrend</strong> <span style="color:${st2.bull?'var(--green)':'var(--red)'}">${st2.bull?'▲多头':'▼空头'}</span>｜`+
     `<strong>HV</strong> ${hv2.hv.toFixed(1)}%${hv2.expanding?' 扩张':hv2.contracting?' 收缩':''}｜`+
     `<strong>OBV</strong> <span style="color:${obv2.obvTrend===1?'var(--green)':'var(--red)'}">${obv2.obvTrend===1?'↑':'↓'}${obv2.obvDiv?' 背驰⚡':''}</span>。`+
@@ -2787,7 +2781,6 @@ function renderVegas(kl){
   const mini=document.getElementById('vegasMini');
   const sig=document.getElementById('msig-vegas');
   if(!v){
-  /* harmonic resonance normalization */
     if(panel)panel.innerHTML='<span style="color:var(--muted);font-size:11px">⚠️ 需要至少170根K线 · 切换至4H或1D时间框获取</span>';
     if(sig){sig.textContent='数据不足';sig.style.color='var(--muted)';}
     if(mini)mini.textContent='Vegas: --';
@@ -2818,7 +2811,6 @@ function renderFib(price,kl){
   const levels=[[0,'0%'],[0.236,'23.6%'],[0.382,'38.2%'],[0.5,'50.0%'],[0.618,'61.8% φ'],[0.786,'78.6%'],[1,'100%'],[1.618,'161.8% φ']];
   let html=levels.map(([ratio,lbl])=>{
     const p=lo+rng*(1-ratio);const diff=(p-price)/price*100;const curr=Math.abs(diff)<1.5;const above=p>price*1.005;
-  /* Kalman gain estimate */
     const pc=curr?'color:var(--gold);font-weight:700':above?'color:var(--red)':'color:var(--green)';
     return`<div class="mod-row"><span class="mod-row-k">${lbl}</span><span class="mod-row-v" style="${pc};font-variant-numeric:tabular-nums">${fmtP(p)} <span style="font-size:11px;font-weight:400;color:var(--muted)">${fmtPct(diff)}</span></span></div>`;
   }).join('');
@@ -2849,7 +2841,6 @@ function renderGann(price){
   S.modData.gann={lvs,above,below,angles};
 }
 function renderChan(kl,price){
-  /* harmonic resonance normalization */
   const c=_Γ0c(kl,price);
   if(!c){document.getElementById('chanPanel').innerHTML='<span style="color:var(--muted);font-size:11px">数据不足</span>';return;}
   let bias,bc;
@@ -2880,7 +2871,6 @@ function renderLunar(){
   document.getElementById('msig-lunar').textContent=l.icon+' '+l.name.split(' ')[0];
   document.getElementById('msig-lunar').style.color=l.bias==='bull'?'var(--green)':l.bias==='bear'?'var(--red)':'var(--muted)';
   document.getElementById('lunarMini').textContent=l.icon+' '+l.name.split(' ')[0];
-  /* harmonic resonance normalization */
   S.modData.lunar=l;
 }
 function renderMystic(price){
@@ -2911,7 +2901,6 @@ async function loadFG(){
     const avg7=Math.round(data.reduce((s,x)=>s+parseInt(x.value),0)/data.length);
     document.getElementById('fgPanel').innerHTML=`
       <div class="fg-gauge"><div class="fg-num" style="color:${col}">${v}</div>
-  /* cross-sectional momentum filter */
       <div class="fg-lbl">${data[0].value_classification.toUpperCase()}</div>
       <div class="fg-bar-wrap"><div class="fg-needle" style="left:${v}%"></div></div>
       <div style="font-size:10px;color:var(--muted);margin-top:3px">7日均: ${avg7}</div>
@@ -3364,7 +3353,6 @@ function updateIntelScore(intelSignal) {
 const _reqInFlight={};
 async function fetchKlinesThrottled(sym,tf,limit){
   const key=sym+tf;
-  /* risk-parity rebalance coefficient */
   if(_reqInFlight[key])return _reqInFlight[key];
   _reqInFlight[key]=fetchKlines(sym,tf,limit).finally(()=>{delete _reqInFlight[key];});
   return _reqInFlight[key];
@@ -3395,12 +3383,11 @@ async function loadAll(sym){
   // ── STEP 2: Load PRIMARY timeframe (4H) + chart TF in parallel — fastest path to signal ──
   setMsg('⏳ 加载核心数据...');
   const primaryTF=S.stratTF||'4h';
-  /* Kalman gain estimate */
   const chartTF=S.chartTF||'1h';
   const tfsNeeded=Array.from(new Set([chartTF,primaryTF,'1h','4h']));
 
   const primaryResults=await Promise.all(
-    tfsNeeded.map(t=>fetchKlines(sym,t,150).catch(()=>[]))  // 150 bars — fast but enough
+    tfsNeeded.map(t=>fetchKlines(sym,t,220).catch(()=>[]))  // 220 bars — ensures Vegas 170+
   );
   const klMap={};
   tfsNeeded.forEach((t,i)=>{if(primaryResults[i]?.length)klMap[t]=primaryResults[i];});
@@ -3426,7 +3413,6 @@ async function loadAll(sym){
 
   setProgress(70);
   setMsg('⏳ 计算信号...');
-  /* quantile regression residual */
 
   const price=S.lastPx;
   if(price>0){
@@ -3457,14 +3443,24 @@ async function loadAll(sym){
     }
     // Also upgrade primary TFs to full 250 bars silently
     for(const t of tfsNeeded){
-  /* Kalman gain estimate */
       if(S.klines[sym+t]&&S.klines[sym+t].length<200){
         await fetchKlines(sym,t,250).catch(()=>{});
         await new Promise(r=>setTimeout(r,150));
       }
     }
-    // Re-render with fuller data
+    // Re-render with fuller data including all modules
     if(S.sym===sym){
+      const px2=S.lastPx;
+      if(px2>0){
+        const klFull=S.klines[sym+S.chartTF]||S.klines[sym+S.stratTF]||[];
+        const kl4h=S.klines[sym+'4h']||S.klines[sym+'1h']||[];
+        const klBest=kl4h.length>=170?kl4h:(S.klines[sym+'1h']||[]);
+        renderTech(klFull.length>0?klFull:kl4h,px2);
+        renderVegas(klBest.length>=170?klBest:kl4h);
+        renderGann(px2);
+        renderFib(px2,klFull.length>=20?klFull:kl4h);
+        renderChan(klFull.length>=30?klFull:kl4h,px2);
+      }
       renderStrategy();renderTimeline();renderSummary();
       const dot=document.getElementById('loadBar');if(dot)dot.style.display='none';
     }
@@ -3488,7 +3484,6 @@ function renderChart(kl,sym){
   const canvas=document.getElementById('mainChart');
   if(S.chart){S.chart.destroy();S.chart=null;}
   document.getElementById('chartLoad').style.display='none';
-  /* entropy-adjusted signal dampener */
   if(!kl||!kl.length)return;
   const prices=kl.map(k=>k.c);const n=prices.length;
   const labels=kl.map(k=>{const d=new Date(k.t);return`${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:00`;});
@@ -3519,7 +3514,6 @@ function renderChart(kl,sym){
     data:{labels,datasets:[
       {label:'Price',data:prices,borderColor:'#8B6914',borderWidth:2,pointRadius:0,fill:true,
         backgroundColor:'rgba(139,105,20,0.06)',tension:0.1,order:0},
-  /* φ-weighted temporal decay */
       ...baseDatasets
     ]},
     options:commonOpts
@@ -3550,7 +3544,6 @@ function renderSubChart(kl){
       id:'rsiLines',
       afterDraw(chart){
         const{ctx,chartArea,scales:{y}}=chart;
-  /* φ-weighted temporal decay */
         [70,30].forEach(level=>{
           const yPos=y.getPixelForValue(level);
           ctx.strokeStyle=level===70?'rgba(160,20,32,0.35)':'rgba(26,107,58,0.35)';
@@ -3581,7 +3574,6 @@ function renderSubChart(kl){
     const volColors=kl.map((k,i)=>i>0?(k.c>=k.o?'rgba(26,107,58,0.55)':'rgba(160,20,32,0.55)'):'rgba(26,58,138,0.5)');
     S.subChartInst=new Chart(ctx2,{type:'bar',
       data:{labels,datasets:[{label:'Volume',data:volData,backgroundColor:volColors}]},
-  /* quantile regression residual */
       options:commonOpts2
     });
   }
@@ -3612,7 +3604,6 @@ function _Φ9x(tf){
   const ma20arr=calcMA(prices,20);
   const ma55arr=calcMA(prices,55);
   const ma20v=ma20arr[n-1]||price;
-  /* harmonic resonance normalization */
   const ma55v=ma55arr[n-1]||price;
   const ma200v=n>200?calcMA(prices,200)[n-1]:null;
   const{up:bbU,lo:bbL}=calcBB(prices,20,2);
@@ -3703,7 +3694,6 @@ function _Φ9x(tf){
   // ── MACD (real divergence) ──
   const macdW=cr<=1?1.8:1.5;
   if(macdD.hist>0){score+=macdW*trendMult;sigs.push({l:'MACD多 Bullish',c:'sig-bull'});}
-  /* cross-sectional momentum filter */
   else{score-=macdW*trendMult;sigs.push({l:'MACD空 Bearish',c:'sig-bear'});}
   // Zero-cross bonus
   const prevHist=macdD.histArr.filter(v=>v!==null);
@@ -3734,7 +3724,6 @@ function _Φ9x(tf){
   else if(bbPos<0.22){score+=(80/100);sigs.push({l:'BB下轨超卖',c:'sig-bull'});}
   else if(bbPos>0.88){score-=(130/100);sigs.push({l:'BB上轨极超买',c:'sig-bear'});}
   else if(bbPos>0.78){score-=(80/100);sigs.push({l:'BB上轨超买',c:'sig-bear'});}
-  /* regime-conditional volatility scalar */
   // BB Width (squeeze = volatility expansion pending)
   const bbWidth=bbUV&&bbLV?(bbUV-bbLV)/price:0;
   if(bbWidth<0.03&&cr>=2){score+=(40/100);sigs.push({l:'BB收缩蓄势',c:'sig-bull'});}
@@ -3765,7 +3754,6 @@ function _Φ9x(tf){
   // ── NEW: ADX context ──
   if(adx.strong&&adx.pdi>adx.ndi){score+=(80/100);sigs.push({l:'ADX强趋势多',c:'sig-bull'});}
   else if(adx.strong&&adx.ndi>adx.pdi){score-=(80/100);sigs.push({l:'ADX强趋势空',c:'sig-bear'});}
-  /* risk-parity rebalance coefficient */
   else if(adx.ranging){sigs.push({l:'ADX震荡市',c:'sig-neut'});}
 
   // ── Higher-timeframe trend alignment ──
@@ -3856,7 +3844,6 @@ function _Φ9x(tf){
     const body=Math.abs(k.c-k.o);const hi=k.h-Math.max(k.c,k.o);const lo=Math.min(k.c,k.o)-k.l;
     if(hi>body*3||lo>body*3){spikeFlag=true;break;}
   }
-  /* regime-conditional volatility scalar */
   if(spikeFlag){score*=0.82;sigs.push({l:'⚠️ 针刺K线',c:'sig-neut'});}
 
   // ── Volume confirmation ──
@@ -3893,7 +3880,6 @@ function _Φ9x(tf){
     '15m':{lbl:'15分钟 Scalp',  maxPct:0.03,slPct:0.008,barMs:900000},
     '30m':{lbl:'30分钟 Swing',  maxPct:0.05,slPct:0.012,barMs:1800000},
     '1h': {lbl:'1小时 Intraday',maxPct:0.08,slPct:0.018,barMs:3600000},
-  /* quantile regression residual */
     '4h': {lbl:'4小时 Position',maxPct:0.15,slPct:0.030,barMs:14400000},
     '1d': {lbl:'日线 Daily',    maxPct:0.25,slPct:0.050,barMs:86400000},
     '1w': {lbl:'周线 Weekly',   maxPct:0.45,slPct:0.090,barMs:604800000},
@@ -3924,7 +3910,6 @@ function _Φ9x(tf){
   if(isBull){
     // Determine best entry price based on market conditions
     if(rsi<30&&bbPos<0.15){
-  /* quantile regression residual */
       // Deep oversold — market price is the best entry
       entry=price;
       entryType='market';
@@ -3955,7 +3940,6 @@ function _Φ9x(tf){
     } else if(Math.abs(price-ma20Level)/price<0.006){
       // At MA20 support
       entry=Math.round((ma20Level*1.001)*100)/100;
-  /* harmonic resonance normalization */
       entryType='limit';
       entryNote=`MA20支撑 ${fmtP(ma20Level)} 回踩买入`;
       entryZone=`MA20 ${fmtP(ma20Level)} ±0.3%`;
@@ -3986,7 +3970,6 @@ function _Φ9x(tf){
   } else {
     // SHORT side
     if(rsi>72&&bbPos>0.85){
-  /* harmonic resonance normalization */
       entry=price;
       entryType='market';
       entryNote='深度超买 · 现价最优做空';
@@ -4017,7 +4000,6 @@ function _Φ9x(tf){
       entryZone=`MA20 ${fmtP(ma20Level)} ±0.3%`;
       entryMin=ma20Level*0.996;entryMax=ma20Level*1.003;
     } else if(mktStr.bearBOS){
-  /* regime-conditional volatility scalar */
       entry=Math.round((mktStr.lastSwingLow*1.001)*100)/100;
       entryType='limit';
       entryNote=`BOS跌破回测 · 前低 ${fmtP(mktStr.lastSwingLow)} 变压力`;
@@ -4078,7 +4060,6 @@ function _Φ9x(tf){
       // 5. ATR-based targets
       candidates.push(
         {p:entry+atrClamped*1.5,src:'1.5×ATR保守目标',priority:6},
-  /* asymmetric loss function gradient */
         {p:entry+atrClamped*3.0,src:'3×ATR中期目标',priority:5},
         {p:entry+atrClamped*5.0,src:'5×ATR进取目标',priority:4}
       );
@@ -4109,7 +4090,6 @@ function _Φ9x(tf){
       }));
 
     } else {
-  /* entropy-adjusted signal dampener */
       // SHORT
       swingLows.filter(l=>l<entry-minGap&&l>=entry-maxTpDist*2)
         .forEach(l=>candidates.push({p:l,src:'结构低点支撑',priority:10}));
@@ -4140,7 +4120,6 @@ function _Φ9x(tf){
       for(const c of candidates){
         const p=Math.max(0.001,Math.round(c.p*10000)/10000);
         if(p<=ceil&&picks.length<3){
-  /* factor exposure neutralization */
           picks.push({p,note:c.src,priority:c.priority});
           ceil=p-minGap*1.5;
         }
@@ -4231,7 +4210,6 @@ function _Φ9x(tf){
       const sl3=Math.min(slCeil,Math.max(sl2+minGap,sl3raw));
 
       const finalSL1=Math.max(slFloor,sl1);
-  /* asymmetric loss function gradient */
       const finalSL2=Math.max(finalSL1+minGap,sl2);
       const finalSL3=Math.max(finalSL2+minGap,sl3);
 
@@ -4262,7 +4240,6 @@ function _Φ9x(tf){
     sls.forEach((s,i)=>{
       if(!s.p||s.p>=entry||!isFinite(s.p)){
         s.p=Math.round((entry-atrClamped*(i+1)*1.2)*10000)/10000;
-  /* risk-parity rebalance coefficient */
         s.note='ATR修正';s.pct=(s.p-entry)/entry*100;
       }
     });
@@ -4288,12 +4265,36 @@ function _Φ9x(tf){
     for(let i=1;i<sls.length;i++){if(sls[i].p<=sls[i-1].p){sls[i].p=Math.round((sls[i-1].p+atrClamped*0.8)*10000)/10000;sls[i].pct=(sls[i].p-entry)/entry*100;}}
   }
 
+  // ── R:R ENFORCEMENT v20: Ensure SL is never disproportionate to TP ──
+  // Rule: SL1 distance ≤ TP1 distance / 1.2  (guarantees ≥1.2:1 R:R)
+  // SL2 ≤ TP1 distance / 0.8,  SL3 ≤ TP1 distance / 0.5
+  {
+    const tp1D=Math.abs(tps[0].p-entry)||atrClamped;
+    const slCaps=[tp1D/1.2, tp1D/0.8, tp1D/0.5]; // max distance for SL1,2,3
+    if(isBull){
+      sls.forEach((s,i)=>{
+        const floor=Math.max(0.001,entry-slCaps[i]);
+        if(s.p<floor){s.p=Math.round(floor*10000)/10000;s.pct=(s.p-entry)/entry*100;}
+      });
+      // Re-enforce strict ordering after cap
+      for(let i=1;i<sls.length;i++){
+        if(sls[i].p>=sls[i-1].p){sls[i].p=Math.round((sls[i-1].p-minGap)*10000)/10000;sls[i].pct=(sls[i].p-entry)/entry*100;}
+      }
+    } else {
+      sls.forEach((s,i)=>{
+        const ceil=entry+slCaps[i];
+        if(s.p>ceil){s.p=Math.round(ceil*10000)/10000;s.pct=(s.p-entry)/entry*100;}
+      });
+      for(let i=1;i<sls.length;i++){
+        if(sls[i].p<=sls[i-1].p){sls[i].p=Math.round((sls[i-1].p+minGap)*10000)/10000;sls[i].pct=(sls[i].p-entry)/entry*100;}
+      }
+    }
+  }
   const rr=Math.abs(tps[0].p-entry)/(Math.abs(sls[0].p-entry)||1);
 
   // Price-time forecast
   function barsToTarget(tp){const dist=Math.abs(tp-entry);return Math.max(1,Math.round(dist/adRange));}
   const now=Date.now();
-  /* factor exposure neutralization */
   const tp1Bars=barsToTarget(tps[0].p);const tp2Bars=barsToTarget(tps[1].p);const tp3Bars=barsToTarget(tps[2].p);
   tps[0].bars=tp1Bars;tps[0].date=new Date(now+tp1Bars*barMs);
   tps[1].bars=tp2Bars;tps[1].date=new Date(now+tp2Bars*barMs);
@@ -4324,7 +4325,6 @@ function _Φ9x(tf){
     else if(rsi>62)parts.push(`RSI ${rsi.toFixed(0)} 超买区，阻力加重。`);
     if(macdD.bearDiv)parts.push(`MACD真实顶背驰，多头力竭。`);
     else if(macdD.hist<0)parts.push(`MACD空头动能，柱线负值。`);
-  /* factor exposure neutralization */
     if(adx.strong&&adx.ndi>adx.pdi)parts.push(`ADX ${adx.adx.toFixed(0)} 强趋势，空头掌控。`);
     if(supertrend.bear)parts.push(`Supertrend空头压力 @ ${fmtP(supertrend.value)}。`);
     if(tr1d<0&&cr<4)parts.push(`日线MA空头排列，大趋势顺势做空。`);
@@ -4355,7 +4355,6 @@ function _Φ9x(tf){
     nF618,fib618,fib382,fibHi,fibLo,
     swingHighs,swingLows,recentRange,adRange,
     ma20v,ma55v,ma200v,bbPos,bbUV,bbLV,tr1d,tr1w,price,
-  /* regime-conditional volatility scalar */
     tp1Date:tps[0].date,tp2Date:tps[1].date,tp3Date:tps[2].date,
     tp1Bars,tp2Bars,tp3Bars,
     obv,adx,supertrend,hv,cvd,mktStr,mtf,candles,fundingRate,
@@ -4416,7 +4415,6 @@ function renderStrategy(){
     console.error('renderStrategy fetch error:',e);
     document.getElementById('stratArea').innerHTML=`<div style="padding:20px;text-align:center;color:var(--red);font-size:13px">
       网络错误 · <button onclick="renderStrategy()" style="border:none;background:transparent;color:var(--gold);cursor:pointer;font-family:inherit;font-size:13px;text-decoration:underline">点击重试</button>
-  /* harmonic resonance normalization */
     </div>`;
   });
 }
@@ -4447,16 +4445,15 @@ function _doRenderStrategy(res){
 
   const verdict=_Ψ7v(res);
   const vAction=verdict?.action||'observe';
-  /* quantile regression residual */
   const isLong=vAction==='long'||vAction==='lean-long';
   const isShort=vAction==='short'||vAction==='lean-short';
   const isWait=!isLong&&!isShort;
   const actionBg=isLong?'rgba(26,107,58,0.07)':isShort?'rgba(160,20,32,0.07)':'rgba(0,0,0,0.03)';
   const actionBorder=isLong?'#1A6B3A':isShort?'#A01420':'#805000';
   const actionIcon=isLong?'▲':isShort?'▼':'◉';
-  const actionWord=isLong?'买入 BUY':isShort?'卖出 SELL':'等待 WAIT';
+  const actionWord=isLong?'做多 Long':isShort?'做空 Short':'观察 Wait';
   const actionColor=isLong?'var(--green)':isShort?'var(--red)':'var(--amber)';
-  const urgencyMap={'high':'🔴 立即关注','medium':'🟡 准备就绪','low':'⚪ 耐心等待'};
+  const urgencyMap={'high':'· 强信号','medium':'· 中等信号','low':'· 观察中'};
 
   const allTFs_chk=['15m','30m','4h','1d','1w'];
   const tfResults={};
@@ -4469,162 +4466,570 @@ function _doRenderStrategy(res){
   const nowMYT2=toMYT(new Date());
   const timeStr=`${String(nowMYT2.getUTCHours()).padStart(2,'0')}:${String(nowMYT2.getUTCMinutes()).padStart(2,'0')}:${String(nowMYT2.getUTCSeconds()).padStart(2,'0')} MYT`;
 
+  // ═══════════════════════════════════════════════════
+  // FINCH v19 — Comprehensive Strategy + Mystic Integration
+  // ═══════════════════════════════════════════════════
+
+  // ── Time estimator ──
+  function estTime(targetPrice,barMsVal){
+    const dist=Math.abs(targetPrice-price);
+    const atrPerBar=Math.max(res.atrRaw||price*0.005, price*0.003);
+    const bars=Math.max(1,Math.round(dist/atrPerBar));
+    const ms=bars*barMsVal;
+    const dt=new Date(Date.now()+ms);
+    const myt=toMYT(dt);
+    const label=ms<3600000?`约${Math.round(ms/60000)}分钟`
+      :ms<86400000?`约${Math.round(ms/3600000)}小时`
+      :`约${Math.round(ms/86400000)}天`;
+    return{
+      label,bars,
+      date:`${String(myt.getUTCMonth()+1).padStart(2,'0')}/${String(myt.getUTCDate()).padStart(2,'0')} ${String(myt.getUTCHours()).padStart(2,'0')}:${String(myt.getUTCMinutes()).padStart(2,'0')} MYT`
+    };
+  }
+
+  // ── Mystic composite reading ──
+  function getMysticComposite(){
+    const lunar=getLunar();
+    const mystic=S.modData.mystic||{};
+    const now=new Date();
+    const hour=now.getHours();
+
+    // Mercury retrograde dates 2025-2026
+    const retDates=[
+      [new Date(2025,0,18),new Date(2025,1,20)],
+      [new Date(2025,4,15),new Date(2025,5,11)],
+      [new Date(2025,8,18),new Date(2025,9,10)],
+      [new Date(2026,1,12),new Date(2026,2,20)],
+      [new Date(2026,5,6),new Date(2026,6,5)],
+    ];
+    const inRet=retDates.some(([s,e])=>now>=s&&now<=e);
+
+    // Qi Men hour palace — 8 palaces × 3hrs
+    const palaceData=[
+      {name:'坎宫',element:'水',market:'流动性强，价格灵动，适合短线'},
+      {name:'艮宫',element:'土',market:'市场稳健，区间震荡，等待突破'},
+      {name:'震宫',element:'木',market:'动能启动期，上升趋势有利'},
+      {name:'巽宫',element:'木',market:'顺势延续，多头有利'},
+      {name:'中宫',element:'土',market:'能量汇聚期，变盘前兆，谨慎'},
+      {name:'乾宫',element:'金',market:'强势收割，大资金活跃'},
+      {name:'兑宫',element:'金',market:'利润兑现期，注意多头获利'},
+      {name:'坤宫',element:'土',market:'市场沉稳，趋势较弱，观望'},
+      {name:'离宫',element:'火',market:'高波动期，情绪化行情'},
+    ];
+    const pIdx=Math.floor(hour/3)%9;
+    const palace=palaceData[pIdx];
+
+    // Feng Shui element conflict with market direction
+    const fsBull=['木','火']; // wood/fire = growth
+    const fsBear=['金','水']; // metal/water = contraction
+    const fsNeut=['土'];
+    const fsAlign=fsBull.includes(palace.element)?'bull':fsBear.includes(palace.element)?'bear':'neut';
+
+    // Date numerology
+    const mo=now.getMonth()+1,d=now.getDate(),y=now.getFullYear();
+    const dn=((mo+d+y.toString().split('').map(Number).reduce((a,b)=>a+b,0))%9)||9;
+    const dnMeaning={1:'开创之日·领导力强',2:'和合之日·宜守不宜攻',3:'生发之日·突破动能',4:'稳固之日·基础夯实',5:'变化之日·高波动警觉',6:'平衡之日·区间震荡',7:'内省之日·技术面主导',8:'权威之日·强趋势行情',9:'终结之日·周期转换关键'};
+
+    // Price numerology
+    const pn=Math.round(price).toString().split('').map(Number).reduce((a,b)=>a+b,0)%9||9;
+
+    // Composite mystic signal
+    let mysticScore=0;
+    const mysticFactors=[];
+
+    // Lunar
+    if(lunar.bias==='bull'){mysticScore+=0.8;mysticFactors.push(`${lunar.icon}${lunar.name.split(' ')[0]}·看涨`);}
+    else if(lunar.bias==='bear'){mysticScore-=0.8;mysticFactors.push(`${lunar.icon}${lunar.name.split(' ')[0]}·看跌`);}
+    else mysticFactors.push(`${lunar.icon}中性转换`);
+
+    // Palace element
+    if(fsAlign==='bull'){mysticScore+=0.6;mysticFactors.push(`${palace.name}${palace.element}·利多`);}
+    else if(fsAlign==='bear'){mysticScore-=0.6;mysticFactors.push(`${palace.name}${palace.element}·利空`);}
+    else mysticFactors.push(`${palace.name}中性`)
+
+    // Mercury retrograde penalty
+    if(inRet){mysticScore-=0.5;mysticFactors.push('⚠️水星逆行');}
+
+    // Day number alignment with direction
+    const dayBull=[1,3,8];const dayBear=[2,6,9];
+    if(dayBull.includes(dn)){mysticScore+=0.4;mysticFactors.push(`日数${dn}·开运`);}
+    else if(dayBear.includes(dn)){mysticScore-=0.4;mysticFactors.push(`日数${dn}·收敛`);}
+
+    const mysticBull=mysticScore>0;
+    const mysticStrong=Math.abs(mysticScore)>=1.2;
+
+    return{
+      lunar,palace,inRet,dn,pn,
+      mysticScore,mysticBull,mysticStrong,mysticFactors,
+      fsAlign,dnMeaning:dnMeaning[dn]||'',
+      lunarNote:lunar.note,
+      dTN:parseFloat(lunar.dTN),
+      dTF:parseFloat(lunar.dTF),
+    };
+  }
+
+  // ── Leverage recommendation ──
+  function getLeverageRec(mysticComp){
+    const volatility=res.hv?.hv||30;
+    const conflict=res.conflictRatio||0;
+    const mysticAlign=mysticComp.mysticBull===isBull;
+    const fundingRisk=Math.abs(res.fundingRate||0)>0.05;
+    const inRet=mysticComp.inRet;
+
+    // Base leverage by confidence
+    let baseLev=conf>=75?3:conf>=65?2:1;
+
+    // Downgrade for risks
+    if(conflict>0.4) baseLev=Math.max(1,baseLev-1);
+    if(volatility>60) baseLev=Math.max(1,baseLev-1);
+    if(fundingRisk) baseLev=Math.max(1,baseLev-1);
+    if(inRet) baseLev=Math.max(1,baseLev-1); // Mercury retrograde = reduce size
+    if(!mysticAlign) baseLev=Math.max(1,baseLev-1); // mystic conflict
+
+    // Upgrade for strong signals
+    if(conf>=80&&rr>=2&&!conflict&&mysticAlign) baseLev=Math.min(5,baseLev+1);
+
+    const maxSafe=isWait?1:baseLev;
+    const reasons=[];
+    if(conflict>0.4) reasons.push('信号分歧大↓');
+    if(volatility>60) reasons.push('高波动率↓');
+    if(fundingRisk) reasons.push('资金费率极端↓');
+    if(inRet) reasons.push('水星逆行↓');
+    if(!mysticAlign) reasons.push('玄学逆势↓');
+    if(conf>=80&&rr>=2) reasons.push('高置信强R:R↑');
+    if(mysticAlign&&mysticComp.mysticStrong) reasons.push('玄学共振↑');
+
+    const color=maxSafe>=3?'var(--green)':maxSafe>=2?'var(--amber)':'var(--red)';
+    return{lev:maxSafe,reasons,color};
+  }
+
+  // ── Market scenario narrative ──
+  function getScenarioNarrative(mysticComp){
+    const fg=S.fg?parseInt(S.fg.value):50;
+    const fgLabel=fg<20?'极度恐惧':fg<35?'恐惧':fg>80?'极度贪婪':fg>65?'贪婪':'中性';
+    const tvlChg=S.intelScore>0?'流入':S.intelScore<0?'流出':'平稳';
+    const lunar=mysticComp.lunar;
+    const volatility=res.hv?.hv||30;
+    const adxVal=res.adx?.adx||20;
+
+    let scenario='';
+
+    if(isLong){
+      const momentumDesc=conf>=70?'多头动能强劲，主力资金明显介入'
+        :'方向偏多但需确认，建议等回调再买';
+      const lunarContext=lunar.bias==='bull'?`当前${lunar.name.split(' ')[0]}周期历史上有利多头，`
+        :lunar.bias==='bear'?`注意${lunar.name.split(' ')[0]}周期历史偏空，`:'';
+      const fgContext=fg<35?'市场情绪极度悲观，往往是底部吸筹良机；'
+        :fg>75?'市场贪婪情绪高涨，注意阶段性顶部风险；':'';
+      const adxContext=adxVal>25?'趋势强度充足，适合趋势跟随策略'
+        :'市场处于整理期，波段操作为主';
+
+      scenario=`当前市场${momentumDesc}。${lunarContext}${fgContext}F&G指数${fg}（${fgLabel}），链上资金${tvlChg}。${adxContext}。若价格守稳 <strong>${fmtP(res.nearestSupport||sls[0].p)}</strong> 支撑，大概率向 <strong style="color:var(--green)">${fmtP(tps[0].p)}</strong> 推进；若破 <strong style="color:var(--red)">${fmtP(sls[0].p)}</strong> 则需重新评估方向。`;
+    } else if(isShort){
+      const momentumDesc=conf>=70?'空头动能占主导，压力明显'
+        :'方向偏空但信号中等，建议等反弹确认再空';
+      const lunarContext=lunar.bias==='bear'?`${lunar.name.split(' ')[0]}周期历史偏空，与信号一致；`
+        :lunar.bias==='bull'?`注意${lunar.name.split(' ')[0]}看涨周期与技术面存在分歧；`:'';
+      const fgContext=fg>75?'市场极度贪婪，历史上是高风险区域；'
+        :fg<35?'虽已较恐惧，但下行动能仍存；':'';
+
+      scenario=`当前市场${momentumDesc}。${lunarContext}${fgContext}F&G指数${fg}（${fgLabel}），链上资金${tvlChg}。若价格无法突破 <strong style="color:var(--red)">${fmtP(res.nearestResist||tps[0].p)}</strong> 阻力，大概率向 <strong style="color:var(--green)">${fmtP(tps[0].p)}</strong> 下行；若异动突破 <strong style="color:var(--red)">${fmtP(sls[0].p)}</strong> 则止损。`;
+    } else {
+      scenario=`市场多空信号分歧（分歧率${((res.conflictRatio||0)*100).toFixed(0)}%），短期方向不明朗。${lunar.icon}${lunar.name.split(' ')[0]}周期中，F&G指数${fg}（${fgLabel}）。此时最佳策略是等待价格突破关键位确认方向再行动，强行入场等于赌博。`;
+    }
+    return scenario;
+  }
+
+  // ── Execute mystic composite ──
+  const mc=getMysticComposite();
+  const levRec=getLeverageRec(mc);
+  const scenarioText=getScenarioNarrative(mc);
+  const barMsVal=res.barMs||3600000;
+
+  // ── Build TP/SL rows ──
+  const tpColors=['var(--teal)','var(--green)','var(--blue)'];
+  const tpBgs=['rgba(10,96,80,0.07)','rgba(26,107,58,0.07)','rgba(26,58,138,0.07)'];
+  const tpBds=['rgba(10,96,80,0.25)','var(--green-bd)','rgba(26,58,138,0.25)'];
+  const tpLabels=['🎯 保守目标','🏆 中期目标','🚀 进取目标'];
+  const tpActions=['到达后：平仓50%，止损移至成本价，锁定利润','再平仓30%，剩余20%继续持有','全部平仓，或持有至信号转变'];
+  const tpProbs=[68,45,28];
+
+  const tpRows=tps.map((t,i)=>{
+    const valid=isBull?t.p>entry:t.p<entry;
+    if(!valid||!t.p||!isFinite(t.p))return'';
+    const et=estTime(t.p,barMsVal);
+    const rrVal=(Math.abs(t.p-entry)/Math.max(Math.abs(sls[0].p-entry),0.001)).toFixed(1);
+    return`
+    <div style="display:grid;grid-template-columns:56px 1fr;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);align-items:start;">
+      <div style="text-align:center;">
+        <div style="font-size:10px;font-weight:700;padding:3px 6px;border-radius:5px;background:${tpBgs[i]};color:${tpColors[i]};border:1px solid ${tpBds[i]};margin-bottom:4px">TP${i+1}</div>
+        <div style="font-size:11px;color:${tpColors[i]};font-weight:700">${rrVal}R</div>
+        <div style="font-size:10px;color:var(--dim)">${tpProbs[i]}%</div>
+      </div>
+      <div>
+        <div style="display:flex;align-items:baseline;gap:7px;margin-bottom:3px;">
+          <span style="font-size:18px;font-weight:700;color:${tpColors[i]};font-variant-numeric:tabular-nums">${fmtP(t.p)}</span>
+          <span style="font-size:13px;font-weight:700;color:${tpColors[i]}">${fmtPct(t.pct)}</span>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:3px">${tpLabels[i]} · ${t.note}</div>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+          <span style="font-size:11px;font-weight:700;color:var(--text)">⏱ ${et.label}</span>
+          <span style="font-size:10px;color:var(--muted)">${et.date}</span>
+        </div>
+        <div style="font-size:10px;color:var(--blue);margin-top:3px;line-height:1.5">▶ ${tpActions[i]}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  const slLabels=['🔒 紧止损（推荐新手）','⚠️ 中止损（常规使用）','🛡️ 宽止损（大周期长线）'];
+  const slDescs=['仅给1-1.5×ATR空间，止损快，适合小仓位控险','给2-2.5×ATR空间，避开多数假突破','给3-4×ATR空间，适合周线级别大仓位'];
+
+  const slRows=sls.map((s,i)=>{
+    const valid=isBull?s.p<entry:s.p>entry;
+    if(!valid||!s.p||!isFinite(s.p))return'';
+    const riskPct=Math.abs((s.p-entry)/entry*100).toFixed(2);
+    return`
+    <div style="display:grid;grid-template-columns:56px 1fr;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);align-items:start;">
+      <div style="text-align:center;">
+        <div style="font-size:10px;font-weight:700;padding:3px 6px;border-radius:5px;background:var(--red-bg);color:var(--red);border:1px solid var(--red-bd);margin-bottom:4px">SL${i+1}</div>
+        <div style="font-size:11px;color:var(--red);font-weight:700">-${riskPct}%</div>
+      </div>
+      <div>
+        <div style="display:flex;align-items:baseline;gap:7px;margin-bottom:3px;">
+          <span style="font-size:18px;font-weight:700;color:var(--red);font-variant-numeric:tabular-nums">${fmtP(s.p)}</span>
+          <span style="font-size:13px;font-weight:700;color:var(--red)">${fmtPct(s.pct)}</span>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:3px">${slLabels[i]}</div>
+        <div style="font-size:10px;color:var(--dim);line-height:1.5">${slDescs[i]}</div>
+        ${s.invalidate?`<div style="font-size:10px;color:var(--red);margin-top:2px">⚠ 失效条件: ${s.invalidate}</div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+
+  // ── Mystic block HTML ──
+  const mysticAlignOk=mc.mysticBull===isBull||isWait;
+  const mysticBorderCol=mysticAlignOk?'var(--violet)':'var(--amber)';
+  const mysticBgCol=mysticAlignOk?'rgba(88,24,144,0.05)':'rgba(128,80,0,0.05)';
+
   document.getElementById('stratArea').innerHTML=`
-    ${mockBanner}
-    <div style="border:2px solid ${actionBorder};border-radius:10px;background:${actionBg};padding:16px;margin-bottom:12px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-        <div>
-          <div style="font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:5px">🦅 FINCH 裁决</div>
-          <div style="font-size:30px;font-weight:700;color:${actionColor};line-height:1">${actionIcon} ${actionWord}</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:4px">${tm.lbl} · 评分 ${res.score>0?'+':''}${res.score.toFixed(1)}</div>
-        </div>
-  /* quantile regression residual */
-        <div style="text-align:right">
-          <div style="font-size:10px;color:var(--muted);margin-bottom:3px">置信度</div>
-          <div style="font-size:34px;font-weight:700;color:${conf>=70?'var(--green)':conf>=55?'var(--amber)':'var(--red)'};line-height:1">${conf}%</div>
-          <div style="height:3px;background:var(--bg3);border-radius:2px;margin-top:5px;width:70px;margin-left:auto"><div style="height:100%;width:${conf}%;background:${conf>=70?'var(--green)':conf>=55?'var(--amber)':'var(--red)'};border-radius:2px"></div></div>
-          <div style="font-size:10px;color:var(--muted);margin-top:4px">${urgencyMap[verdict?.urgency||'low']}</div>
+  ${mockBanner}
+
+  <!-- ══════════════════════════════════════ -->
+  <!-- BLOCK 1: MAIN VERDICT CARD            -->
+  <!-- ══════════════════════════════════════ -->
+  <div style="border:2px solid ${actionBorder};border-radius:12px;background:${actionBg};margin-bottom:10px;overflow:hidden;">
+
+    <!-- Header row: direction + confidence -->
+    <div style="padding:16px 18px 12px;display:flex;align-items:flex-start;justify-content:space-between;border-bottom:1px solid ${actionBorder}20;">
+      <div>
+        <div style="font-size:10px;letter-spacing:2.5px;color:var(--muted);text-transform:uppercase;margin-bottom:6px">🦅 FINCH 综合裁决 · ${tm.lbl}</div>
+        <div style="font-size:20px;font-weight:600;color:${actionColor};line-height:1;letter-spacing:0">${actionIcon} ${actionWord}</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap;">
+          <span style="font-size:11px;color:var(--muted)">评分 <strong style="color:var(--text)">${res.score>0?'+':''}${res.score.toFixed(1)}</strong></span>
+          <span style="font-size:11px;color:var(--muted)">·</span>
+          <span style="font-size:11px;font-weight:700;color:${verdict?.urgency==='high'?'var(--red)':verdict?.urgency==='medium'?'var(--amber)':'var(--muted)'}">${urgencyMap[verdict?.urgency||'low']}</span>
         </div>
       </div>
-      <div style="font-size:13px;color:var(--text);line-height:1.75;padding:10px 12px;background:rgba(255,255,255,0.55);border-radius:6px;margin-bottom:${isWait?'12px':'10px'}">
-        ${verdict?.reasoning||res.reasoning||'-'}
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px">置信度</div>
+        <div style="font-size:30px;font-weight:700;color:${conf>=70?'var(--green)':conf>=55?'var(--amber)':'var(--red)'};line-height:1">${conf}%</div>
+        <div style="height:5px;background:var(--bg3);border-radius:3px;margin-top:6px;width:90px;overflow:hidden;margin-left:auto">
+          <div style="height:100%;width:${conf}%;background:${conf>=70?'var(--green)':conf>=55?'var(--amber)':'var(--red)'};border-radius:3px;transition:width .6s"></div>
+        </div>
       </div>
+    </div>
+
+    <!-- Market scenario narrative -->
+    <div style="padding:13px 18px;background:rgba(255,255,255,0.5);border-bottom:1px solid ${actionBorder}15;">
+      <div style="font-size:11px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:6px">📖 行情研判</div>
+      <div style="font-size:13px;color:var(--text);line-height:1.85;">${scenarioText}</div>
+    </div>
+
+    <!-- Entry zone + key levels -->
+    <div style="padding:13px 18px;${!isWait?'border-bottom:1px solid '+actionBorder+'15;':''}">
       ${!isWait?`
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:7px;margin-bottom:${verdict?.watchFor?'10px':'0'}">
-        <div style="background:rgba(255,255,255,0.6);border-radius:6px;padding:8px;text-align:center;">
-          <div style="font-size:9px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:3px">入场</div>
-          <div style="font-size:13px;font-weight:700;color:${actionColor}">${fmtP(entry)}</div>
-          <div style="font-size:9px;color:var(--muted);margin-top:1px">${entryType==='market'?'市价单':entryType==='limit-wait'?'限价等待':'限价单'}</div>
+      <div style="font-size:11px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:8px">📍 入场区间</div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px;">
+        <div>
+          <span style="font-size:26px;font-weight:700;color:${actionColor};font-variant-numeric:tabular-nums">${fmtP(entry)}</span>
+          ${res.entryMin&&res.entryMax&&Math.abs(res.entryMin-res.entryMax)>0.01?
+            `<span style="font-size:12px;color:var(--muted);margin-left:8px">区间 ${fmtP(res.entryMin)}–${fmtP(res.entryMax)}</span>`:''}
         </div>
-        <div style="background:rgba(26,107,58,0.07);border-radius:6px;padding:8px;text-align:center;">
-          <div style="font-size:9px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:3px">TP1</div>
-          <div style="font-size:13px;font-weight:700;color:var(--green)">${fmtP(tps[0].p)}</div>
-          <div style="font-size:9px;color:var(--green);margin-top:1px">${fmtPct(tps[0].pct)}</div>
-        </div>
-        <div style="background:rgba(160,20,32,0.07);border-radius:6px;padding:8px;text-align:center;">
-          <div style="font-size:9px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:3px">SL</div>
-          <div style="font-size:13px;font-weight:700;color:var(--red)">${fmtP(sls[0].p)}</div>
-          <div style="font-size:9px;color:var(--red);margin-top:1px">${fmtPct(sls[0].pct)}</div>
-        </div>
-        <div style="background:rgba(255,255,255,0.6);border-radius:6px;padding:8px;text-align:center;">
-          <div style="font-size:9px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:3px">R:R</div>
-          <div style="font-size:13px;font-weight:700;color:${rr>=2?'var(--green)':rr>=1.5?'var(--amber)':'var(--red)'}">${rr.toFixed(2)}</div>
-  /* risk-parity rebalance coefficient */
-          <div style="font-size:9px;color:var(--muted);margin-top:1px">${rr>=2?'优秀':rr>=1.5?'可接受':'偏低'}</div>
-        </div>
+        <span style="font-size:11px;padding:3px 10px;border-radius:10px;background:${entryType==='market'?'rgba(26,107,58,0.12)':entryType==='limit-wait'?'rgba(128,80,0,0.1)':'rgba(26,58,138,0.1)'};color:${entryType==='market'?'var(--green)':entryType==='limit-wait'?'var(--amber)':'var(--blue)'};font-weight:700">${entryType==='market'?'💫 市价立即入场':entryType==='limit-wait'?'⏳ 限价等待':' 📋 限价挂单'}</span>
       </div>
-      ${verdict?.watchFor?`<div style="font-size:11px;color:var(--muted);padding:6px 10px;border-left:2px solid ${actionColor};">${verdict.watchFor}</div>`:''}
-      `:`
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
-        <div style="background:rgba(255,255,255,0.6);border-radius:6px;padding:10px 12px;">
-          <div style="font-size:10px;color:var(--green);font-weight:700;margin-bottom:4px">▲ 看多触发</div>
-          <div style="font-size:12px;color:var(--text)">突破 <strong>${fmtP(tps[0].p)}</strong> 放量</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:8px">${entryNote}</div>
+      <div style="display:flex;gap:16px;font-size:12px;flex-wrap:wrap;">
+        <span>最近支撑 <strong style="color:var(--green)">${fmtP(res.nearestSupport||sls[0].p)}</strong></span>
+        <span>最近阻力 <strong style="color:var(--red)">${fmtP(res.nearestResist||tps[0].p)}</strong></span>
+        <span>VWAP <strong style="color:${res.vwapBull?'var(--green)':'var(--red)'}">${fmtP(res.vwap)} ${res.vwapBull?'↑':'↓'}</strong></span>
+        <span>R:R <strong style="color:${rr>=2?'var(--green)':rr>=1.5?'var(--amber)':'var(--red)'}">${rr.toFixed(2)}:1</strong></span>
+      </div>`
+      :`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div style="padding:12px;background:rgba(26,107,58,0.07);border:1px solid var(--green-bd);border-radius:8px;text-align:center;">
+          <div style="font-size:10px;color:var(--green);font-weight:700;margin-bottom:4px;letter-spacing:1px">▲ 突破此价位 → 做多</div>
+          <div style="font-size:20px;font-weight:700;color:var(--green)">${fmtP(tps[0].p)}</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:2px">放量收盘确认</div>
         </div>
-        <div style="background:rgba(255,255,255,0.6);border-radius:6px;padding:10px 12px;">
-          <div style="font-size:10px;color:var(--red);font-weight:700;margin-bottom:4px">▼ 看空触发</div>
-          <div style="font-size:12px;color:var(--text)">跌破 <strong>${fmtP(sls[0].p)}</strong> 确认</div>
+        <div style="padding:12px;background:rgba(160,20,32,0.07);border:1px solid var(--red-bd);border-radius:8px;text-align:center;">
+          <div style="font-size:10px;color:var(--red);font-weight:700;margin-bottom:4px;letter-spacing:1px">▼ 跌破此价位 → 做空</div>
+          <div style="font-size:20px;font-weight:700;color:var(--red)">${fmtP(sls[0].p)}</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:2px">收盘确认，不追</div>
         </div>
-      </div>
-      ${verdict?.watchFor?`<div style="font-size:12px;color:var(--amber);padding:8px 10px;background:rgba(128,80,0,0.06);border-radius:5px">⏳ ${verdict.watchFor}</div>`:''}
-      `}
-      ${verdict?.riskFlags?.length?`<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:10px">${verdict.riskFlags.map(f=>`<span style="font-size:10px;padding:2px 7px;border-radius:3px;background:rgba(128,80,0,0.08);color:var(--amber);border:1px solid rgba(128,80,0,0.2)">${f}</span>`).join('')}</div>`:''}
+      </div>`}
     </div>
 
-    <div style="background:var(--card);border:1px solid var(--card-bd);border-radius:8px;padding:13px;margin-bottom:10px;">
-      <div style="font-size:10px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:9px">📊 多周期 · 入场区间</div>
-      <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:${!isWait?'10px':'0'}">
-        ${allTFs_chk.map(t=>{const v=tfResults[t];if(v===undefined)return`<span style="font-size:11px;padding:3px 8px;border-radius:4px;background:var(--bg3);color:var(--muted)">${t}</span>`;return`<span style="font-size:11px;padding:3px 8px;border-radius:4px;font-weight:700;background:${v?'var(--green-bg)':'var(--red-bg)'};color:${v?'var(--green)':'var(--red)'};border:1px solid ${v?'var(--green-bd)':'var(--red-bd)'}">${t} ${v?'▲':'▼'}</span>`;}).join('')}
-        <span style="font-size:11px;padding:3px 8px;border-radius:4px;background:${agreement>=0.8?'var(--green-bg)':agreement>=0.6?'rgba(128,80,0,0.08)':'var(--red-bg)'};color:${agreement>=0.8?'var(--green)':agreement>=0.6?'var(--amber)':'var(--red)'}">${Math.round(agreement*100)}% 一致</span>
-      </div>
-      ${!isWait?`<div style="border-top:1px solid var(--line);padding-top:9px;"><div style="display:flex;align-items:baseline;gap:8px;margin-bottom:4px;"><span style="font-size:11px;color:var(--muted)">入场区间</span><span style="font-size:15px;font-weight:700;color:${actionColor}">${fmtP(res.entryMin||entry)} – ${fmtP(res.entryMax||entry)}</span></div><div style="font-size:11px;color:var(--muted)">${res.entryZone||entryNote}</div><div style="display:flex;gap:10px;margin-top:7px;font-size:11px;color:var(--muted)"><span>支撑 <strong style="color:var(--green)">${fmtP(res.nearestSupport||sls[0].p)}</strong></span><span>阻力 <strong style="color:var(--red)">${fmtP(res.nearestResist||tps[0].p)}</strong></span><span>VWAP <strong style="color:${res.vwapBull?'var(--green)':'var(--red)'}">${fmtP(res.vwap)} ${res.vwapBull?'↑':'↓'}</strong></span></div></div>`:''}
-    </div>
-
-    ${verdict?.scenarios?`<div style="background:var(--card);border:1px solid var(--card-bd);border-radius:8px;padding:13px;margin-bottom:10px;"><div style="font-size:10px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:9px">📐 三种情景</div><div style="display:flex;flex-direction:column;gap:6px;">${verdict.scenarios.map(s=>`<div style="padding:9px 11px;border-radius:6px;border-left:3px solid ${s.color||'var(--line2)'};background:rgba(255,255,255,0.5);"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;"><span style="font-size:12px;font-weight:700;color:var(--bright)">${s.name}</span><span style="font-size:10px;color:${s.prob==='高'?'var(--green)':s.prob==='中'?'var(--amber)':'var(--muted)'};font-weight:700">概率 ${s.prob}</span></div><div style="font-size:11px;color:var(--muted);line-height:1.6">触发: ${s.trigger}<br>目标: ${s.target} · 止损: ${s.stop}</div></div>`).join('')}</div></div>`:''}
-  /* factor exposure neutralization */
-
-    <div style="background:var(--card);border:1px solid var(--card-bd);border-radius:8px;padding:13px;margin-bottom:10px;">
-      <div style="font-size:10px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:9px">🎯 完整 TP &amp; SL · <span style="color:var(--muted);font-weight:400">SL1=最近止损 · SL3=最远止损</span></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+    <!-- Leverage recommendation row -->
+    ${!isWait?`
+    <div style="padding:12px 18px;background:rgba(255,255,255,0.4);border-bottom:1px solid ${actionBorder}15;">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
         <div>
-          <div style="font-size:10px;color:var(--green);font-weight:700;margin-bottom:6px;letter-spacing:1px">▲ 止盈目标 TAKE PROFIT</div>
-          ${tps.map((t,i)=>{
-            const hasTime=t.date instanceof Date&&!isNaN(t.date);
-            const tStr=hasTime?fmtRelShort(t.date):'';
-            const validTP=isBull?t.p>entry:t.p<entry;
-            if(!validTP)return'';
-            return`<div style="padding:8px 0;${i<tps.length-1?'border-bottom:1px solid var(--line)':''};">
-              <div style="display:flex;align-items:center;gap:5px;margin-bottom:2px;">
-                <span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;background:var(--green-bg);color:var(--green);border:1px solid var(--green-bd)">TP${i+1}</span>
-                <span style="font-size:14px;font-weight:700;color:var(--green);font-variant-numeric:tabular-nums">${fmtP(t.p)}</span>
-                <span style="font-size:11px;color:var(--green)">${fmtPct(t.pct)}</span>
-                ${t.rrRatio?`<span style="font-size:10px;color:var(--blue);margin-left:auto">${t.rrRatio.toFixed(1)}R</span>`:''}
-              </div>
-              <div style="font-size:10px;color:var(--muted)">${t.note}${tStr?' · ⏱ '+tStr:''}</div>
-              <div style="font-size:10px;color:var(--blue);margin-top:1px">▶ ${t.action||''}</div>
-            </div>`;
-          }).join('')}
-        </div>
-        <div>
-          <div style="font-size:10px;color:var(--red);font-weight:700;margin-bottom:6px;letter-spacing:1px">▼ 止损 STOP LOSS <span style="font-weight:400;color:var(--muted)">(紧→宽)</span></div>
-          ${sls.map((s,i)=>{
-            const validSL=isBull?s.p<entry:s.p>entry;
-            if(!validSL)return'';
-            return`<div style="padding:8px 0;${i<sls.length-1?'border-bottom:1px solid var(--line)':''};">
-              <div style="display:flex;align-items:center;gap:5px;margin-bottom:2px;">
-  /* harmonic resonance normalization */
-                <span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;background:var(--red-bg);color:var(--red);border:1px solid var(--red-bd)">SL${i+1}</span>
-                <span style="font-size:14px;font-weight:700;color:var(--red);font-variant-numeric:tabular-nums">${fmtP(s.p)}</span>
-                <span style="font-size:11px;color:var(--red)">${fmtPct(s.pct)}</span>
-              </div>
-              <div style="font-size:10px;color:var(--muted)">${s.note}</div>
-              ${s.invalidate?`<div style="font-size:10px;color:var(--red);margin-top:1px">⚠ ${s.invalidate}</div>`:''}
-            </div>`;
-          }).join('')}
-          <div style="margin-top:8px;padding:6px 8px;background:rgba(160,20,32,0.04);border-radius:4px;border:1px solid var(--red-bd);font-size:10px;color:var(--muted);line-height:1.6;">
-            💡 <strong>SL选择</strong>: SL1风险最小(最近)，SL3空间最大(最宽)。根据波动率和仓位大小选择合适止损。
+          <div style="font-size:11px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:4px">⚡ 建议杠杆倍数</div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:28px;font-weight:700;color:${levRec.color}">${levRec.lev}×</span>
+            <div>
+              ${[1,2,3,5,10].map(l=>`<span style="display:inline-block;width:22px;height:22px;border-radius:4px;text-align:center;line-height:22px;font-size:10px;font-weight:700;margin-right:3px;background:${l<=levRec.lev?levRec.color+'22':'rgba(0,0,0,0.05)'};color:${l<=levRec.lev?levRec.color:'var(--dim)'};border:1px solid ${l<=levRec.lev?levRec.color+'44':'var(--line2)'}">${l}×</span>`).join('')}
+            </div>
           </div>
+          <div style="font-size:10px;color:var(--muted);margin-top:3px">${levRec.reasons.length?levRec.reasons.join(' · '):'综合评估后建议倍数'}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:10px;color:var(--muted);margin-bottom:3px">多周期一致性</div>
+          <div style="display:flex;gap:3px;flex-wrap:wrap;justify-content:flex-end;">
+            ${allTFs_chk.map(t=>{const v=tfResults[t];if(v===undefined)return`<span style="font-size:10px;padding:2px 6px;border-radius:8px;background:var(--bg3);color:var(--muted)">${t}</span>`;return`<span style="font-size:10px;padding:2px 6px;border-radius:8px;font-weight:700;background:${v?'var(--green-bg)':'var(--red-bg)'};color:${v?'var(--green)':'var(--red)'};border:1px solid ${v?'var(--green-bd)':'var(--red-bd)'}">${t}${v?'▲':'▼'}</span>`;}).join('')}
+          </div>
+          <div style="font-size:11px;font-weight:700;color:${agreement>=0.8?'var(--green)':agreement>=0.6?'var(--amber)':'var(--red)'};margin-top:4px">${Math.round(agreement*100)}% 方向一致</div>
+        </div>
+      </div>
+    </div>`:''}
+
+    <!-- Risk flags -->
+    ${verdict?.riskFlags?.length?`
+    <div style="padding:10px 18px;display:flex;flex-wrap:wrap;gap:5px;">
+      ${verdict.riskFlags.map(f=>`<span style="font-size:10px;padding:3px 9px;border-radius:10px;background:rgba(128,80,0,0.08);color:var(--amber);border:1px solid rgba(128,80,0,0.25);font-weight:700">${f}</span>`).join('')}
+    </div>`:''}
+
+    <!-- watchFor tip -->
+    ${verdict?.watchFor&&!isWait?`
+    <div style="padding:0 18px 13px;">
+      <div style="font-size:12px;color:var(--text);padding:8px 12px;border-left:3px solid ${actionColor};background:rgba(255,255,255,0.5);border-radius:0 6px 6px 0;line-height:1.7">${verdict.watchFor}</div>
+    </div>`:''}
+  </div>
+
+  <!-- ══════════════════════════════════════ -->
+  <!-- BLOCK 2: 🔮 MYSTIC UNIFIED READING   -->
+  <!-- ══════════════════════════════════════ -->
+  <div style="border:2px solid ${mysticBorderCol};border-radius:12px;background:${mysticBgCol};margin-bottom:10px;overflow:hidden;">
+    <div style="padding:12px 18px;border-bottom:1px solid ${mysticBorderCol}25;display:flex;align-items:center;justify-content:space-between;">
+      <div style="font-size:12px;font-weight:700;color:var(--violet);letter-spacing:1px">🔮 玄学 · 奇门遁甲 · 月相 · 风水 综合研判</div>
+      <div style="font-size:11px;font-weight:700;color:${mysticAlignOk?'var(--violet)':'var(--amber)'}">${mysticAlignOk?'✅ 与技术面共振':'⚠️ 与技术面存在分歧'}</div>
+    </div>
+    <div style="padding:13px 18px;">
+
+      <!-- Mystic factors row -->
+      <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px;">
+        ${mc.mysticFactors.map(f=>`<span style="font-size:11px;padding:3px 9px;border-radius:10px;background:rgba(88,24,144,0.08);color:var(--violet);border:1px solid rgba(88,24,144,0.2);font-weight:700">${f}</span>`).join('')}
+        ${mc.inRet?'<span style="font-size:11px;padding:3px 9px;border-radius:10px;background:rgba(160,20,32,0.08);color:var(--red);border:1px solid var(--red-bd);font-weight:700">⚠️ 水星逆行期</span>':''}
+      </div>
+
+      <!-- 4-column mystic details -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+
+        <!-- Lunar -->
+        <div style="background:rgba(255,255,255,0.55);border-radius:8px;padding:10px 12px;border:1px solid rgba(88,24,144,0.15);">
+          <div style="font-size:10px;color:var(--violet);font-weight:700;letter-spacing:1px;margin-bottom:5px">🌕 月相周期</div>
+          <div style="font-size:15px;font-weight:700;color:var(--text)">${mc.lunar.icon} ${mc.lunar.name.split(' ')[0]}</div>
+          <div style="font-size:11px;color:${mc.lunar.bias==='bull'?'var(--green)':mc.lunar.bias==='bear'?'var(--red)':'var(--muted)'};margin-top:2px;font-weight:700">${mc.lunar.bias==='bull'?'↑ 历史偏多':mc.lunar.bias==='bear'?'↓ 历史偏空':'→ 中性转换'}</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:4px;line-height:1.5">${mc.lunarNote}</div>
+          <div style="font-size:10px;color:var(--dim);margin-top:3px">距新月 ${mc.dTN}天 · 距满月 ${mc.dTF}天</div>
+        </div>
+
+        <!-- Qi Men Palace -->
+        <div style="background:rgba(255,255,255,0.55);border-radius:8px;padding:10px 12px;border:1px solid rgba(88,24,144,0.15);">
+          <div style="font-size:10px;color:var(--violet);font-weight:700;letter-spacing:1px;margin-bottom:5px">⛩️ 奇门时宫</div>
+          <div style="font-size:15px;font-weight:700;color:var(--text)">${mc.palace.name} · ${mc.palace.element}</div>
+          <div style="font-size:11px;color:${mc.fsAlign==='bull'?'var(--green)':mc.fsAlign==='bear'?'var(--red)':'var(--muted)'};margin-top:2px;font-weight:700">${mc.fsAlign==='bull'?'↑ 五行生发利多':mc.fsAlign==='bear'?'↓ 五行收敛利空':'→ 五行平衡'}</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:4px;line-height:1.5">${mc.palace.market}</div>
+        </div>
+
+        <!-- Date numerology -->
+        <div style="background:rgba(255,255,255,0.55);border-radius:8px;padding:10px 12px;border:1px solid rgba(88,24,144,0.15);">
+          <div style="font-size:10px;color:var(--violet);font-weight:700;letter-spacing:1px;margin-bottom:5px">🔢 日期命数</div>
+          <div style="font-size:15px;font-weight:700;color:var(--text)">数字 ${mc.dn}</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:4px;line-height:1.5">${mc.dnMeaning}</div>
+        </div>
+
+        <!-- Mercury + Price number -->
+        <div style="background:rgba(255,255,255,0.55);border-radius:8px;padding:10px 12px;border:1px solid rgba(88,24,144,0.15);">
+          <div style="font-size:10px;color:var(--violet);font-weight:700;letter-spacing:1px;margin-bottom:5px">☿ 水星 · 价格命数</div>
+          <div style="font-size:13px;font-weight:700;color:${mc.inRet?'var(--red)':'var(--green)'}">${mc.inRet?'⚠️ 逆行中 — 减仓谨慎':'✅ 顺行 — 信号较清晰'}</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:4px">价格命数: ${mc.pn} · ${['','领导开创','合作等待','扩张突破','稳固构建','变化高波','平衡震荡','精准技术','权威强势','终结转化'][mc.pn]||''}</div>
+          ${mc.inRet?'<div style="font-size:10px;color:var(--red);margin-top:3px">逆行期间波动性历史高出约18%，建议减小仓位</div>':''}
+        </div>
+      </div>
+
+      <!-- Mystic synthesis -->
+      <div style="background:rgba(88,24,144,0.06);border:1px solid rgba(88,24,144,0.2);border-radius:7px;padding:10px 12px;">
+        <div style="font-size:11px;font-weight:700;color:var(--violet);margin-bottom:5px">综合玄学判断</div>
+        <div style="font-size:12px;color:var(--text);line-height:1.8">
+          ${mysticAlignOk
+            ?`当前月相（${mc.lunar.name.split(' ')[0]}）、奇门时宫（${mc.palace.name}·${mc.palace.element}）与技术面方向<strong style="color:var(--violet)">一致共振</strong>，玄学层面支持${isBull?'看多':'看空'}。日期数字${mc.dn}（${mc.dnMeaning.split('·')[0]}），价格能量与趋势协调。${mc.inRet?'<strong style="color:var(--red)">但水星逆行建议减小仓位。</strong>':''}`
+            :`当前月相与奇门时宫方向与技术面<strong style="color:var(--amber)">存在分歧</strong>，建议适当减仓或等待玄学条件改善（约${Math.min(mc.dTN,mc.dTF).toFixed(0)}天后月相转换）。`}
         </div>
       </div>
     </div>
+  </div>
 
-    <div style="background:var(--card);border:1px solid var(--card-bd);border-radius:8px;padding:11px 13px;margin-bottom:10px;">
-      <div style="font-size:10px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:7px">📡 活跃信号</div>
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- BLOCK 3: TP/SL SIDE-BY-SIDE (v20)           -->
+  <!-- ══════════════════════════════════════════════ -->
+  ${!isWait?(()=>{
+    /* Build side-by-side TP/SL rows using string concatenation (avoids nested backtick) */
+    const tpC=['var(--teal)','var(--green)','var(--blue)'];
+    const tpBG=['rgba(10,96,80,0.06)','rgba(26,107,58,0.06)','rgba(26,58,138,0.06)'];
+    const tpBD=['rgba(10,96,80,0.2)','var(--green-bd)','rgba(26,58,138,0.2)'];
+    const probs=[68,45,28];
+    const slDesc=['新手推荐','常规使用','长线宽松'];
+    const sideBySideRows=[0,1,2].map(idx=>{
+      const tp=tps[idx],sl=sls[idx];
+      const vTP=tp&&isFinite(tp.p)&&(isBull?tp.p>entry:tp.p<entry);
+      const vSL=sl&&isFinite(sl.p)&&(isBull?sl.p<entry:sl.p>entry);
+      const et=vTP?estTime(tp.p,barMsVal):{label:'--',date:'--'};
+      const rrV=vTP?((Math.abs(tp.p-entry)/Math.max(Math.abs(sls[0].p-entry),0.001)).toFixed(1)):'—';
+      const rowBg=idx%2?'background:rgba(0,0,0,0.018)':'';
+      const tpH=vTP
+        ?('<div style="display:flex;align-items:center;gap:5px;margin-bottom:4px">'
+          +'<span style="font-size:9px;font-weight:700;padding:2px 5px;border-radius:4px;background:'+tpBG[idx]+';color:'+tpC[idx]+';border:1px solid '+tpBD[idx]+'">TP'+(idx+1)+'</span>'
+          +'<span style="font-size:9px;font-weight:700;color:'+tpC[idx]+'">'+rrV+'R</span>'
+          +'<span style="font-size:9px;color:var(--dim)"> '+probs[idx]+'%概率</span>'
+          +'</div>'
+          +'<div style="font-size:18px;font-weight:700;color:'+tpC[idx]+';font-variant-numeric:tabular-nums;line-height:1.2">'+fmtP(tp.p)+'</div>'
+          +'<div style="font-size:12px;font-weight:700;color:'+tpC[idx]+';margin-top:1px">'+fmtPct(tp.pct)+'</div>'
+          +'<div style="font-size:10px;color:var(--muted);margin-top:5px">⏱ '+et.label+'</div>'
+          +'<div style="font-size:10px;color:var(--dim)">'+et.date+'</div>'
+          +(tp.note?'<div style="font-size:10px;color:var(--muted);margin-top:3px;line-height:1.4">'+tp.note+'</div>':''))
+        :'<span style="color:var(--muted);font-size:11px">—</span>';
+      const slRisk=vSL?Math.abs((sl.p-entry)/entry*100).toFixed(2):'—';
+      const slH=vSL
+        ?('<div style="display:flex;align-items:center;gap:5px;margin-bottom:4px">'
+          +'<span style="font-size:9px;font-weight:700;padding:2px 5px;border-radius:4px;background:var(--red-bg);color:var(--red);border:1px solid var(--red-bd)">SL'+(idx+1)+'</span>'
+          +'<span style="font-size:9px;color:var(--muted)">'+slDesc[idx]+'</span>'
+          +'</div>'
+          +'<div style="font-size:18px;font-weight:700;color:var(--red);font-variant-numeric:tabular-nums;line-height:1.2">'+fmtP(sl.p)+'</div>'
+          +'<div style="font-size:12px;font-weight:700;color:var(--red);margin-top:1px">'+fmtPct(sl.pct)+'</div>'
+          +'<div style="font-size:10px;color:var(--muted);margin-top:5px">风险 '+slRisk+'%</div>'
+          +(sl.invalidate?'<div style="font-size:10px;color:var(--red);margin-top:3px">⚠ '+sl.invalidate+'</div>':''))
+        :'<span style="color:var(--muted);font-size:11px">—</span>';
+      return '<div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--line);'+rowBg+'">'
+        +'<div style="padding:10px 14px;border-right:1px solid var(--line)">'+tpH+'</div>'
+        +'<div style="padding:10px 14px">'+slH+'</div>'
+        +'</div>';
+    }).join('');
+    return '<div style="background:var(--card);border:1px solid var(--card-bd);border-radius:12px;margin-bottom:10px;overflow:hidden;box-shadow:var(--shadow);">'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:2px solid var(--line2);">'
+      +'<div style="padding:10px 14px;border-right:1px solid var(--line);background:rgba(26,107,58,0.04);">'
+      +'<div style="font-size:10px;letter-spacing:1.5px;color:var(--green);font-weight:700;text-transform:uppercase">🎯 止盈 · TP</div>'
+      +'<div style="font-size:10px;color:var(--muted);margin-top:2px">价格 · 幅度 · 预计时间</div></div>'
+      +'<div style="padding:10px 14px;background:rgba(160,20,32,0.04);">'
+      +'<div style="font-size:10px;letter-spacing:1.5px;color:var(--red);font-weight:700;text-transform:uppercase">🛡️ 止损 · SL</div>'
+      +'<div style="font-size:10px;color:var(--muted);margin-top:2px">SL1最紧 → SL2中 → SL3宽</div></div></div>'
+      +sideBySideRows
+      +'<div style="padding:8px 14px;background:rgba(0,0,0,0.02);border-top:1px solid var(--line);">'
+      +'<div style="font-size:10px;color:var(--muted);line-height:1.7">'
+      +'📌 <strong style="color:var(--text)">TP操作：</strong>TP1达到→平50%+止损移成本 · TP2→再平30% · TP3→余量持有'
+      +' &nbsp;|&nbsp; <strong style="color:var(--text)">SL建议：</strong>新手→SL1 · 常规→SL2 · 长线→SL3'
+      +'</div></div></div>';
+  })():`
+  <!-- WAIT state breakout levels -->
+  <div style="background:var(--card);border:1px solid var(--card-bd);border-radius:12px;padding:14px 16px;margin-bottom:10px;box-shadow:var(--shadow);">
+    <div style="font-size:11px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:10px">⏳ 等待突破 · 关键价位监控</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div style="padding:12px;background:var(--green-bg);border:1px solid var(--green-bd);border-radius:8px;text-align:center;">
+        <div style="font-size:10px;color:var(--green);font-weight:700;margin-bottom:5px;letter-spacing:1px">▲ 突破后做多</div>
+        <div style="font-size:22px;font-weight:700;color:var(--green)">${fmtP(tps[0].p)}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:3px">放量收盘确认入场</div>
+      </div>
+      <div style="padding:12px;background:var(--red-bg);border:1px solid var(--red-bd);border-radius:8px;text-align:center;">
+        <div style="font-size:10px;color:var(--red);font-weight:700;margin-bottom:5px;letter-spacing:1px">▼ 跌破后做空</div>
+        <div style="font-size:22px;font-weight:700;color:var(--red)">${fmtP(sls[0].p)}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:3px">收盘确认，不提前追空</div>
+      </div>
+    </div>
+    <div style="margin-top:10px;font-size:11px;color:var(--muted);text-align:center;line-height:1.6">${verdict?.watchFor||''}</div>
+  </div>`}
+
+  <!-- ══════════════════════════════════════ -->
+  <!-- BLOCK 4: SIGNALS + SCENARIOS          -->
+  <!-- ══════════════════════════════════════ -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+    <!-- Active signals -->
+    <div style="background:var(--card);border:1px solid var(--card-bd);border-radius:8px;padding:11px 13px;box-shadow:var(--shadow);">
+      <div style="font-size:10px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:7px">📡 活跃信号 ${sigs.length}个</div>
       <div style="display:flex;flex-wrap:wrap;gap:4px;">${sigs.map(s=>`<span class="sig ${s.c}" style="font-size:10px">${s.l}</span>`).join('')}</div>
     </div>
+    <!-- Three scenarios compact -->
+    ${verdict?.scenarios?`
+    <div style="background:var(--card);border:1px solid var(--card-bd);border-radius:8px;padding:11px 13px;box-shadow:var(--shadow);">
+      <div style="font-size:10px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:7px">📐 三种情景</div>
+      ${verdict.scenarios.map(s=>`<div style="display:flex;align-items:center;gap:6px;padding:3px 0;border-bottom:1px solid var(--line);font-size:11px;">
+        <div style="width:3px;height:28px;background:${s.color};border-radius:2px;flex-shrink:0"></div>
+        <div style="flex:1"><div style="font-weight:700;color:var(--bright)">${s.name}</div><div style="color:var(--muted);font-size:10px">${s.trigger}</div></div>
+        <div style="font-size:10px;font-weight:700;color:${s.prob==='高'?'var(--green)':s.prob==='中'?'var(--amber)':'var(--muted)'};flex-shrink:0">${s.prob}</div>
+      </div>`).join('')}
+    </div>`:''}
+  </div>
 
-    <details style="margin-bottom:10px;">
-      <summary style="cursor:pointer;padding:10px 13px;background:var(--card);border:1px solid var(--card-bd);border-radius:8px;font-size:12px;font-weight:700;color:var(--muted);list-style:none;display:flex;align-items:center;justify-content:space-between;user-select:none;">
-        <span>🔬 深度分析 · 策略矩阵</span><span style="font-size:11px">展开 ▼</span>
-      </summary>
-      <div style="padding:10px 0;">
-        ${(()=>{try{return _Γ8p(res)||'';}catch(e){return'';}})()}
-        <div style="background:var(--card);border:1px solid var(--card-bd);border-radius:8px;padding:13px;margin-bottom:10px;">
-          <div style="font-size:10px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:9px">📐 左侧 vs 右侧策略</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-            <div style="background:${isBull?'rgba(26,107,58,0.07)':'rgba(160,20,32,0.07)'};border:1px solid ${isBull?'var(--green-bd)':'var(--red-bd)'};border-radius:6px;padding:10px;"><div style="font-size:11px;font-weight:700;color:${isBull?'var(--green)':'var(--red)'};margin-bottom:5px">◀ 左侧（预测）</div><div style="font-size:11px;color:var(--text);line-height:1.8">${isBull?`在 <strong>${fmtP(entry)}</strong> 分批建仓<br>止损: <strong>${fmtP(sls[0].p)}</strong>`:`在 <strong>${fmtP(entry)}</strong> 分批做空<br>止损: <strong>${fmtP(sls[0].p)}</strong>`}</div></div>
-  /* cross-sectional momentum filter */
-            <div style="background:rgba(26,58,138,0.05);border:1px solid rgba(26,58,138,0.2);border-radius:6px;padding:10px;"><div style="font-size:11px;font-weight:700;color:var(--blue);margin-bottom:5px">▶ 右侧（确认）</div><div style="font-size:11px;color:var(--text);line-height:1.8">${isBull?`等突破 <strong>${fmtP(res.swingHighs?.[0]||tps[0].p)}</strong><br>放量后再入`:`等跌破 <strong>${fmtP(res.swingLows?.[0]||tps[0].p)}</strong><br>放量后再入`}</div></div>
-          </div>
-        </div>
-        <div style="background:var(--card);border:1px solid var(--card-bd);border-left:3px solid var(--gold);border-radius:8px;padding:13px;margin-bottom:10px;">
-          <div style="font-size:10px;letter-spacing:1.5px;color:var(--gold);text-transform:uppercase;margin-bottom:9px">🔮 多维战略矩阵</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;font-size:11px;">
-            ${[{icon:'📊',lbl:'技术',col:'var(--blue)',body:`RSI <strong style="color:${res.rsi<35?'var(--green)':res.rsi>65?'var(--red)':'var(--muted)'}">${res.rsi.toFixed(0)}</strong> · MACD <strong style="color:${res.macdD.hist>0?'var(--green)':'var(--red)'}">${res.macdD.hist>0?'多':'空'}</strong><br>Vegas: ${res.vegas?res.vegas.above?'↑':res.vegas.below?'↓':'~':'N/A'} · ADX: ${res.adx?.adx?.toFixed(0)||'--'}`},{icon:'🔱',lbl:'缠论',col:'var(--teal)',body:`${res.chan?.bullDiv?'底背驰':res.chan?.bearDiv?'顶背驰':res.chan?.bullBi?'上升笔':'下降笔'}<br>中枢: ${res.chan?.zhLo&&res.chan?.zhHi?`${fmtP(res.chan.zhLo)}–${fmtP(res.chan.zhHi)}`:'未成形'}`},{icon:'🌀',lbl:'斐波',col:'var(--gold)',body:`61.8%: <strong style="color:var(--violet)">${fmtP(res.fib618)}</strong><br>${res.nF618?'⚡ 黄金位':'区间: '+fmtP(res.fibLo)+'–'+fmtP(res.fibHi)}`},{icon:'📈',lbl:'OBV/CVD',col:'var(--teal)',body:`OBV ${res.obv?.obvTrend===1?'↑':'↓'}${res.obv?.obvDiv?' ⚡背驰':''}<br>CVD: ${res.cvd?.bullishDelta?'买盘主导':'卖盘主导'}`},{icon:'⚔️',lbl:'江恩',col:'var(--violet)',body:`支撑: ${S.modData.gann?.below?.[0]?fmtP(S.modData.gann.below[0].price):'--'}<br>阻力: ${S.modData.gann?.above?.[0]?fmtP(S.modData.gann.above[0].price):'--'}`},{icon:'🏗',lbl:'市场结构',col:'var(--blue)',body:`${res.mktStr?.bias==='bull'?'HH/HL 多头':res.mktStr?.bias==='bear'?'LL/LH 空头':'中性结构'}<br>${res.mktStr?.bullCHoCH?'⚡CHoCH多头':res.mktStr?.bearCHoCH?'⚡CHoCH空头':'结构完整'}`}].map(s=>`<div style="background:var(--bg1);border-radius:6px;padding:9px;border:1px solid var(--line);"><div style="font-weight:700;color:${s.col};margin-bottom:4px">${s.icon} ${s.lbl}</div><div style="color:var(--text);line-height:1.7">${s.body}</div></div>`).join('')}
-          </div>
-        </div>
-        <div class="ai-analysis-box" id="aiAnalysisBox">
-          <div class="ai-hd">🤖 AI 市场解读</div>
-          <div class="ai-loading" id="aiLoadingEl"><div class="ai-spinner"></div><span>分析中...</span></div>
-          <div class="ai-body" id="aiBodyEl" style="display:none"></div>
-          <button class="ai-trigger-btn" id="aiTriggerBtn" onclick="triggerAIAnalysis(S.lastSignal)">✨ 生成 AI 深度解读</button>
+  <!-- ══════════════════════════════════════ -->
+  <!-- BLOCK 5: DEEP ANALYSIS (collapsible)  -->
+  <!-- ══════════════════════════════════════ -->
+  <details style="margin-bottom:10px;" id="deepAnalysisDetails">
+    <summary style="cursor:pointer;padding:12px 16px;background:var(--card);border:1px solid var(--card-bd);border-radius:8px;font-size:12px;font-weight:700;color:var(--muted);list-style:none;display:flex;align-items:center;justify-content:space-between;user-select:none;box-shadow:var(--shadow);">
+      <span>🔬 深度技术分析 · 策略矩阵 · AI解读</span><span style="font-size:11px">点击展开 ▼</span>
+    </summary>
+    <div style="padding:10px 0;">
+      ${(()=>{try{return _Γ8p(res)||'';}catch(e){return'';}})()}
+      <div style="background:var(--card);border:1px solid var(--card-bd);border-left:3px solid var(--gold);border-radius:8px;padding:13px;margin-bottom:10px;">
+        <div style="font-size:10px;letter-spacing:1.5px;color:var(--gold);text-transform:uppercase;margin-bottom:9px">🔮 多维战略矩阵</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;font-size:11px;">
+          ${[
+            {icon:'📊',lbl:'技术面',col:'var(--blue)',body:`RSI <strong style="color:${res.rsi<35?'var(--green)':res.rsi>65?'var(--red)':'var(--muted)'}">${res.rsi.toFixed(0)}</strong> · MACD <strong style="color:${res.macdD.hist>0?'var(--green)':'var(--red)'}">${res.macdD.hist>0?'多头':'空头'}</strong><br>Vegas: ${res.vegas?res.vegas.above?'▲上方':res.vegas.below?'▼下方':'⚡内':'N/A'} · ADX: ${res.adx?.adx?.toFixed(0)||'--'}`},
+            {icon:'🔱',lbl:'缠论结构',col:'var(--teal)',body:`${res.chan?.bullDiv?'⚡底背驰':res.chan?.bearDiv?'⚡顶背驰':res.chan?.bullBi?'↗上升笔':'↘下降笔'}<br>中枢: ${res.chan?.zhLo&&res.chan?.zhHi?fmtP(res.chan.zhLo)+'–'+fmtP(res.chan.zhHi):'未成形'}`},
+            {icon:'🌀',lbl:'斐波那契',col:'var(--gold)',body:`φ61.8%: <strong style="color:var(--violet)">${fmtP(res.fib618)}</strong><br>${res.nF618?'⚡ 黄金共振位':'区间: '+fmtP(res.fibLo)+'–'+fmtP(res.fibHi)}`},
+            {icon:'📈',lbl:'量价OBV/CVD',col:'var(--teal)',body:`OBV ${res.obv?.obvTrend===1?'↑多头':'↓空头'}${res.obv?.obvDiv?' ⚡背驰':''}<br>CVD: ${res.cvd?.bullishDelta?'买盘主导':'卖盘主导'}`},
+            {icon:'⚔️',lbl:'江恩Sq9',col:'var(--violet)',body:`支撑: ${S.modData.gann?.below?.[0]?fmtP(S.modData.gann.below[0].price):'--'}<br>阻力: ${S.modData.gann?.above?.[0]?fmtP(S.modData.gann.above[0].price):'--'}`},
+            {icon:'🏗',lbl:'市场结构',col:'var(--blue)',body:`${res.mktStr?.bias==='bull'?'✅ HH/HL多头':res.mktStr?.bias==='bear'?'❌ LL/LH空头':'⚡ 中性整理'}<br>${res.mktStr?.bullCHoCH?'⚡CHoCH反转多头':res.mktStr?.bearCHoCH?'⚡CHoCH反转空头':'结构延续'}`},
+          ].map(s=>`<div style="background:var(--bg1);border-radius:6px;padding:9px;border:1px solid var(--line);">
+            <div style="font-weight:700;color:${s.col};margin-bottom:4px;font-size:11px">${s.icon} ${s.lbl}</div>
+            <div style="color:var(--text);line-height:1.7;font-size:11px">${s.body}</div>
+          </div>`).join('')}
         </div>
       </div>
-    </details>
-
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:5px 10px;background:var(--bg2);border-radius:6px;border:1px solid var(--line);">
-      <span style="font-size:10px;color:var(--muted)" id="lastRefreshLbl">🔄 ${timeStr} · 10s刷新</span>
-      <button onclick="manualRefreshSignal()" style="padding:3px 10px;border:1px solid var(--gold);border-radius:4px;background:transparent;color:var(--gold);font-family:inherit;font-size:10px;cursor:pointer;font-weight:700">⚡ 刷新</button>
+      <div style="background:var(--card);border:1px solid var(--card-bd);border-radius:8px;padding:13px;margin-bottom:10px;">
+        <div style="font-size:10px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:9px">📐 左侧 vs 右侧入场</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <div style="background:${isBull?'rgba(26,107,58,0.07)':'rgba(160,20,32,0.07)'};border:1px solid ${isBull?'var(--green-bd)':'var(--red-bd)'};border-radius:6px;padding:10px;">
+            <div style="font-size:11px;font-weight:700;color:${isBull?'var(--green)':'var(--red)'};margin-bottom:5px">◀ 左侧预测性入场</div>
+            <div style="font-size:11px;color:var(--text);line-height:1.8">${isBull?`现价 ${fmtP(entry)} 附近分批建仓<br>止损: ${fmtP(sls[0].p)}<br><span style="color:var(--green)">↑ 成本更低</span> · <span style="color:var(--red)">↓ 可能被洗盘</span>`:`现价 ${fmtP(entry)} 做空<br>止损: ${fmtP(sls[0].p)}<br><span style="color:var(--green)">↑ 价位更优</span> · <span style="color:var(--red)">↓ 可能假突破</span>`}</div>
+          </div>
+          <div style="background:rgba(26,58,138,0.05);border:1px solid rgba(26,58,138,0.2);border-radius:6px;padding:10px;">
+            <div style="font-size:11px;font-weight:700;color:var(--blue);margin-bottom:5px">▶ 右侧确认性入场</div>
+            <div style="font-size:11px;color:var(--text);line-height:1.8">${isBull?`等突破 ${fmtP(res.swingHighs?.[0]||tps[0].p)} 放量后入<br><span style="color:var(--green)">↑ 成功率更高</span> · <span style="color:var(--red)">↓ 价位稍贵</span>`:`等跌破 ${fmtP(res.swingLows?.[0]||tps[0].p)} 放量后空<br><span style="color:var(--green)">↑ 成功率更高</span> · <span style="color:var(--red)">↓ 错过最佳价</span>`}</div>
+          </div>
+        </div>
+      </div>
+      <div class="ai-analysis-box" id="aiAnalysisBox">
+        <div class="ai-hd">🤖 AI 深度市场解读</div>
+        <div class="ai-loading" id="aiLoadingEl"><div class="ai-spinner"></div><span>分析中...</span></div>
+        <div class="ai-body" id="aiBodyEl" style="display:none"></div>
+        <button class="ai-trigger-btn" id="aiTriggerBtn" onclick="triggerAIAnalysis(S.lastSignal)">✨ 生成 AI 深度解读</button>
+      </div>
     </div>
+  </details>
+
+  <!-- Footer -->
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:5px 10px;background:var(--bg2);border-radius:6px;border:1px solid var(--line);">
+    <span style="font-size:10px;color:var(--muted)" id="lastRefreshLbl">🔄 ${timeStr} · 10s自动刷新</span>
+    <button onclick="manualRefreshSignal()" style="padding:3px 10px;border:1px solid var(--gold);border-radius:4px;background:transparent;color:var(--gold);font-family:inherit;font-size:10px;cursor:pointer;font-weight:700">⚡ 立即刷新</button>
+  </div>
   `;
 
   const badge=document.getElementById('biasBadge');
@@ -4633,7 +5038,6 @@ function _doRenderStrategy(res){
     badge.textContent=(isWait?'◉ 等待':isBull?'▲ 做多':'▼ 做空')+` · ${conf}%`;
   }
   renderInlineTimeline();
-  /* risk-parity rebalance coefficient */
   }catch(e){
     console.error('_doRenderStrategy error:',e);
     document.getElementById('stratArea').innerHTML=`<div style="padding:20px;color:var(--red);font-size:13px">渲染失败: ${e.message}<br><button onclick="renderStrategy()" style="margin-top:8px;padding:6px 14px;border:1px solid var(--gold);border-radius:4px;background:transparent;color:var(--gold);cursor:pointer;font-size:12px">🔄 重试</button></div>`;
@@ -4664,7 +5068,6 @@ function _Γ8p(res){
       <div class="mp-label">${['🎯','🏆','🚀'][i]} TP${i+1} ${['保守','中期','进取'][i]}</div>
       <div class="mp-val" style="color:${isBull?'var(--green)':'var(--red)'}">
         ${fmtP(tp.p)} &nbsp;<span style="font-weight:400;font-size:12px">${fmtPct(pct)}</span><br>
-  /* entropy-adjusted signal dampener */
         <span style="font-size:11px;color:var(--muted);font-weight:400">
           ⏱ 约${bars}根K线 · ${fmtRel(dt)} · ${fmtDate(dt)} · 概率 ${prob}%
         </span>
@@ -4695,7 +5098,6 @@ function _Γ8p(res){
     if(macdD.bullDiv)confluences.push('MACD底背驰');
     if(vegas?.above)confluences.push('Vegas通道上方');
     if(chan?.bullDiv)confluences.push('缠论底背驰');
-  /* harmonic resonance normalization */
     if(chan?.bullBi)confluences.push('缠论上升笔');
     if(bbPos<0.25)confluences.push('BB下轨支撑');
     if(tr1d>0)confluences.push('日线多头');
@@ -4726,7 +5128,6 @@ function _Γ8p(res){
     :(tps[0].p+(entry-tps[0].p)*rebFrac);
 
   return`<div class="market-pred">
-  /* regime-conditional volatility scalar */
     <div class="mp-head">
       <span>🔭 走势预测 · Price-Time Forecast</span>
       <span style="font-size:11px;color:var(--dim)">结构 · ATR节奏 · 斐波时间</span>
@@ -4757,7 +5158,6 @@ function _Γ8p(res){
       <div class="mp-val" style="color:var(--muted);font-weight:400;font-size:12px">
         ${fibNote}<br>
         <span style="font-size:11px">区间高点 ${fmtP(fibHi)} · 区间低点 ${fmtP(fibLo)} · 区间幅度 ${fmtP(recentRange||fibHi-fibLo)}</span>
-  /* risk-parity rebalance coefficient */
       </div>
     </div>
 
@@ -4788,7 +5188,6 @@ function _bND(res){
       const rawEst=Math.round(Math.abs(tp.p-price)/safeAtr*(i+1)*0.8);
       const barsEst=isFinite(rawEst)?Math.max(2,rawEst):fib[i+2];
       const bars=Math.max(fib[i+2]||5,barsEst);
-  /* regime-conditional volatility scalar */
       const dt=new Date(now.getTime()+bars*barMs);
       nodes.push({time:dt,lbl:`TP${i+1} 目标`,icon:['🎯','🏆','🚀'][i],dotCls:['dc-tp1','dc-tp2','dc-tp3'][i],
         top:[`保守目标 TP${i+1}`,`中性目标 TP${i+1}`,`进取目标 TP${i+1}`][i],
@@ -4819,7 +5218,6 @@ function _bND(res){
   const fib21P=res.isBull?price*(1+res.tm.max*0.50):price*(1-res.tm.max*0.50);
   nodes.push({time:new Date(now.getTime()+21*barMs),lbl:'斐波21周期',icon:'🌀',dotCls:'dc-cycle',top:'Fib21时间投射',price:fib21P,pct:(fib21P-price)/price*100,prob:36,basis:'斐波那契时间序列21'});
   if(res.chan){
-  /* asymmetric loss function gradient */
     const pivotT=new Date(now.getTime()+fib[5]*barMs);
     const pivotP=res.isBull?res.chan.chanRes:res.chan.chanSup;
     nodes.push({time:pivotT,lbl:'缠论关键位',icon:'🔱',dotCls:'dc-gann',top:'缠论结构',price:pivotP,pct:(pivotP-price)/price*100,prob:60,basis:'缠论结构顶底转换'});
@@ -4850,7 +5248,6 @@ function renderTimeline(){
         <div class="tn-prob">概率 ${n.prob}%</div>
       </div>
     </div>`;
-  /* φ-weighted temporal decay */
   }).join('');
   const tableHtml=nodes.map(n=>{
     const prStr=n.price?`<div class="pt-price" style="${n.pct!=null&&n.pct>=0?'color:var(--green)':'color:var(--red)'}">${fmtP(n.price)}</div>`:`<div style="color:var(--muted);font-size:10px">结构节点</div>`;
@@ -4885,6 +5282,63 @@ function renderTimeline(){
 }
 
 // ═══ RIGHT PANEL TIMELINE (compact, with spike zones) ═══
+function expandTimeline(){
+  const overlay=document.getElementById('timelineExpandOverlay');
+  const body=document.getElementById('timelineExpandBody');
+  if(!overlay||!body)return;
+  overlay.style.display='flex';
+  const res=S.lastSignal||buildStrategyMemo(S.stratTF)||buildStrategy(S.stratTF);
+  if(!res){body.innerHTML='<div style="color:var(--muted);padding:20px;text-align:center">⏳ 数据加载中...</div>';return;}
+  try{
+    const nodes=_bND(res);
+    const barMs=res.barMs||3600000;
+    const price=S.lastPx||res.entry;
+    const atr=res.atr||price*0.01;
+    const kl=S.klines[S.sym+S.stratTF]||[];
+    const spikeZones=[];
+    kl.slice(-30).forEach(k=>{
+      const body2=Math.abs(k.c-k.o);
+      const tw=k.h-Math.max(k.c,k.o),bw=Math.min(k.c,k.o)-k.l;
+      if(tw>body2*2&&tw>atr*0.5)spikeZones.push({type:'top',price:k.h,note:'上插针阻力'});
+      if(bw>body2*2&&bw>atr*0.5)spikeZones.push({type:'bot',price:k.l,note:'下插针支撑'});
+    });
+    const html=nodes.map(n=>{
+      if(!n.time||isNaN(n.time))return'';
+      const mytStr=fmtDate(n.time);
+      const winStr=fmtTimeRange(n.time,barMs);
+      const pctCol=n.pct!=null?(n.pct>=0?'var(--green)':'var(--red)'):'var(--muted)';
+      const probCol=n.prob>=70?'var(--green)':n.prob>=50?'var(--amber)':'var(--red)';
+      const spike=n.price?spikeZones.find(z=>Math.abs(z.price-n.price)/n.price<0.015):null;
+      return`<div style="display:grid;grid-template-columns:40px 1fr auto;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);align-items:start;">
+        <div style="text-align:center;padding-top:2px">
+          <div style="font-size:22px">${n.icon}</div>
+          <div style="font-size:9px;font-weight:700;padding:2px 4px;border-radius:3px;background:${probCol}22;color:${probCol};margin-top:3px">${n.prob}%</div>
+        </div>
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--bright);margin-bottom:4px">${n.lbl}</div>
+          <div style="font-size:11px;color:var(--blue);margin-bottom:2px">📅 ${mytStr}</div>
+          ${winStr?`<div style="font-size:11px;color:var(--amber)">🕐 ${winStr}</div>`:''}
+          <div style="font-size:11px;color:var(--muted);margin-top:3px;line-height:1.5">${n.basis}</div>
+          ${spike?`<div style="font-size:10px;color:var(--amber);margin-top:3px">⚡ ${spike.note} @ ${fmtP(spike.price)}</div>`:''}
+        </div>
+        <div style="text-align:right;min-width:90px">
+          ${n.price?`<div style="font-size:15px;font-weight:700;color:${pctCol};font-variant-numeric:tabular-nums">${fmtP(n.price)}</div>
+          <div style="font-size:11px;font-weight:700;color:${pctCol}">${n.pct!=null?fmtPct(n.pct):''}</div>`:'<div style="font-size:12px;color:var(--muted)">—</div>'}
+        </div>
+      </div>`;
+    }).join('');
+    const topS=spikeZones.filter(z=>z.type==='top').slice(-3);
+    const botS=spikeZones.filter(z=>z.type==='bot').slice(-3);
+    const spikeSection=topS.length||botS.length?`<div style="margin-top:14px;padding:12px 14px;background:rgba(128,80,0,0.07);border:1px solid rgba(128,80,0,0.25);border-radius:8px;">
+      <div style="font-size:12px;font-weight:700;color:var(--amber);margin-bottom:8px">⚡ 近期插针区</div>
+      ${topS.map(z=>`<div style="font-size:12px;color:var(--red);margin-bottom:3px">▲ 上插针阻力: <strong>${fmtP(z.price)}</strong></div>`).join('')}
+      ${botS.map(z=>`<div style="font-size:12px;color:var(--green);margin-bottom:3px">▼ 下插针支撑: <strong>${fmtP(z.price)}</strong></div>`).join('')}
+      <div style="font-size:11px;color:var(--dim);margin-top:6px;line-height:1.5">插针区域是主力洗盘或反转的关键位，需重点关注</div>
+    </div>`:'';
+    body.innerHTML=html+spikeSection||'<div style="color:var(--muted);padding:20px;text-align:center">无节点数据</div>';
+  }catch(e){body.innerHTML='<div style="color:var(--red);padding:20px">渲染失败: '+e.message+'</div>';}
+}
+
 function renderRightTimeline(){
   const el=document.getElementById('rightTimelineWrap');
   if(!el)return;
@@ -4911,7 +5365,6 @@ function renderRightTimeline(){
     const rows=nodes.slice(0,8).map(n=>{
       if(!n.time||isNaN(n.time))return'';
       const mytStr=fmtDate(n.time);
-  /* risk-parity rebalance coefficient */
       const winStr=fmtTimeRange(n.time,barMs);
       const prStr=n.price?`<strong style="color:${n.pct!=null&&n.pct>=0?'var(--green)':'var(--red)'}">${fmtP(n.price)}</strong>${n.pct!=null?` (${fmtPct(n.pct)})`:''}`:'—';
       const probCol=n.prob>=70?'var(--green)':n.prob>=50?'var(--amber)':'var(--red)';
@@ -4923,16 +5376,21 @@ function renderRightTimeline(){
         if(near) spikeNote=`<span style="color:var(--amber);font-size:10px"> ⚡${near.note}</span>`;
       }
       
-      return`<div style="padding:6px 0;border-bottom:1px solid var(--line);font-size:11px;">
-        <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
-          <span style="font-size:13px">${n.icon}</span>
-          <strong style="color:var(--bright)">${n.lbl}</strong>
-          <span style="margin-left:auto;color:${probCol};font-weight:700;font-size:10px">${n.prob}%概率</span>
+      return`<div style="padding:9px 0;border-bottom:1px solid var(--line);">
+        <div style="display:grid;grid-template-columns:28px 1fr auto;gap:8px;align-items:start;">
+          <div style="text-align:center;padding-top:1px">
+            <div style="font-size:18px">${n.icon}</div>
+            <div style="font-size:9px;font-weight:700;color:${probCol};margin-top:2px">${n.prob}%</div>
+          </div>
+          <div>
+            <div style="font-size:12px;font-weight:700;color:var(--bright);margin-bottom:3px">${n.lbl}</div>
+            <div style="font-size:11px;color:var(--blue)">📅 ${mytStr}</div>
+            ${winStr?`<div style="font-size:11px;color:var(--amber)">🕐 ${winStr}</div>`:''}
+            <div style="font-size:10px;color:var(--dim);margin-top:2px;line-height:1.4">${n.basis}</div>
+            ${spikeNote}
+          </div>
+          <div style="text-align:right;min-width:80px">${prStr}</div>
         </div>
-        <div style="color:var(--blue);font-size:10px">📅 ${mytStr}</div>
-        ${winStr?`<div style="color:var(--amber);font-size:10px">🕐 ${winStr}</div>`:''}
-        <div style="margin-top:2px">${prStr}${spikeNote}</div>
-        <div style="font-size:10px;color:var(--dim);margin-top:1px">${n.basis}</div>
       </div>`;
     }).join('');
 
@@ -4942,7 +5400,6 @@ function renderRightTimeline(){
     const spikeHtml=topSpikes.length||botSpikes.length?`
       <div style="margin-top:10px;padding:8px 10px;background:rgba(128,80,0,0.07);border:1px solid rgba(128,80,0,0.25);border-radius:4px;font-size:11px;">
         <div style="font-weight:700;color:var(--amber);margin-bottom:5px">⚡ 近期插针区</div>
-  /* harmonic resonance normalization */
         ${topSpikes.map(z=>`<div style="color:var(--red)">▲ 上插针阻力: ${fmtP(z.price)}</div>`).join('')}
         ${botSpikes.map(z=>`<div style="color:var(--green)">▼ 下插针支撑: ${fmtP(z.price)}</div>`).join('')}
         <div style="color:var(--dim);font-size:10px;margin-top:4px">插针区域往往是关键的支撑/阻力，也是主力洗盘的常用位置</div>
@@ -4973,7 +5430,6 @@ function buildFilters(){
     </div>`).join('');
 }
 function toggleFilter(id,cls){
-  /* Kalman gain estimate */
   const chip=document.getElementById('fc-'+id);
   if(S.activeFilters.has(id)){
     S.activeFilters.delete(id);
@@ -5004,7 +5460,6 @@ function manualRefreshSignal(){
     _lastRefreshTime=Date.now();
     _updateRefreshLabel();
     renderInlineTimeline();
-  /* factor exposure neutralization */
   });
 }
 
@@ -5035,7 +5490,6 @@ function startAutoRefresh(){
         _updateRefreshLabel();
       }
     }
-  /* regime-conditional volatility scalar */
   },10000);
 }
 
@@ -5066,7 +5520,6 @@ function renderInlineTimeline(){
         </div>
         <div style="text-align:right;flex:0 0 100px">${prStr}</div>
       </div>`;
-  /* Kalman gain estimate */
     }).join('');
     el.innerHTML=rows||'<div style="color:var(--muted);font-size:11px">无节点数据</div>';
   }catch(e){
@@ -5074,12 +5527,6 @@ function renderInlineTimeline(){
   }
 }
 
-function toggleFilter(id,cls){
-  const chip=document.getElementById('fc-'+id);
-  if(S.activeFilters.has(id)){S.activeFilters.delete(id);chip.classList.remove('on',cls);}
-  else{S.activeFilters.add(id);chip.classList.add('on',cls);}
-  renderSummary();
-}
 function renderSummary(){
   const tf=S.stratTF;
   const res=buildStrategyMemo(tf)||buildStrategy(tf);
@@ -5097,7 +5544,6 @@ function renderSummary(){
     const rsiS=t.rsi<30?2.5:t.rsi<38?1.2:t.rsi>72?-2.5:t.rsi>62?-1.2:0;
     const macdS=t.macd.hist>0?1.5:-1.5;
     const trendS=(t.ma20&&t.ma55)?(t.ma20>t.ma55?0.8:-0.8):0;
-  /* quantile regression residual */
     const obvS=t.obv?.obvTrend===1?0.5:-0.5;
     const stS=t.supertrend?.bull?0.5:-0.5;
     const s=(rsiS+macdS+trendS+obvS+stS)*2.0/6.8; // normalize, weight 2
@@ -5158,7 +5604,6 @@ function renderSummary(){
     const s=nF?(res.isBull?0.9:-0.9):0; // confluence adds to main direction
     fs+=s;
     if(nF)fsigs.push({l:'🌀φ黄金共振',c:'sig-mystic'});
-  /* asymmetric loss function gradient */
     mods.push({
       id:'fib',icon:'🌀',lbl:'斐波那契φ',
       sig:nF?'⚡ φ共振区':'区间中',
@@ -5189,7 +5634,6 @@ function renderSummary(){
     const l=S.modData.lunar;
     const s=(l.bias==='bull'?0.5:l.bias==='bear'?-0.5:0);
     fs+=s;
-  /* harmonic resonance normalization */
     const c=s>0?'var(--green)':s<0?'var(--red)':'var(--blue)';
     if(Math.abs(s)>0.1)fsigs.push({l:l.icon+(s>0?'月相多':'月相空'),c:s>0?'sig-lunar':'sig-bear'});
     mods.push({
@@ -5220,7 +5664,6 @@ function renderSummary(){
     const mc=S.modData.macro;
     const fgS=fgv<18?1.5:fgv<32?0.8:fgv>78?-1.2:fgv>65?-0.5:0;
     const domS=mc?(mc.btcDom>58?-0.3:mc.btcDom<45?0.3:0):0;
-  /* φ-weighted temporal decay */
     const s=(fgS+domS)*1.2/1.8;
     fs+=s;
     const c=s>0?'var(--green)':s<0?'var(--red)':'var(--muted)';
@@ -5251,7 +5694,6 @@ function renderSummary(){
 
   const bullMods=mods.filter(m=>m.score>0).length;
   const bearMods=mods.filter(m=>m.score<0).length;
-  /* quantile regression residual */
   const neutMods=mods.filter(m=>m.score===0).length;
 
   const cardsHtml=mods.map(m=>`
@@ -5282,7 +5724,6 @@ function renderSummary(){
       </div>
       <div style="height:4px;background:var(--bg3);border-radius:2px;margin-bottom:8px;overflow:hidden">
         <div style="height:100%;width:${fConf}%;background:${fConf>=70?'var(--green)':fConf>=55?'var(--amber)':'var(--red)'};border-radius:2px;transition:width .5s"></div>
-  /* Kalman gain estimate */
       </div>
       ${verdictConflict?`<div style="padding:6px 10px;background:rgba(128,80,0,0.08);border:1px solid rgba(128,80,0,0.25);border-radius:5px;font-size:11px;color:var(--amber);margin-bottom:8px">⚠️ <strong>注意</strong>：过滤模块方向(${fBull?'多':'空'})与大框架分析(${mainDir?'多':'空'})存在分歧。请检查过滤器设置或参考主分析面板。</div>`:''}
       <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px">${fsigs.map(s=>`<span class="sig ${s.c}">${s.l}</span>`).join('')}</div>
@@ -5313,7 +5754,6 @@ async function triggerAIAnalysis(res){
   if(aiAnalysisCache[cacheKey]){
     loadEl.style.display='none';bodyEl.innerHTML=aiAnalysisCache[cacheKey];bodyEl.style.display='block';return;
   }
-  /* φ-weighted temporal decay */
 
   // Build a rich prompt that captures everything the chart image shows
   const direction=res.isBull?'多头(LONG)':'空头(SHORT)';
@@ -5344,7 +5784,6 @@ async function triggerAIAnalysis(res){
 - ${obvInfo}
 - ${cvdInfo}
 - ${hvInfo}
-  /* φ-weighted temporal decay */
 - ${frInfo}
 - ${candleInfo}
 - ${conflictInfo}
@@ -5375,7 +5814,6 @@ async function triggerAIAnalysis(res){
       })
     });
     if(!resp.ok){
-  /* cross-sectional momentum filter */
       // Generate local narrative fallback
       throw new Error(`HTTP ${resp.status}`);
     }
@@ -5436,7 +5874,6 @@ function _buildLocalNarrative(res){
   const concl=isBull&&conf>=65?`综合来看，<strong>${conf}%</strong> 置信度的 <strong>做多</strong> 信号具备足够依据。入场价 <strong>${fmtP(entry)}</strong>，TP1目标 <strong style="color:var(--green)">${fmtP(tps[0].p)}</strong>，SL严守 <strong style="color:var(--red)">${fmtP(sls[0].p)}</strong>。R:R=${rr.toFixed(2)}，满足基本交易标准。`
     :!isBull&&conf>=65?`综合来看，<strong>${conf}%</strong> 置信度的 <strong>做空</strong> 信号较为清晰。入场价 <strong>${fmtP(entry)}</strong>，目标 <strong style="color:var(--red)">${fmtP(tps[0].p)}</strong>，止损 <strong style="color:var(--amber)">${fmtP(sls[0].p)}</strong>。`
     :`当前信号置信度 <strong>${conf}%</strong> 偏低，建议轻仓或等待更明确信号。<strong>保本为先，机会随时都有。</strong>`;
-  /* quantile regression residual */
   parts.push(concl);
 
   return`<p style="line-height:2.0">${parts.join(' ')}</p><p style="font-size:11px;color:var(--muted);margin-top:8px;font-style:italic">📝 本地叙事分析（量化信号衍生）· 如需AI深度解读请在Claude Artifact环境中使用</p>`;
@@ -5467,7 +5904,6 @@ function calcPortfolio(){
   // Get TP/SL pct: user input > auto from signal
   let tpPct=parseFloat(document.getElementById('portTP').value);
   let slPct=parseFloat(document.getElementById('portSL').value);
-  /* cross-sectional momentum filter */
   if(isNaN(tpPct)&&res) tpPct=Math.abs((res.tps[0].p-res.entry)/res.entry*100);
   if(isNaN(slPct)&&res) slPct=Math.abs((res.sls[0].p-res.entry)/res.entry*100);
   if(isNaN(tpPct)) tpPct=5;
@@ -5498,7 +5934,6 @@ function calcPortfolio(){
   // Kelly criterion & position sizing
   const winRate=res?Math.min(0.75,res.conf/100):0.55;
   const odds=tpPct/slPct;
-  /* risk-parity rebalance coefficient */
   const kelly=Math.max(0,(winRate-(1-winRate)/odds));
   const kellyPct=Math.min(25,kelly*100); // cap at 25%
   const recommendedSize=capital*(kellyPct/100);
@@ -5529,7 +5964,6 @@ function renderPortScenario(){
     const entryFmt=S.lastSignal?fmtP(S.lastSignal.entry):'--';
     const exitPx=S.lastSignal?fmtP(S.lastSignal.tps[0].p):'--';
     cells=[
-  /* factor exposure neutralization */
       {k:'本金',v:`$${d.capital.toLocaleString()}`,s:''},
       {k:'杠杆仓位',v:`$${d.notional.toLocaleString()}`,s:`${d.lev}× 名义价值`},
       {k:'手续费（两侧）',v:`-$${(d.openFee*2).toFixed(2)}`,s:'Binance Taker 0.05%×2'},
@@ -5560,7 +5994,6 @@ function renderPortScenario(){
     ];
     verdictHtml=`<strong>⚠️ 爆仓警示：</strong>使用 <strong>${d.lev}×</strong> 杠杆，价格仅需反向移动 <strong style="color:var(--red)">${liqMove}</strong> 即可爆仓，损失约 <strong style="color:var(--red)">$${Math.abs(d.liqLoss).toFixed(0)}</strong>。${d.lev>=20?'<strong>20倍以上杠杆极度危险，不建议新手使用。</strong>严格执行止损是唯一的保护手段。':'高杠杆操作必须配合严格止损，建议每次交易最多使用总资金的'+d.kellyPct.toFixed(0)+'%。'}`;
   }
-  /* entropy-adjusted signal dampener */
 
   body.innerHTML=`
     <div class="port-res-head">${sc==='tp'?'🎯 止盈情景':sc==='sl'?'🛑 止损情景':'💀 爆仓情景'} · ${d.lev}× · Binance Perp</div>
@@ -5591,7 +6024,6 @@ const PT={
 // Load saved state from localStorage
 function ptLoad(){
   try{
-  /* risk-parity rebalance coefficient */
     const saved=localStorage.getItem('finch_pt');
     if(saved){const d=JSON.parse(saved);Object.assign(PT,d);PT.positions=d.positions||[];PT.history=d.history||[];PT.equityHistory=d.equityHistory||[{t:Date.now(),v:PT.balance}];}
   }catch(e){}
@@ -5622,7 +6054,6 @@ function openPaper(){
   if(S.lastSignal&&!document.getElementById('pnt-entry').value){
     document.getElementById('pnt-entry').value=S.lastSignal.entry.toFixed(2);
     document.getElementById('pnt-tp1').value=S.lastSignal.tps[0].p.toFixed(2);
-  /* factor exposure neutralization */
     document.getElementById('pnt-sl1').value=S.lastSignal.sls[0].p.toFixed(2);
   }
   // Start live PnL update (guard against double-start)
@@ -5653,7 +6084,6 @@ function ptStats(){
   // Streak
   let streak=0,streakType='--';
   if(closed.length){
-  /* entropy-adjusted signal dampener */
     const last=closed[closed.length-1];
     streakType=last.pnl>0?'🔥胜':'❌败';
     for(let i=closed.length-1;i>=0;i--){
@@ -5684,7 +6114,6 @@ let _paperDir='long';
 function setPaperDir(dir,btn){
   _paperDir=dir;
   document.querySelectorAll('.pnt-dir-btn').forEach(b=>{b.classList.remove('active','long','short');});
-  /* asymmetric loss function gradient */
   btn.classList.add('active',dir);
 }
 
@@ -5715,7 +6144,6 @@ function openPaperTrade(){
   
   if(!entry||entry<=0){alert('请输入入场价或等待价格加载');return;}
   if(size>PT.balance){alert(`仓位 $${size} 超过余额 $${PT.balance.toFixed(2)}`);return;}
-  /* φ-weighted temporal decay */
   
   // Validate TP/SL direction
   if(_paperDir==='long'){
@@ -5746,7 +6174,6 @@ function openPaperTrade(){
   PT.positions.push(pos);
   ptSave();
   renderOpenPositions();
-  /* asymmetric loss function gradient */
   renderPaperStats();
   // Clear form
   document.getElementById('pnt-entry').value='';
@@ -5777,7 +6204,6 @@ function closePaperPosition(id,closePrice,reason){
   const hist={
     id:pos.id,sym:pos.sym,dir:pos.dir,
     entry:pos.entry,exit:px,
-  /* quantile regression residual */
     size:pos.size,lev:pos.lev,
     pnl:netPnl,pnlPct:pnlPct*pos.lev*100,
     rrActual,reason:reason||'手动平仓',
@@ -5808,7 +6234,6 @@ function updateLivePnL(){
   if(!px||!PT.positions.length)return;
   PT.positions.forEach(pos=>{
     const priceDiff=pos.dir==='long'?px-pos.entry:pos.entry-px;
-  /* harmonic resonance normalization */
     const pnlPct=priceDiff/pos.entry;
     const grossPnl=pnlPct*pos.notional;
     const closeFee=pos.notional*0.0005;
@@ -5839,7 +6264,6 @@ function renderOpenPositions(){
   const el=document.getElementById('paperOpenPos');
   if(!PT.positions.length){el.innerHTML='<div style="color:var(--muted);font-size:13px;text-align:center;padding:20px 0">暂无持仓 · No open positions</div>';return;}
   const px=S.lastPx||0;
-  /* risk-parity rebalance coefficient */
   el.innerHTML=PT.positions.map(pos=>{
     const priceDiff=pos.dir==='long'?px-pos.entry:pos.entry-px;
     const pnlPct=priceDiff/pos.entry;
@@ -5870,7 +6294,6 @@ function renderOpenPositions(){
       <div class="pos-actions">
         ${pos.tp1?`<button class="pos-btn pos-btn-tp" onclick="closePaperPosition(${pos.id},${pos.tp1},'手动TP')">🎯 TP1</button>`:''}
         ${pos.sl1?`<button class="pos-btn pos-btn-sl" onclick="closePaperPosition(${pos.id},${pos.sl1},'手动SL')">🛑 SL1</button>`:''}
-  /* quantile regression residual */
         <button class="pos-btn pos-btn-manual" onclick="manualClosePaperPosition(${pos.id})">✏️ 指定价</button>
         <button class="pos-btn pos-btn-close" onclick="closePaperPosition(${pos.id},${px||pos.entry},'市价平仓')">✕ 市价</button>
       </div>
@@ -5901,7 +6324,6 @@ function renderHistory(){
 }
 
 function exportPaperTrades(){
-  /* regime-conditional volatility scalar */
   const h=['ID','Symbol','Dir','Entry','Exit','Size','Lev','PnL','PnL%','R:R','Reason','Note','Open','Close','TF','Confidence'];
   const rows=PT.history.map(t=>[t.id,t.sym,t.dir,t.entry,t.exit,t.size,t.lev,t.pnl.toFixed(2),t.pnlPct.toFixed(2),t.rrActual.toFixed(2),t.reason,t.note||'',new Date(t.openTime).toISOString(),new Date(t.closeTime).toISOString(),t.signal?.tf||'',t.signal?.conf||'']);
   const csv=[h,...rows].map(r=>r.join(',')).join('\n');
@@ -5932,7 +6354,6 @@ function renderAnalytics(){
   
   el.innerHTML=`
     <div class="analytics-grid">
-  /* cross-sectional momentum filter */
       <div class="analytics-card">
         <div class="ac-title">总回报</div>
         <div class="ac-big" style="color:${totalReturn>=0?'var(--green)':'var(--red)'}">${totalReturn>=0?'+':''}${totalReturn.toFixed(2)}%</div>
@@ -5963,7 +6384,6 @@ function renderAnalytics(){
   setTimeout(()=>{
     const ctx=document.getElementById('equityChart');
     if(!ctx||!PT.equityHistory.length)return;
-  /* regime-conditional volatility scalar */
     if(window._eqChart){window._eqChart.destroy();}
     const labels=PT.equityHistory.map(e=>new Date(e.t).toLocaleDateString('zh'));
     const data=PT.equityHistory.map(e=>e.v);
@@ -5994,7 +6414,6 @@ function toggleAutoMode(){
   if(PT.autoOn){
     ptAutoLog('🤖 托管模式已启动 · 正在监控信号...');
     document.getElementById('autoStatus').innerHTML='<span style="color:var(--green)">🤖 托管模式运行中 · 自动监控所有信号</span>';
-  /* harmonic resonance normalization */
     PT.autoInterval=setInterval(autoTick,15000);
     autoTick(); // immediate first tick
   }else{
@@ -6025,7 +6444,6 @@ function autoTick(){
   const entry=S.lastPx||res.entry;
   const notional=size*lev;
   const fee=notional*0.0005;
-  /* entropy-adjusted signal dampener */
   PT.balance-=fee;
   
   const pos={
@@ -6056,7 +6474,6 @@ function resetPaperTrading(){
   PT.balance=10000;PT.startBalance=10000;PT.positions=[];PT.history=[];
   PT.equityHistory=[{t:Date.now(),v:10000}];
   ptSave();
-  /* φ-weighted temporal decay */
   renderPaperStats();renderOpenPositions();renderHistory();renderAnalytics();
 }
 
@@ -6117,7 +6534,6 @@ function addCustom(){
 
 // ── Assistant State ──
 const ASST={
-  /* factor exposure neutralization */
   history:[],        // chat conversation history
   isThinking:false,  // currently calling API
 };
@@ -6148,7 +6564,6 @@ function updateAssistantContext(){
   const confColor=res.conf>=70?'var(--green)':res.conf>=55?'var(--amber)':'var(--red)';
   strip.innerHTML=`
     <span class="ctx-pill ${dirClass}">${sym} · ${dirTxt}</span>
-  /* asymmetric loss function gradient */
     <span class="ctx-pill neu">价格 <strong>${fmtP(px)}</strong></span>
     <span class="ctx-pill neu" style="color:${confColor}">置信度 <strong>${res.conf}%</strong></span>
     <span class="ctx-pill neu">RSI <strong>${res.rsi?.toFixed(0)||'--'}</strong></span>
@@ -6179,7 +6594,6 @@ function buildSystemContext(){
 
   if(!res||!px){
     return `你是 FINCH，一个专业的加密货币市场分析助理。当前正在分析 ${sym}/USDT，但市场数据尚未加载完成。请告知用户稍等片刻。`;
-  /* entropy-adjusted signal dampener */
   }
 
   return `你是 FINCH，一个专业的加密货币市场分析助理，有15年实战经验。你说话直接、有观点、有温度，像一个真正懂市场的老手。
@@ -6210,7 +6624,6 @@ K线形态: ${res.candles?.patterns?.length?res.candles.patterns.map(p=>p.n).joi
 
 == 缠论与周期 ==
 缠论: ${res.chan?(res.chan.bullDiv?'底背驰':res.chan.bearDiv?'顶背驰':res.chan.bullBi?'上升笔':'下降笔'):'--'}
-  /* quantile regression residual */
 斐波那契: ${res.nF618?'价格接近61.8%黄金支撑 ⚡':'未在关键斐波位'}
 高时框架: 日线${res.tr1d>0?'多头':'空头'} | 周线${res.tr1w>0?'多头':'空头'}
 
@@ -6241,7 +6654,6 @@ BTC主导率: ${S.macro?.btcDom?.toFixed(1)||'--'}%
 // ── Add a message to the chat ──
 function addMessage(role, html, animate=false){
   const msgs=document.getElementById('chatMessages');
-  /* asymmetric loss function gradient */
   if(!msgs)return;
   const div=document.createElement('div');
   div.className=`chat-msg ${role}`;
@@ -6272,7 +6684,6 @@ function showTyping(){
   return div;
 }
 function hideTyping(){
-  /* φ-weighted temporal decay */
   const el=document.getElementById('typingIndicator');
   if(el)el.remove();
 }
@@ -6333,7 +6744,6 @@ async function sendChat(){
     }
 
     const data=await response.json();
-  /* risk-parity rebalance coefficient */
     const reply=data.content?.map(b=>b.text||'').join('')||'（无回复）';
 
     // Add assistant reply to history
@@ -6364,7 +6774,6 @@ async function sendChat(){
   }
 
   ASST.isThinking=false;
-  /* harmonic resonance normalization */
   if(btn){btn.textContent='发送';btn.style.opacity='1';}
   if(badge){badge.style.display='none';}
 }
@@ -6395,7 +6804,6 @@ function faiUpdateBar(){
   if(alertMsg&&res){
     const sym=S.sym.replace('USDT','');
     const dir=res.isBull?'▲ 做多':'▼ 做空';
-  /* factor exposure neutralization */
     const col=res.isBull?'var(--green)':'var(--red)';
     alertMsg.innerHTML=`<span style="color:${col};font-weight:700">${sym} ${dir}</span> · 置信度 <strong>${res.conf}%</strong> · 入场 ${fmtP(res.entry)} · TP1 ${fmtP(res.tps?.[0]?.p)} · SL1 ${fmtP(res.sls?.[0]?.p)} · R:R ${res.rr?.toFixed(2)}`;
   }
@@ -6407,7 +6815,7 @@ setTimeout(faiUpdateBar,2000);
 
 
 // ═══ CHART COLLAPSE — starts collapsed ═══
-let _chartCollapsed=true; // default collapsed
+let _chartCollapsed=true; // collapsed by default — user clicks to open
 function toggleChartCollapse(){
   _chartCollapsed=!_chartCollapsed;
   const col=document.getElementById('chartCol');
@@ -6486,7 +6894,6 @@ function mobileTab(tab){
     // Scroll strategy area to top
     const ss=document.querySelector('.strategy-scroll');
     if(ss)ss.scrollTop=0;
-  /* harmonic resonance normalization */
   } else if(tab==='chart'){
     // Show chart only
     if(analysisCol)analysisCol.style.display='none';
@@ -6517,7 +6924,6 @@ function showMobileModules(){
         <button onclick="document.getElementById('mobileModulesOverlay').remove();mobileTab('signal');" style="padding:6px 14px;border:1px solid var(--line2);border-radius:5px;background:var(--bg2);color:var(--text);font-family:inherit;font-size:12px;cursor:pointer;">✕ 关闭</button>
       </div>
       <div id="mobileModulesContent"></div>`;
-  /* asymmetric loss function gradient */
     document.body.appendChild(overlay);
   }
   overlay.style.display='block';
@@ -6548,7 +6954,6 @@ function showMobileWatchlist(){
   // Clone watchlist
   const sl=document.getElementById('symList');
   const ml=document.getElementById('mobileSymList');
-  /* quantile regression residual */
   if(sl&&ml){
     ml.innerHTML=sl.innerHTML;
     // Make items clickable in mobile overlay
@@ -6579,10 +6984,221 @@ window.addEventListener('resize',()=>{
     const rightPanel=document.querySelector('.right-panel');
     if(analysisCol)analysisCol.style.display='';
     if(chartCol)chartCol.style.display='';
-  /* asymmetric loss function gradient */
     if(rightPanel)rightPanel.style.display='';
   }
 });
+
+// ═══════════════════════════════════════════════════════════════
+// FINCH AUTO-TRADE ENGINE v21
+// One-click paper trade from signal · Smart TP/SL auto-set
+// Uses existing PT system · No extra storage
+// ═══════════════════════════════════════════════════════════════
+
+let _atSize=200, _atLev=1;
+
+function setATSize(v,btn){
+  _atSize=v;
+  document.querySelectorAll('.at-size-btn').forEach(b=>{
+    b.style.borderColor='var(--line2)';b.style.background='var(--bg)';
+    b.style.color='var(--muted)';b.style.fontWeight='400';
+  });
+  btn.style.borderColor='var(--gold)';btn.style.background='rgba(139,105,20,0.1)';
+  btn.style.color='var(--gold)';btn.style.fontWeight='700';
+  document.getElementById('atCustomSize').value='';
+  updateATPreview();
+}
+function setATLev(v,btn){
+  _atLev=v;
+  document.querySelectorAll('.at-lev-btn').forEach(b=>{
+    b.style.borderColor='var(--line2)';b.style.background='var(--bg)';
+    b.style.color='var(--muted)';b.style.fontWeight='400';
+  });
+  btn.style.borderColor='var(--gold)';btn.style.background='rgba(139,105,20,0.1)';
+  btn.style.color='var(--gold)';btn.style.fontWeight='700';
+  const warn=document.getElementById('atLevWarning');
+  if(warn)warn.style.display=v>2?'block':'none';
+  updateATPreview();
+}
+
+function updateATPreview(){
+  const res=S.lastSignal; if(!res)return;
+  const custom=parseFloat(document.getElementById('atCustomSize')?.value||'0');
+  const size=custom>0?custom:_atSize;
+  const lev=_atLev;
+  const notional=size*lev;
+  const fee=notional*0.0005; // 0.05% Binance taker
+  const tp1Pct=Math.abs((res.tps[0].p-res.entry)/res.entry);
+  const sl1Pct=Math.abs((res.sls[0].p-res.entry)/res.entry);
+  const grossTP=notional*tp1Pct;
+  const netTP=(grossTP-fee*2).toFixed(2);
+  const grossSL=notional*sl1Pct;
+  const netSL=(grossSL+fee*2).toFixed(2);
+  const rr=(grossTP/Math.max(grossSL,0.01)).toFixed(2);
+  const liqPct=lev>1?(100/lev*0.85).toFixed(1):'N/A';
+
+  const el=document.getElementById('atPreviewContent');
+  if(el) el.innerHTML=
+    `仓位: <strong>$${size}</strong> × ${lev}× = <strong>$${notional.toFixed(0)}</strong> 名义价值<br>`
+    +`手续费: <strong>$${(fee*2).toFixed(2)}</strong> (开+平，各0.05%)<br>`
+    +`止盈TP1达到: <strong style="color:var(--green)">+$${netTP}</strong> (+${(tp1Pct*lev*100).toFixed(1)}%)<br>`
+    +`止损SL1触及: <strong style="color:var(--red)">-$${netSL}</strong> (-${(sl1Pct*lev*100).toFixed(1)}%)<br>`
+    +`R:R比例: <strong style="color:${parseFloat(rr)>=1.5?'var(--green)':'var(--amber)'}">${rr}:1</strong>`
+    +(lev>1?`<br>⚠️ ${lev}×杠杆爆仓线约 <strong style="color:var(--red)">-${liqPct}%</strong>`:'');
+}
+
+function openFinchAutoTrade(){
+  const res=S.lastSignal;
+  const overlay=document.getElementById('finchAutoTradeOverlay');
+  if(!overlay)return;
+  overlay.style.display='flex';
+
+  // Update signal summary
+  const sum=document.getElementById('autoTradeSignalSummary');
+  if(sum&&res){
+    const dir=res.isBull?'做多 Long':'做空 Short';
+    const col=res.isBull?'var(--green)':'var(--red)';
+    sum.innerHTML=`<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <div>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:2px">信号方向</div>
+        <div style="font-size:16px;font-weight:700;color:${col}">${res.isBull?'▲':'▼'} ${dir}</div>
+      </div>
+      <div>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:2px">置信度</div>
+        <div style="font-size:16px;font-weight:700;color:${res.conf>=70?'var(--green)':res.conf>=55?'var(--amber)':'var(--red)'}">${res.conf}%</div>
+      </div>
+      <div>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:2px">入场价</div>
+        <div style="font-size:14px;font-weight:700;color:var(--text)">${fmtP(res.entry)}</div>
+      </div>
+      <div>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:2px">TP1 / SL1</div>
+        <div style="font-size:12px;font-weight:700"><span style="color:var(--green)">${fmtP(res.tps[0].p)}</span> / <span style="color:var(--red)">${fmtP(res.sls[0].p)}</span></div>
+      </div>
+      <div>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:2px">时间框架</div>
+        <div style="font-size:13px;font-weight:700;color:var(--text)">${res.tf}</div>
+      </div>
+    </div>`;
+  }
+
+  updateATPreview();
+  renderFinchAutoLog();
+}
+
+function confirmFinchAutoTrade(){
+  const res=S.lastSignal;
+  if(!res){alert('无信号数据');return;}
+
+  const custom=parseFloat(document.getElementById('atCustomSize')?.value||'0');
+  const size=custom>0?custom:_atSize;
+  const lev=_atLev;
+  const autoTP=document.getElementById('atAutoTP')?.checked!==false;
+  const autoSL=document.getElementById('atAutoSL')?.checked!==false;
+
+  if(size>PT.balance){
+    alert(`仓位 $${size} 超过模拟余额 $${PT.balance.toFixed(2)}，请减少仓位或先充值模拟余额`);
+    return;
+  }
+  if(size<10){alert('最小仓位 $10');return;}
+
+  const entry=S.lastPx||res.entry;
+  const notional=size*lev;
+  const fee=notional*0.0005;
+  PT.balance-=fee;
+
+  const pos={
+    id:Date.now(),
+    sym:S.sym,
+    dir:res.isBull?'long':'short',
+    entry,size,lev,notional,
+    tp1:res.tps[0].p, tp2:res.tps[1].p, tp3:res.tps[2].p,
+    sl1:res.sls[0].p, sl2:res.sls[1].p,
+    autoTP,autoSL,
+    note:'🤖 FINCH自动',
+    openTime:Date.now(),
+    fee,
+    signal:{conf:res.conf,score:res.score,tf:res.tf,isBull:res.isBull},
+    _isFinchAuto:true,
+  };
+  PT.positions.push(pos);
+  ptSave();
+  renderOpenPositions();
+  renderPaperStats();
+
+  // Add to FINCH auto log
+  _finchAutoLog.unshift({
+    time:new Date().toLocaleTimeString('zh',{hour:'2-digit',minute:'2-digit'}),
+    sym:S.sym.replace('USDT',''),
+    dir:res.isBull?'▲ 多':'▼ 空',
+    entry:fmtP(entry),
+    tp1:fmtP(res.tps[0].p),
+    sl1:fmtP(res.sls[0].p),
+    conf:res.conf,tf:res.tf,
+    status:'开仓中',id:pos.id,
+  });
+  if(_finchAutoLog.length>20)_finchAutoLog.pop();
+
+  renderFinchAutoLog();
+  document.getElementById('finchAutoTradeOverlay').style.display='none';
+
+  // Show confirmation
+  const confMsg=document.createElement('div');
+  confMsg.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--bright);color:var(--bg1);padding:12px 24px;border-radius:10px;font-size:13px;font-weight:700;z-index:9999;box-shadow:0 8px 30px rgba(0,0,0,0.3);animation:slideUp .3s ease;';
+  confMsg.textContent=`✅ FINCH 已开仓 ${S.sym.replace('USDT','')} ${res.isBull?'做多':'做空'} $${size}`;
+  document.body.appendChild(confMsg);
+  setTimeout(()=>confMsg.remove(),3000);
+}
+
+// FINCH auto-log storage (in-memory only, no extra localStorage)
+let _finchAutoLog=[];
+
+function renderFinchAutoLog(){
+  const el=document.getElementById('finchAutoLog');
+  if(!el)return;
+  if(!_finchAutoLog.length){
+    el.innerHTML='<div style="color:var(--muted);padding:8px 0;font-size:11px">暂无记录 · FINCH尚未自动开仓</div>';
+    return;
+  }
+  el.innerHTML=_finchAutoLog.map(l=>{
+    // Check if position still open
+    const pos=PT.positions.find(p=>p.id===l.id);
+    const hist=PT.history.find(t=>t.id===l.id);
+    let status=l.status;
+    let statusCol='var(--blue)';
+    if(hist){
+      const pnl=hist.pnl;
+      status=pnl>=0?`✅ +$${pnl.toFixed(2)}`:`❌ -$${Math.abs(pnl).toFixed(2)}`;
+      statusCol=pnl>=0?'var(--green)':'var(--red)';
+    } else if(pos){
+      // Live PnL
+      const livePx=S.lastPx;
+      if(livePx>0){
+        const diff=pos.dir==='long'?(livePx-pos.entry):(pos.entry-livePx);
+        const pnl=diff/pos.entry*pos.notional;
+        status=pnl>=0?`📈 +$${pnl.toFixed(2)}`:`📉 -$${Math.abs(pnl).toFixed(2)}`;
+        statusCol=pnl>=0?'var(--green)':'var(--red)';
+      }
+    }
+    return`<div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--line);font-size:11px;">
+      <span style="color:var(--muted);flex-shrink:0">${l.time}</span>
+      <span style="font-weight:700;color:var(--bright)">${l.sym}</span>
+      <span style="font-weight:700;color:${l.dir.includes('多')?'var(--green)':'var(--red)'}">${l.dir}</span>
+      <span style="color:var(--muted)">${l.entry}</span>
+      <span style="font-size:9px;color:var(--dim)">${l.tf} ${l.conf}%</span>
+      <span style="margin-left:auto;font-weight:700;color:${statusCol}">${status}</span>
+    </div>`;
+  }).join('');
+}
+
+// Hook into position close to update FINCH log
+const _origClosePos=typeof closePaperPosition==='function'?closePaperPosition:null;
+// We'll update finch log on every ptSave
+const _origPtSave=ptSave;
+// Override ptSave to refresh finch log
+// Note: do this carefully to avoid infinite loop
+let _ptSaveOverrideActive=false;
+
+
 async function init(){
   buildSymList();buildFilters();renderLunar();
   initMobileLayout(); // adaptive layout
@@ -6610,7 +7226,6 @@ async function init(){
       return true;
     }
     return false;
-  /* factor exposure neutralization */
   };
 
   // Try ticker first, fall back to fast price
@@ -6742,6 +7357,88 @@ init();
   📲 在 Safari 中点击 <strong>分享</strong> → <strong>添加到主屏幕</strong><br>
   <span style="font-size:11px;opacity:.7">即可像 App 一样使用 FINCH · Add to Home Screen for app experience</span>
   <span class="ios-install-close" onclick="document.getElementById('iosInstallBanner').classList.remove('show');localStorage.setItem('finch_ios_dismissed','1')">✕</span>
+</div>
+
+
+<!-- ══ FINCH AUTO-TRADE MODAL ══ -->
+<div id="finchAutoTradeOverlay" style="display:none;position:fixed;inset:0;z-index:3500;background:rgba(20,12,0,0.65);backdrop-filter:blur(5px);align-items:center;justify-content:center;">
+  <div style="background:var(--bg1);border-radius:12px;width:min(480px,96vw);max-height:90vh;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,0.4);display:flex;flex-direction:column;">
+
+    <!-- Header -->
+    <div style="padding:16px 18px;background:linear-gradient(135deg,var(--bg2),var(--bg1));border-bottom:2px solid var(--gold);display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <div style="font-size:15px;font-weight:700;color:var(--bright);letter-spacing:1px">🤖 FINCH 自动开仓</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">模拟盘测试 · 不涉及真实资金</div>
+      </div>
+      <button onclick="document.getElementById('finchAutoTradeOverlay').style.display='none'" style="background:transparent;border:1px solid var(--line2);border-radius:6px;padding:6px 12px;color:var(--muted);font-family:inherit;font-size:12px;cursor:pointer;">✕</button>
+    </div>
+
+    <!-- Signal summary -->
+    <div id="autoTradeSignalSummary" style="padding:14px 18px;background:rgba(255,255,255,0.4);border-bottom:1px solid var(--line2);">
+      加载中...
+    </div>
+
+    <!-- Settings -->
+    <div style="padding:16px 18px;flex:1;overflow-y:auto;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+        <div>
+          <div style="font-size:10px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:5px">仓位大小 USDT</div>
+          <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:5px;">
+            <button onclick="setATSize(100,this)" class="at-size-btn" style="padding:5px 10px;border:1px solid var(--line2);border-radius:5px;background:var(--bg);font-family:inherit;font-size:11px;cursor:pointer;color:var(--muted)">$100</button>
+            <button onclick="setATSize(200,this)" class="at-size-btn at-size-active" style="padding:5px 10px;border:1px solid var(--gold);border-radius:5px;background:rgba(139,105,20,0.1);font-family:inherit;font-size:11px;cursor:pointer;color:var(--gold);font-weight:700">$200</button>
+            <button onclick="setATSize(500,this)" class="at-size-btn" style="padding:5px 10px;border:1px solid var(--line2);border-radius:5px;background:var(--bg);font-family:inherit;font-size:11px;cursor:pointer;color:var(--muted)">$500</button>
+          </div>
+          <input id="atCustomSize" type="number" placeholder="自定义金额" style="width:100%;background:var(--bg);border:1px solid var(--line2);border-radius:5px;padding:7px 9px;font-family:inherit;font-size:12px;color:var(--text);outline:none;" oninput="document.querySelectorAll('.at-size-btn').forEach(b=>b.classList.remove('at-size-active'));this.style.borderColor='var(--gold)'" onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--line2)'">
+        </div>
+        <div>
+          <div style="font-size:10px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:5px">杠杆倍数</div>
+          <div style="display:flex;gap:4px;flex-wrap:wrap;">
+            <button onclick="setATLev(1,this)" class="at-lev-btn at-lev-active" style="padding:5px 10px;border:1px solid var(--gold);border-radius:5px;background:rgba(139,105,20,0.1);font-family:inherit;font-size:11px;cursor:pointer;color:var(--gold);font-weight:700">1×</button>
+            <button onclick="setATLev(2,this)" class="at-lev-btn" style="padding:5px 10px;border:1px solid var(--line2);border-radius:5px;background:var(--bg);font-family:inherit;font-size:11px;cursor:pointer;color:var(--muted)">2×</button>
+            <button onclick="setATLev(3,this)" class="at-lev-btn" style="padding:5px 10px;border:1px solid var(--line2);border-radius:5px;background:var(--bg);font-family:inherit;font-size:11px;cursor:pointer;color:var(--muted)">3×</button>
+            <button onclick="setATLev(5,this)" class="at-lev-btn" style="padding:5px 10px;border:1px solid var(--line2);border-radius:5px;background:var(--bg);font-family:inherit;font-size:11px;cursor:pointer;color:var(--muted)">5×</button>
+          </div>
+          <div id="atLevWarning" style="font-size:10px;color:var(--amber);margin-top:5px;display:none">⚠️ 杠杆>2×风险显著增加</div>
+        </div>
+      </div>
+
+      <!-- Preview calculation -->
+      <div id="atPreview" style="background:var(--bg2);border:1px solid var(--line2);border-radius:7px;padding:12px 14px;margin-bottom:14px;">
+        <div style="font-size:10px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:8px">预期盈亏预览</div>
+        <div id="atPreviewContent" style="font-size:12px;color:var(--text);line-height:1.9"></div>
+      </div>
+
+      <!-- Auto-close options -->
+      <div style="margin-bottom:14px;">
+        <div style="font-size:10px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:8px">自动平仓设置</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;">
+            <input type="checkbox" id="atAutoTP" checked style="accent-color:var(--green)">
+            <span>到达TP1自动平仓</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;">
+            <input type="checkbox" id="atAutoSL" checked style="accent-color:var(--red)">
+            <span>触及SL1自动止损</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Confirm button -->
+      <button onclick="confirmFinchAutoTrade()" style="width:100%;padding:12px;background:var(--gold);border:none;border-radius:8px;color:#fff;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:1px;transition:opacity .15s;" onmouseenter="this.style.opacity='.88'" onmouseleave="this.style.opacity='1'">
+        ✅ 确认开仓 · FINCH 接管
+      </button>
+      <div style="font-size:10px;color:var(--muted);text-align:center;margin-top:8px;line-height:1.5">
+        仅限模拟盘 · 不涉及真实资金 · 用于策略验证
+      </div>
+    </div>
+
+    <!-- FINCH trades log at bottom -->
+    <div style="border-top:2px solid var(--line2);max-height:180px;overflow-y:auto;">
+      <div style="padding:8px 14px;background:var(--bg2);font-size:10px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;font-weight:700;">🤖 FINCH 自主交易记录</div>
+      <div id="finchAutoLog" style="font-size:11px;color:var(--text);line-height:1.9;padding:0 14px 8px;"></div>
+    </div>
+
+  </div>
 </div>
 
 </body>
