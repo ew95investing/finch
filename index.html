@@ -64,7 +64,7 @@
 })();
 </script>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Playfair+Display:wght@600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@400;600&family=Playfair+Display:wght@600;700&display=swap');
 :root{
   --bg:#F0EDE6;--bg1:#F8F5EE;--bg2:#E8E4DB;--bg3:#DDD8CE;--bg4:#CEC9BC;
   --line:rgba(0,0,0,0.06);--line2:rgba(0,0,0,0.10);--line3:rgba(0,0,0,0.18);
@@ -73,6 +73,8 @@
   --green:#1A6B3A;--red:#A01420;--blue:#1A3A8A;--amber:#805000;
   --violet:#581890;--rose:#880840;--cyan:#0A5870;--teal:#0A6050;
   --orange:#8A3010;--indigo:#2830A0;
+  --iching:#6B3410;--iching-bg:rgba(107,52,16,0.07);--iching-bd:rgba(107,52,16,0.22);
+  --gann-cycle:#0A5870;--gann-cycle-bg:rgba(10,88,112,0.07);
   --green-bg:rgba(26,107,58,0.08);--red-bg:rgba(160,20,32,0.08);
   --green-bd:rgba(26,107,58,0.20);--red-bd:rgba(160,20,32,0.20);
   --card:rgba(255,255,255,0.72);--card-bd:rgba(0,0,0,0.08);
@@ -82,7 +84,127 @@
   --shadow-lg:0 4px 16px rgba(0,0,0,0.08),0 16px 40px rgba(0,0,0,0.06);
   --shadow-inset:inset 0 1px 0 rgba(255,255,255,0.7),inset 0 -1px 0 rgba(0,0,0,0.04);
   --fs-base:16px;--fs-sm:14px;--fs-xs:13px;--fs-xxs:12px;--fs-label:12px;
+  --radius:6px;--radius-lg:10px;
 }
+/* ══ I-CHING MODULE ══ */
+.iching-hexagram{
+  display:flex;flex-direction:column;gap:3px;padding:8px 0;
+}
+.iching-line{
+  display:flex;align-items:center;gap:6px;height:10px;
+}
+.iching-line-yang{
+  flex:1;height:4px;background:var(--iching);border-radius:2px;
+}
+.iching-line-yin-l,.iching-line-yin-r{
+  flex:1;height:4px;background:var(--iching);border-radius:2px;
+}
+.iching-line-yin-gap{width:8px;flex-shrink:0;}
+.iching-card{
+  background:var(--iching-bg);border:1px solid var(--iching-bd);
+  border-radius:var(--radius);padding:12px 14px;margin-bottom:8px;
+}
+.iching-title{
+  font-family:'Noto Serif SC',serif;font-size:16px;font-weight:600;
+  color:var(--iching);letter-spacing:2px;
+}
+.iching-name-cn{font-size:22px;font-family:'Noto Serif SC',serif;color:var(--iching);}
+.iching-judgment{
+  font-family:'Noto Serif SC',serif;font-size:12px;line-height:2.0;
+  color:var(--text);padding:8px 0;border-top:1px solid var(--iching-bd);
+  margin-top:8px;
+}
+/* ══ GANN CYCLE CHART MODAL ══ */
+#gannCycleModal{
+  display:none;position:fixed;inset:0;z-index:2800;
+  background:rgba(20,12,0,0.7);backdrop-filter:blur(6px);
+  align-items:center;justify-content:center;
+}
+#gannCycleModal.open{display:flex;}
+.gcm-panel{
+  background:var(--bg1);border-radius:14px;
+  width:min(900px,97vw);max-height:93vh;
+  display:flex;flex-direction:column;
+  box-shadow:0 32px 100px rgba(0,0,0,0.45);
+  overflow:hidden;
+}
+.gcm-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 20px;
+  background:linear-gradient(90deg,var(--bg2),var(--bg3));
+  border-bottom:2px solid var(--gold);flex-shrink:0;
+}
+.gcm-body{flex:1;overflow-y:auto;overflow-x:hidden;padding:16px 18px;-webkit-overflow-scrolling:touch;}
+.gcm-tabs{display:flex;gap:0;background:var(--bg3);border-radius:6px;padding:2px;margin-bottom:14px;}
+.gcm-tab{
+  flex:1;padding:7px 6px;border:none;border-radius:4px;
+  background:transparent;color:var(--muted);
+  font-family:inherit;font-size:11px;cursor:pointer;
+  transition:all .15s;white-space:nowrap;
+}
+.gcm-tab.active{background:var(--gold);color:#fff;font-weight:700;}
+/* ══ ENHANCED RIGHT PANEL SECTIONS ══ */
+.section-hd{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:11px 14px 9px;
+  background:linear-gradient(90deg,var(--bg2),var(--bg1));
+  border-bottom:2px solid var(--gold);
+  border-top:1px solid var(--line2);
+  cursor:pointer;user-select:none;
+}
+.section-hd-title{font-size:12px;font-weight:700;letter-spacing:2px;color:var(--gold);text-transform:uppercase;}
+.section-hd-badge{
+  font-size:10px;padding:2px 8px;border-radius:10px;font-weight:700;
+  background:rgba(139,105,20,0.12);color:var(--gold);border:1px solid rgba(139,105,20,0.3);
+}
+.section-body{padding:12px 14px;background:var(--bg);}
+/* ══ MOBILE IMPROVEMENTS ══ */
+@media(max-width:768px){
+  .gcm-panel{border-radius:0;max-height:100vh;height:100vh;}
+  #gannCycleModal.open{align-items:flex-start;}
+  .gcm-tabs{overflow-x:auto;}
+  .gcm-tab{min-width:70px;}
+}
+/* ══ CYCLE CHART CANVAS ══ */
+.cycle-chart-wrap{
+  background:var(--bg);border:1px solid var(--line2);
+  border-radius:var(--radius);overflow:hidden;margin-bottom:12px;
+}
+/* ══ VERDICT CARDS ENHANCED ══ */
+.verdict-enhanced{
+  background:var(--card);border:1px solid var(--card-bd);
+  border-radius:var(--radius);padding:13px 14px;
+  margin-bottom:10px;box-shadow:var(--shadow);
+  transition:box-shadow .2s;
+}
+.verdict-enhanced:hover{box-shadow:var(--shadow-lg);}
+/* ══ MASTER FRAMEWORK CARDS ══ */
+.master-card{
+  background:var(--card);border:1px solid var(--card-bd);
+  border-radius:var(--radius);padding:11px 13px;
+  margin-bottom:8px;box-shadow:var(--shadow);
+}
+/* ══ BACKTEST TABLE ══ */
+.bt-stat-grid{
+  display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px;
+}
+.bt-stat-cell{
+  background:var(--card);border:1px solid var(--card-bd);
+  border-radius:var(--radius);padding:9px 11px;
+  box-shadow:var(--shadow);
+}
+/* ══ WEIGHT BARS ══ */
+.weight-row{
+  display:flex;align-items:center;gap:6px;
+  padding:5px 0;border-bottom:1px solid var(--line);
+}
+/* ══ PULSE ANIMATION for new signals ══ */
+@keyframes pulse-gold{0%,100%{box-shadow:0 0 0 0 rgba(139,105,20,0.4);}50%{box-shadow:0 0 0 6px rgba(139,105,20,0);}}
+.pulse-new{animation:pulse-gold 2s ease-in-out 3;}
+/* ══ SCROLLBAR THIN ══ */
+.gcm-body::-webkit-scrollbar,.right-panel::-webkit-scrollbar{width:4px;}
+.gcm-body::-webkit-scrollbar-thumb{background:var(--dim);border-radius:2px;}
+
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 html{font-size:var(--fs-base);}
 body{
@@ -1201,6 +1323,29 @@ canvas.main-c{width:100%!important;}
         <div id="gannTimeNodes"><span style="color:var(--muted);font-size:11px">加载价格后自动计算...</span></div>
       </div>
       <div class="mod-explain" id="explain-gann">威廉·戴尔·江恩（W.D. Gann）发现价格与时间的几何关系。Sq9（平方九）通过价格的平方根运算推导关键支撑/阻力位。1×1（45°线）是最重要的角度——价格与时间完全平衡。<strong>时间节点</strong>：30/60/90/120/180/360自然日周期及价格平方根周期，这些时间窗口历史上是关键转折集中区。</div>
+      <!-- Gann Cycle Chart Button -->
+      <div style="padding:10px 0 2px;">
+        <button onclick="openGannCycleModal()" style="width:100%;padding:9px;border:1px solid var(--cyan);border-radius:6px;background:var(--gann-cycle-bg);color:var(--cyan);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;letter-spacing:1px;transition:all .15s;" onmouseenter="this.style.background='rgba(10,88,112,0.15)'" onmouseleave="this.style.background='var(--gann-cycle-bg)'">
+          📊 打开江恩周期图表 · Gann Cycle Chart
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- I-Ching 易经 Module -->
+  <div class="mod-card">
+    <div class="mod-card-head" onclick="toggleMod('iching')">
+      <div><span class="mod-card-icon">☯️</span><span class="mod-card-lbl">易经卦象 I-Ching</span></div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span class="mod-card-sig" id="msig-iching" style="color:var(--iching)">--</span>
+        <span class="mod-card-arrow" id="marr-iching">›</span>
+      </div>
+    </div>
+    <div class="mod-card-body" id="mbody-iching">
+      <div id="ichingPanel"><span style="color:var(--muted);font-size:11px">--</span></div>
+      <div class="mod-explain" style="border-top:1px solid var(--iching-bd);color:var(--iching);">
+        易经六十四卦是中国最古老的智慧体系，以阴阳变化描述万物规律。<strong>卦象与市场</strong>：每卦代表一种市场状态与演变趋势。变爻指向即将发生的转变，本卦揭示当下格局，之卦预示未来走向。结合江恩时间节点与月相，三维交叉验证转折时机。
+      </div>
     </div>
   </div>
 
@@ -7669,25 +7814,268 @@ function mobileTab(tab){
 }
 
 function showMobileModules(){
-  // Create a fullscreen overlay showing the right panel content
-  let overlay=document.getElementById('mobileModulesOverlay');
-  if(!overlay){
-    overlay=document.createElement('div');
-    overlay.id='mobileModulesOverlay';
-    overlay.style.cssText='position:fixed;inset:0;z-index:450;background:var(--bg1);overflow-y:auto;padding:12px;padding-bottom:70px;';
-    overlay.innerHTML=`
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 4px 16px;">
-        <div style="font-size:16px;font-weight:700;color:var(--bright)">🔬 技术指标面板</div>
-        <button onclick="document.getElementById('mobileModulesOverlay').remove();mobileTab('signal');" style="padding:6px 14px;border:1px solid var(--line2);border-radius:5px;background:var(--bg2);color:var(--text);font-family:inherit;font-size:12px;cursor:pointer;">✕ 关闭</button>
+  // Remove stale overlay to force re-render with fresh data
+  const old = document.getElementById('mobileModulesOverlay');
+  if (old) old.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'mobileModulesOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:450;background:var(--bg1);overflow-y:auto;padding-bottom:80px;-webkit-overflow-scrolling:touch;';
+
+  overlay.innerHTML = `
+    <div style="position:sticky;top:0;z-index:10;background:var(--bg2);border-bottom:2px solid var(--gold);padding:10px 14px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div style="font-size:16px;font-weight:700;color:var(--bright)">🔬 分析面板</div>
+        <button onclick="document.getElementById('mobileModulesOverlay').remove();mobileTab('signal');" style="padding:6px 14px;border:1px solid var(--line2);border-radius:5px;background:var(--bg);color:var(--text);font-family:inherit;font-size:12px;cursor:pointer;">✕ 关闭</button>
       </div>
-      <div id="mobileModulesContent"></div>`;
-    document.body.appendChild(overlay);
+      <!-- Tab bar -->
+      <div style="display:flex;gap:0;background:var(--bg3);border-radius:7px;padding:2px;overflow-x:auto;">
+        <button onclick="switchMobileModTab('master',this)" id="mmtab-master" class="mm-tab-btn" style="flex:1;min-width:60px;padding:6px 4px;border:none;border-radius:5px;background:var(--gold);color:#fff;font-family:inherit;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap;">🧭 大师</button>
+        <button onclick="switchMobileModTab('backtest',this)" id="mmtab-backtest" class="mm-tab-btn" style="flex:1;min-width:60px;padding:6px 4px;border:none;border-radius:5px;background:transparent;color:var(--muted);font-family:inherit;font-size:10px;cursor:pointer;white-space:nowrap;">📊 回测</button>
+        <button onclick="switchMobileModTab('learning',this)" id="mmtab-learning" class="mm-tab-btn" style="flex:1;min-width:60px;padding:6px 4px;border:none;border-radius:5px;background:transparent;color:var(--muted);font-family:inherit;font-size:10px;cursor:pointer;white-space:nowrap;">🧠 自学习</button>
+        <button onclick="switchMobileModTab('indicators',this)" id="mmtab-indicators" class="mm-tab-btn" style="flex:1;min-width:60px;padding:6px 4px;border:none;border-radius:5px;background:transparent;color:var(--muted);font-family:inherit;font-size:10px;cursor:pointer;white-space:nowrap;">📈 指标</button>
+        <button onclick="switchMobileModTab('verdict',this)" id="mmtab-verdict" class="mm-tab-btn" style="flex:1;min-width:60px;padding:6px 4px;border:none;border-radius:5px;background:transparent;color:var(--muted);font-family:inherit;font-size:10px;cursor:pointer;white-space:nowrap;">🔮 研判</button>
+      </div>
+    </div>
+
+    <!-- TAB: 大师框架 -->
+    <div id="mmcontent-master" class="mm-tab-content" style="padding:14px;">
+      <div style="margin-bottom:12px;">
+        <div style="font-size:13px;font-weight:700;color:var(--gold);margin-bottom:3px;">🧭 大师框架分析</div>
+        <div style="font-size:10px;color:var(--muted);">Ray Dalio 全天候象限 × Naval Ravikant 杠杆论</div>
+      </div>
+      <div id="masterFrameworkPanel_mobile"></div>
+    </div>
+
+    <!-- TAB: 回测系统 -->
+    <div id="mmcontent-backtest" class="mm-tab-content" style="display:none;padding:14px;">
+      <div style="margin-bottom:12px;">
+        <div style="font-size:13px;font-weight:700;color:var(--gold);margin-bottom:3px;">📊 策略回测报告</div>
+        <div style="font-size:10px;color:var(--muted);">历史K线信号准确度评估</div>
+      </div>
+      <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;">
+        <select id="btTF_m" style="padding:7px 8px;border:1px solid var(--line2);border-radius:5px;background:var(--bg);color:var(--text);font-family:inherit;font-size:12px;flex:1;">
+          <option value="1h">1H</option><option value="4h" selected>4H</option><option value="1d">1D</option>
+        </select>
+        <select id="btPeriod_m" style="padding:7px 8px;border:1px solid var(--line2);border-radius:5px;background:var(--bg);color:var(--text);font-family:inherit;font-size:12px;flex:1;">
+          <option value="60">近60根K</option><option value="120" selected>近120根K</option><option value="200">近200根K</option>
+        </select>
+        <select id="btSize_m" style="padding:7px 8px;border:1px solid var(--line2);border-radius:5px;background:var(--bg);color:var(--text);font-family:inherit;font-size:12px;flex:1;">
+          <option value="0.05">5%仓位</option><option value="0.10" selected>10%仓位</option><option value="0.20">20%仓位</option>
+        </select>
+      </div>
+      <button onclick="runFinchBacktestMobile()" id="backtestRunBtn_m" style="width:100%;padding:12px;background:var(--gold);border:none;border-radius:7px;color:#fff;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:12px;letter-spacing:1px;">▶ 运行回测</button>
+      <div id="backtestResult_mobile"><div style="color:var(--muted);font-size:12px;text-align:center;padding:20px 0;">点击「运行回测」分析历史信号准确度</div></div>
+    </div>
+
+    <!-- TAB: 自学习 -->
+    <div id="mmcontent-learning" class="mm-tab-content" style="display:none;padding:14px;">
+      <div style="margin-bottom:12px;">
+        <div style="font-size:13px;font-weight:700;color:var(--gold);margin-bottom:3px;">🧠 自学习权重优化</div>
+        <div style="font-size:10px;color:var(--muted);">根据历史回测动态调整各信号因子权重</div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;">
+        <button onclick="optimizeWeightsNow();setTimeout(()=>renderLearningPanelMobile(),800);" style="flex:1;padding:10px;border:1px solid rgba(88,24,144,0.4);border-radius:6px;background:rgba(88,24,144,0.08);color:var(--violet);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">⚡ 立即优化</button>
+        <button onclick="resetLearnedWeights();setTimeout(()=>renderLearningPanelMobile(),300);" style="flex:1;padding:10px;border:1px solid var(--line2);border-radius:6px;background:var(--bg2);color:var(--muted);font-family:inherit;font-size:12px;cursor:pointer;">重置权重</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;">
+        <button onclick="exportLearnedWeights()" style="flex:1;padding:8px;border:1px solid var(--gold);border-radius:6px;background:transparent;color:var(--gold);font-family:inherit;font-size:11px;cursor:pointer;">📤 导出权重</button>
+        <button onclick="importLearnedWeights()" style="flex:1;padding:8px;border:1px solid var(--line2);border-radius:6px;background:var(--bg2);color:var(--muted);font-family:inherit;font-size:11px;cursor:pointer;">📂 导入权重</button>
+      </div>
+      <div id="learningBody_mobile"><div style="color:var(--muted);font-size:12px;text-align:center;padding:16px 0;">加载中...</div></div>
+    </div>
+
+    <!-- TAB: 技术指标 -->
+    <div id="mmcontent-indicators" class="mm-tab-content" style="display:none;">
+      <div id="mobileIndicatorsContent"></div>
+    </div>
+
+    <!-- TAB: 综合研判 -->
+    <div id="mmcontent-verdict" class="mm-tab-content" style="display:none;">
+      <div id="mobileVerdictContent"></div>
+    </div>`;
+
+  document.body.appendChild(overlay);
+
+  // ── Populate tab contents ──
+
+  // 大师框架: render fresh
+  setTimeout(() => {
+    try {
+      renderMasterFrameworkTo('masterFrameworkPanel_mobile');
+    } catch(e) {
+      const el = document.getElementById('masterFrameworkPanel_mobile');
+      if (el) el.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:10px 0;text-align:center;">等待信号加载...</div>';
+    }
+  }, 50);
+
+  // 自学习: render
+  setTimeout(() => { try { renderLearningPanelMobile(); } catch(e) {} }, 100);
+
+  // 技术指标: clone mod cards from right panel
+  const rp = document.querySelector('.right-panel');
+  const indEl = document.getElementById('mobileIndicatorsContent');
+  if (rp && indEl) {
+    // Clone only the mod-section and mod-card elements
+    const modSection = rp.querySelector('.mod-section-head');
+    const modCards = rp.querySelectorAll('.mod-card');
+    let html = '';
+    if (modSection) html += `<div style="padding:10px 14px 8px;font-size:11px;letter-spacing:3px;color:var(--muted);background:var(--bg2);border-bottom:1px solid var(--line);text-transform:uppercase;">分析模块</div>`;
+    modCards.forEach(card => { html += card.outerHTML; });
+    indEl.innerHTML = html;
+    // Re-attach toggle handlers
+    indEl.querySelectorAll('.mod-card-head').forEach(h => {
+      const id = h.getAttribute('onclick')?.match(/toggleMod\('(\w+)'\)/)?.[1];
+      if (id) {
+        h.onclick = () => {
+          const body = indEl.querySelector(`#mbody-${id}`);
+          const arr = indEl.querySelector(`#marr-${id}`);
+          if (body) body.classList.toggle('open');
+          if (arr) arr.classList.toggle('open');
+        };
+      }
+    });
   }
-  overlay.style.display='block';
-  // Clone right panel content
-  const rp=document.querySelector('.right-panel');
-  const mc=document.getElementById('mobileModulesContent');
-  if(rp&&mc){mc.innerHTML=rp.innerHTML;}
+
+  // 综合研判: clone verdict/summary section
+  const summaryEl = rp?.querySelector('.summary-section');
+  const verdictEl = document.getElementById('mobileVerdictContent');
+  if (summaryEl && verdictEl) {
+    verdictEl.innerHTML = `<div style="padding:14px;">${summaryEl.innerHTML}</div>`;
+  }
+}
+
+// ── Mobile-specific backtest runner (reads mobile selects) ──
+async function runFinchBacktestMobile() {
+  const btn = document.getElementById('backtestRunBtn_m');
+  const resultEl = document.getElementById('backtestResult_mobile');
+  if (!resultEl) return;
+
+  // Sync settings from mobile selects to desktop selects (shared logic)
+  const tfM = document.getElementById('btTF_m')?.value || '4h';
+  const periodM = document.getElementById('btPeriod_m')?.value || '120';
+  const sizeM = document.getElementById('btSize_m')?.value || '0.10';
+  // Also update desktop selects for consistency
+  const dTF = document.getElementById('btTF'); if (dTF) dTF.value = tfM;
+  const dPer = document.getElementById('btPeriod'); if (dPer) dPer.value = periodM;
+  const dSz = document.getElementById('btSize'); if (dSz) dSz.value = sizeM;
+
+  if (btn) { btn.textContent = '⏳ 回测中...'; btn.style.opacity = '0.6'; btn.disabled = true; }
+  resultEl.innerHTML = `<div style="text-align:center;padding:20px 0;"><div class="ai-spinner" style="margin:0 auto 10px;width:20px;height:20px;border:2px solid var(--line2);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;"></div><div style="font-size:12px;color:var(--muted);">正在分析历史数据...</div></div>`;
+
+  await new Promise(r => setTimeout(r, 40));
+
+  const kl = S.klines[S.sym + tfM] || [];
+  if (kl.length < 30) {
+    resultEl.innerHTML = `<div style="color:var(--amber);font-size:12px;padding:10px;">⚠️ K线不足（${kl.length}根），请先等待数据加载</div>`;
+    if (btn) { btn.textContent = '▶ 运行回测'; btn.style.opacity = '1'; btn.disabled = false; }
+    return;
+  }
+
+  try {
+    const result = _runBacktestEngine(kl, tfM, parseInt(periodM), parseFloat(sizeM), 0.001);
+    _btResults = result;
+    // Render into mobile panel
+    _renderBacktestResultTo(result, 'backtestResult_mobile');
+    // Learn from it
+    learnFromBacktest(result);
+    // Refresh learning tab
+    setTimeout(() => { try { renderLearningPanelMobile(); } catch(e) {} }, 400);
+  } catch(e) {
+    resultEl.innerHTML = `<div style="color:var(--red);font-size:12px;padding:10px;">❌ 回测出错：${e.message}</div>`;
+  }
+
+  if (btn) { btn.textContent = '▶ 重新回测'; btn.style.opacity = '1'; btn.disabled = false; }
+}
+
+// ── Render backtest result to any target element ID ──
+function _renderBacktestResultTo(r, targetId) {
+  // First render into desktop panel to generate HTML
+  const desktop = document.getElementById('backtestResult');
+  const target = document.getElementById(targetId);
+  if (!target) return;
+  if (!r || r.error) {
+    target.innerHTML = `<div style="color:var(--amber);font-size:12px;padding:10px;">${r?.error || '回测无结果'}</div>`;
+    return;
+  }
+  // Reuse renderBacktestResult which renders into backtestResult div, then copy
+  if (desktop) {
+    const prevContent = desktop.innerHTML;
+    renderBacktestResult(r);
+    target.innerHTML = desktop.innerHTML;
+    // Add export button for mobile
+    target.innerHTML += `<div style="display:flex;gap:6px;margin-top:8px;">
+      <button onclick="exportBacktestResult()" style="flex:1;padding:8px;border:1px solid var(--gold);border-radius:5px;background:transparent;color:var(--gold);font-size:11px;cursor:pointer;font-family:inherit;font-weight:700;">📥 导出结果</button>
+    </div>`;
+  }
+}
+
+// ── Render learning panel into mobile target ──
+function renderLearningPanelMobile() {
+  loadLearnedWeights();
+  const target = document.getElementById('learningBody_mobile');
+  if (!target) return;
+
+  // Temporarily render into desktop element, copy, restore
+  const desktopEl = document.getElementById('learningBody');
+  if (desktopEl) {
+    renderLearningPanel();
+    target.innerHTML = desktopEl.innerHTML;
+  } else {
+    // Fallback: render directly
+    const sigLabels = { rsi:'RSI', macd:'MACD', vegas:'Vegas通道', chan:'缠论', gann:'江恩', obv:'OBV量能', adx:'ADX趋势', candle:'K线形态', lunar:'月相', mystic:'玄学' };
+    let html = `<div style="font-size:10px;color:var(--muted);padding:6px 8px;background:var(--bg2);border-radius:4px;margin-bottom:10px;">
+      已学习 <strong>${_btResults?.total||0}</strong> 笔交易 · 优化 <strong>${_weightLog.length}</strong> 次</div>`;
+    Object.entries(_learnedWeights).forEach(([key, w]) => {
+      const defW = DEFAULT_WEIGHTS[key] || 1;
+      const pct = Math.min(100, (w / SAFETY.maxWeight) * 100);
+      const col = w > defW + 0.05 ? 'var(--green)' : w < defW - 0.05 ? 'var(--red)' : 'var(--gold)';
+      html += `<div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--line);">
+        <span style="font-size:12px;color:var(--muted);width:80px;">${sigLabels[key]||key}</span>
+        <div style="flex:1;height:6px;background:var(--bg2);border-radius:3px;"><div style="width:${pct}%;height:100%;background:${col};border-radius:3px;"></div></div>
+        <span style="font-size:12px;font-weight:700;color:${col};width:40px;text-align:right;">${w.toFixed(2)}×</span>
+      </div>`;
+    });
+    target.innerHTML = html;
+  }
+}
+
+// ── Render master framework to any element ID ──
+function renderMasterFrameworkTo(targetId) {
+  const target = document.getElementById(targetId);
+  if (!target) return;
+  // Render into desktop panel first, then copy
+  const desktop = document.getElementById('masterFrameworkPanel');
+  if (desktop) {
+    renderMasterFramework();
+    target.innerHTML = desktop.innerHTML;
+  } else {
+    renderMasterFramework();
+  }
+}
+
+// ── Mobile tab switcher ──
+function switchMobileModTab(tab, btn) {
+  // Hide all
+  document.querySelectorAll('.mm-tab-content').forEach(el => el.style.display = 'none');
+  // Reset all tab buttons
+  document.querySelectorAll('.mm-tab-btn').forEach(b => {
+    b.style.background = 'transparent';
+    b.style.color = 'var(--muted)';
+    b.style.fontWeight = 'normal';
+  });
+  // Show target
+  const content = document.getElementById('mmcontent-' + tab);
+  if (content) content.style.display = 'block';
+  // Activate button
+  if (btn) { btn.style.background = 'var(--gold)'; btn.style.color = '#fff'; btn.style.fontWeight = '700'; }
+
+  // Lazy-load tab content on first switch
+  if (tab === 'master') {
+    setTimeout(() => { try { renderMasterFrameworkTo('masterFrameworkPanel_mobile'); } catch(e) {} }, 50);
+  } else if (tab === 'learning') {
+    setTimeout(() => { try { renderLearningPanelMobile(); } catch(e) {} }, 50);
+  }
 }
 
 function showMobileWatchlist(){
@@ -8462,11 +8850,11 @@ async function runFinchBacktest() {
   const btn = document.getElementById('backtestRunBtn');
   const resultEl = document.getElementById('backtestResult');
 
-  // ── 读取配置 ──
+  // ── 读取配置（桌面端下拉框）──
   const tf = document.getElementById('btTF')?.value || '4h';
   const periodBars = parseInt(document.getElementById('btPeriod')?.value || '120');
   const positionSize = parseFloat(document.getElementById('btSize')?.value || '0.10');
-  const commission = 0.001; // 0.1% 双边手续费
+  const commission = 0.001;
 
   // ── 获取K线数据 ──
   const kl = S.klines[S.sym + tf] || [];
@@ -8477,7 +8865,10 @@ async function runFinchBacktest() {
 
   _btRunning = true;
   if (btn) { btn.textContent = '⏳ 计算中...'; btn.style.opacity = '0.6'; }
-  resultEl.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:10px 0;text-align:center;">⏳ 正在回测 ' + kl.length + ' 根K线...</div>';
+  resultEl.innerHTML = `<div style="text-align:center;padding:20px 0;">
+    <div style="width:20px;height:20px;border:2px solid var(--line2);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 10px;"></div>
+    <div style="font-size:12px;color:var(--muted);">正在回测 ${kl.length} 根K线...</div>
+  </div>`;
 
   // 让UI更新
   await new Promise(r => setTimeout(r, 30));
@@ -9540,8 +9931,953 @@ if (_origRenderSummary) {
   renderSummary = function() {
     _origRenderSummary();
     setTimeout(() => { try { renderMasterFramework(); } catch(e) {} }, 200);
+    setTimeout(() => { try { renderIching(S.lastPx); } catch(e) {} }, 300);
   };
 }
+
+// ╔══════════════════════════════════════════════════════════════════════╗
+// ║  FINCH MODULE 5 — 易经卦象分析 (I-Ching Market Oracle)              ║
+// ║  算法原理：                                                           ║
+// ║  1. 六十四卦 × 六爻：每卦对应一种市场状态                            ║
+// ║  2. 本卦：由价格数字特征+日期数字推导 → 揭示当下市场格局             ║
+// ║  3. 变卦/之卦：由RSI/MACD动量推导变爻 → 预测未来走向                 ║
+// ║  4. 彖辞与象辞：提供市场操作建议                                      ║
+// ║  5. 互卦：提取第2-5爻 → 揭示潜藏力量                                 ║
+// ╚══════════════════════════════════════════════════════════════════════╝
+
+const HEXAGRAMS = [
+  // [index, 卦名, 英文, 上卦(trigram), 下卦, 属性, 市场含义, 建议, 彖辞]
+  [1,'乾','Heaven','乾','乾','极阳·纯健','市场强势，趋势完整，多头主导','顺势做多，不可逆势','元亨利贞。天行健，君子以自强不息'],
+  [2,'坤','Earth','坤','坤','极阴·纯顺','市场承压，空头格局，等待反转','防守为主，等待时机','元亨，利牝马之贞。地势坤，君子以厚德载物'],
+  [3,'屯','Difficulty','坎','震','初生·困难','初始突破后震荡整理，等待方向','轻仓观察，等待放量突破','元亨利贞，勿用有攸往，利建侯'],
+  [4,'蒙','Youthful Folly','艮','坎','启蒙·迷茫','信号混沌，方向不明，高噪音期','减少交易频率，等待清晰信号','亨。匪我求童蒙，童蒙求我'],
+  [5,'需','Waiting','坎','乾','等待·时机','积累期，大行情前兆，等待催化剂','耐心等待最佳入场点','有孚，元亨，贞吉，利涉大川'],
+  [6,'讼','Conflict','乾','坎','争讼·冲突','多空博弈激烈，信号分歧，高波动','避免追高，等待胜负分出','有孚，窒惕，中吉，终凶'],
+  [7,'师','Army','坤','坎','统帅·纪律','趋势型行情，需要严格纪律执行','严格遵守止损，有序入场','贞，丈人，吉，无咎'],
+  [8,'比','Holding Together','坎','坤','亲附·聚合','资金聚合，市场共识形成，趋势启动','顺势参与，跟随主力资金','吉。原筮，元永贞，无咎'],
+  [9,'小畜','Small Taming','巽','乾','小积·蓄势','蓄势待发，突破在即，量能逐步增加','轻仓埋伏，等待放量确认','亨。密云不雨，自我西郊'],
+  [10,'履','Treading','乾','兑','谨慎·前行','谨慎行情，步步为营，不宜激进','小步建仓，设好止损','履虎尾，不咥人，亨'],
+  [11,'泰','Peace','坤','乾','大通·和谐','牛市格局，多头流畅，风险偏好高','积极做多，持仓待涨','小往大来，吉，亨'],
+  [12,'否','Standstill','乾','坤','闭塞·停滞','熊市格局，资金撤离，反弹即卖','空仓观望或做空反弹','否之匪人，不利君子贞，大往小来'],
+  [13,'同人','Fellowship','乾','离','共识·协作','市场共识强烈，多头一致看涨','趋势做多，动量强劲','同人于野，亨，利涉大川，利君子贞'],
+  [14,'大有','Great Possession','离','乾','丰收·大成','强势牛市，资产升值，财富效应','持仓多头，注意阶段性高点','元亨'],
+  [15,'谦','Modesty','坤','艮','谦逊·内敛','低调行情，稳健上涨，不过度激进','稳健操作，不追高','亨，君子有终'],
+  [16,'豫','Enthusiasm','震','坤','欢喜·先行','情绪驱动行情，FOMO情绪，短期强势','注意情绪顶，逢高减仓','利建侯行师'],
+  [17,'随','Following','兑','震','随从·顺势','跟随强势，动量持续，顺势交易','跟随主流，顺势操作','元亨利贞，无咎'],
+  [18,'蛊','Work on Decay','艮','巽','整治·改革','旧趋势结束，新趋势孕育，关键转折点','等待结构确认，新趋势入场','元亨，利涉大川，先甲三日，后甲三日'],
+  [19,'临','Approach','坤','兑','临近·来势','大行情来临，价格接近关键区域','布局等待突破，做好准备','元亨利贞，至于八月有凶'],
+  [20,'观','Contemplation','巽','坤','观察·审视','市场审视期，等待方向选择','深度观察，不急于行动','盥而不荐，有孚颙若'],
+  [21,'噬嗑','Biting Through','离','震','突破·穿越','价格突破关键阻力，成交量配合','突破跟进，趋势启动','亨，利用狱'],
+  [22,'贲','Grace','艮','离','文采·装饰','技术形态完美，但需注意内容是否支撑','形态交易，注意基本面','亨，小利有攸往'],
+  [23,'剥','Splitting Apart','艮','坤','剥落·衰退','价格逐步下移，多头力量衰竭','降低仓位，顺势减持','不利有攸往'],
+  [24,'复','Return','坤','震','回归·复苏','反转信号，底部复苏，新一轮上涨开始','积极布局，底部做多','亨，出入无疾，朋来无咎'],
+  [25,'无妄','Innocence','乾','震','纯粹·自然','真实行情，不受人为操控，自然运动','顺应自然规律，不逆势','元亨利贞，其匪正有眚'],
+  [26,'大畜','Great Taming','艮','乾','大积·储备','大量资本积累，即将喷发','等待蓄势结束，重仓入场','利贞，不家食吉，利涉大川'],
+  [27,'颐','Nourishment','艮','震','养育·滋养','市场积累期，价格箱体震荡，养精蓄锐','震荡区间操作，积累底仓','贞吉，观颐，自求口实'],
+  [28,'大过','Preponderance','兑','巽','过度·异常','过度延伸，泡沫警告，需要修正','注意风险，减轻杠杆','栋桡，利有攸往，亨'],
+  [29,'坎','Abysmal Water','坎','坎','险陷·重复','反复测试关键支撑，险中求生','严格止损，小心双底陷阱','有孚，维心亨，行有尚'],
+  [30,'离','Clinging Fire','离','离','附丽·光明','上涨动能强烈，趋势明确，光芒四射','坚定持多，追涨动量','利贞，亨。畜牝牛，吉'],
+  [31,'咸','Influence','兑','艮','感应·共鸣','市场情绪共鸣，FOMO驱动，强烈反应','注意情绪性波动','亨，利贞，取女吉'],
+  [32,'恒','Duration','震','巽','持久·恒常','稳定趋势，长期持仓，不轻易改变','坚持趋势，不被噪音干扰','亨，无咎，利贞，利有攸往'],
+  [33,'遁','Retreat','乾','艮','退避·收缩','熊市格局，主动撤退，保存实力','减仓防守，等待更好时机','亨，小利贞'],
+  [34,'大壮','Great Power','震','乾','大力·强盛','强势多头，动能充沛，势不可挡','顺势做多，但注意过热','利贞'],
+  [35,'晋','Progress','离','坤','进步·前进','稳步上涨，基本面支撑，持续进步','持仓待涨，稳步加仓','康侯用锡马蕃庶，昼日三接'],
+  [36,'明夷','Darkening','坤','离','隐晦·受压','行情受压，信息不透明，谨慎操作','防守为主，避免重仓','利艰贞'],
+  [37,'家人','Family','巽','离','家庭·秩序','结构性行情，有序运动，遵循规律','按照规律操作，有序布局','利女贞'],
+  [38,'睽','Opposition','离','兑','对立·分歧','多空分歧，信号矛盾，方向不明','观望等待，不盲目操作','小事吉'],
+  [39,'蹇','Obstruction','坎','艮','险阻·困难','上涨阻力重重，需要突破才能前进','不强攻阻力，等待时机','利西南，不利东北，利见大人，贞吉'],
+  [40,'解','Deliverance','震','坎','解除·释放','压力释放，趋势解放，向上突破','突破跟进，做多为主','利西南，无所往，其来复吉'],
+  [41,'损','Decrease','艮','兑','损减·节约','获利了结期，减仓时机，上涨乏力','逐步减仓，锁定利润','有孚，元吉，无咎，可贞，利有攸往'],
+  [42,'益','Increase','巽','震','增益·扩张','利润放大期，趋势加速，加仓时机','趋势加仓，扩大仓位','利有攸往，利涉大川'],
+  [43,'夬','Breakthrough','兑','乾','决断·突破','决定性突破，关键阻力被攻克','突破后积极跟进','扬于王庭，孚号，有厉'],
+  [44,'姤','Coming to Meet','乾','巽','相遇·邂逅','意外反转信号，需要警觉','注意突发性反转，设好止损','女壮，勿用取女'],
+  [45,'萃','Gathering','兑','坤','聚集·汇聚','资金汇聚，大行情前聚集','等待资金聚集完成，准备入场','亨，王假有庙，利见大人，亨，利贞'],
+  [46,'升','Pushing Upward','坤','巽','上升·晋升','稳健上涨，基本面驱动，可持续','坚定做多，趋势可靠','元亨，用见大人，勿恤，南征吉'],
+  [47,'困','Oppression','兑','坎','困境·枯竭','流动性枯竭，价格受困，需耐心','等待困境解除，不轻易操作','亨，贞大人吉，无咎'],
+  [48,'井','The Well','坎','巽','资源·根基','价值支撑，底部区域，深度价值','底部布局，等待价值回归','改邑不改井，无丧无得'],
+  [49,'革','Revolution','兑','离','变革·革命','趋势彻底反转，新周期开始','反转后积极做多','巳日乃孚，元亨利贞，悔亡'],
+  [50,'鼎','The Cauldron','离','巽','烹饪·转化','积累转化，价值创造，稳定上涨','持仓待涨，让利润奔跑','元吉，亨'],
+  [51,'震','Thunder','震','震','震动·惊醒','突发事件，市场震动，急剧波动','警惕突发风险，减小仓位','亨，震来虩虩，笑言哑哑，震惊百里'],
+  [52,'艮','Keeping Still','艮','艮','停止·静止','价格停滞，区间震荡，等待方向','区间操作，不追突破','艮其背，不获其身，行其庭，不见其人，无咎'],
+  [53,'渐','Development','巽','艮','渐进·发展','缓慢但持续上涨，趋势稳健','耐心持仓，不急于获利','女归吉，利贞'],
+  [54,'归妹','Marrying Maiden','震','兑','归宿·急切','情绪化操作，追涨追跌，冲动交易','克制情绪，冷静决策','征凶，无攸利'],
+  [55,'丰','Abundance','震','离','丰盛·顶峰','价格高点，丰收时期，注意见顶','阶段性减仓，锁定丰厚利润','亨，王假之，勿忧，宜日中'],
+  [56,'旅','The Wanderer','离','艮','旅行·漂泊','价格漂游，方向不定，高波动','轻仓灵活，不恋战','小亨，旅贞吉'],
+  [57,'巽','The Gentle','巽','巽','顺从·渗透','缓慢渗透，趋势延续，不急剧','顺势操作，跟随趋势','小亨，利有攸往，利见大人'],
+  [58,'兑','The Joyous','兑','兑','喜悦·悦从','市场乐观，做多情绪，价格上涨','乐观做多，但注意顶部','亨，利贞'],
+  [59,'涣','Dispersion','巽','坎','涣散·流散','资金流失，多头离散，需警惕','减仓防守，等待重新聚合','亨，王假有庙，利涉大川，利贞'],
+  [60,'节','Limitation','坎','兑','节制·有度','价格在区间内运动，受限','区间交易，不追突破','亨，苦节不可贞'],
+  [61,'中孚','Inner Truth','巽','兑','真诚·内心','真实信号，不受噪音影响，可信度高','跟随真实信号，果断入场','豚鱼吉，利涉大川，利贞'],
+  [62,'小过','Small Exceeding','震','艮','小越·微超','小幅超越，注意过度延伸','适当获利，注意回调','亨，利贞，可小事，不可大事'],
+  [63,'既济','After Completion','坎','离','完成·结束','趋势完成，行情接近尾声','适时了结，不恋战','亨，小利贞，初吉终乱'],
+  [64,'未济','Before Completion','离','坎','未完·转化','新周期开始，旧格局结束，转折中','谨慎对待，等待确认','亨，小狐汔济，濡其尾，无攸利'],
+];
+
+// 八卦二进制编码 (阳=1 阴=0, 从下到上)
+const TRIGRAMS = {
+  '乾': [1,1,1], '兑': [1,1,0], '离': [1,0,1], '震': [1,0,0],
+  '巽': [0,1,1], '坎': [0,1,0], '艮': [0,0,1], '坤': [0,0,0],
+};
+
+// ── 核心：由价格+日期+技术指标推导卦象 ──
+function computeIching(price, kl, signalRes) {
+  if (!price || price <= 0) return null;
+
+  // ── Step 1: 本卦推导 ──
+  // 用价格数字特征（取整取模）+ 日期数字 → 1~64之间的卦序
+  const now = new Date();
+  const dateNum = (now.getFullYear() % 100) + (now.getMonth() + 1) + now.getDate() + now.getHours();
+  const priceNum = Math.round(price);
+  const priceDigitSum = priceNum.toString().split('').map(Number).reduce((a, b) => a + b, 0);
+
+  // 本卦索引 (0~63)
+  const benIdx = ((priceDigitSum + dateNum) % 64 + 64) % 64;
+  const benGua = HEXAGRAMS[benIdx];
+
+  // ── Step 2: 变爻 — 由技术指标决定 ──
+  // 哪一爻变化，取决于市场动能的强弱位置
+  let changeYao = 0; // 第几爻变 (1-6, 0=无变爻)
+  if (signalRes) {
+    const rsi = signalRes.rsi || 50;
+    const macdHist = signalRes.macdD?.hist || 0;
+    const bbPos = signalRes.bbPos || 0.5;
+
+    // RSI决定变爻位置（将0-100映射到1-6）
+    if (rsi < 20 || rsi > 80) changeYao = 1; // 极端值 → 初爻变
+    else if (rsi < 30 || rsi > 70) changeYao = 2;
+    else if (rsi < 38 || rsi > 62) changeYao = 3;
+    else if (Math.abs(macdHist) > 0 && bbPos < 0.2) changeYao = 4;
+    else if (Math.abs(macdHist) > 0 && bbPos > 0.8) changeYao = 5;
+    else if (Math.abs(macdHist) > 500) changeYao = 6;
+  }
+
+  // ── Step 3: 之卦 — 变爻后的新卦 ──
+  let zhiIdx = benIdx;
+  if (changeYao > 0) {
+    // 翻转对应爻（第changeYao爻）
+    zhiIdx = benIdx ^ (1 << (changeYao - 1));
+    zhiIdx = ((zhiIdx % 64) + 64) % 64;
+  }
+  const zhiGua = HEXAGRAMS[zhiIdx];
+
+  // ── Step 4: 互卦 — 取本卦2-5爻 ──
+  // 用于揭示潜藏力量
+  const huIdx = (benIdx + 17) % 64; // 简化：互卦用固定偏移
+  const huGua = HEXAGRAMS[huIdx];
+
+  // ── Step 5: 市场解读 ──
+  const isBull = signalRes ? signalRes.isBull : true;
+  const alignment = (benGua[5].includes('多') || benGua[5].includes('健') || benGua[5].includes('进') || benGua[5].includes('升'))
+    ? 'bull' : (benGua[5].includes('空') || benGua[5].includes('衰') || benGua[5].includes('退'))
+    ? 'bear' : 'neutral';
+
+  // 市场含义评分
+  const guaScore = alignment === 'bull' ? 1 : alignment === 'bear' ? -1 : 0;
+  const techScore = signalRes ? (signalRes.isBull ? 1 : -1) : 0;
+  const resonance = guaScore === techScore && guaScore !== 0 ? 'high' : guaScore * techScore < 0 ? 'conflict' : 'neutral';
+
+  return {
+    ben:   { gua: benGua,  idx: benIdx, changeYao },
+    zhi:   { gua: zhiGua,  idx: zhiIdx },
+    hu:    { gua: huGua,   idx: huIdx },
+    alignment, resonance, guaScore, changeYao,
+    marketNote: benGua[7], judgment: benGua[9],
+  };
+}
+
+// ── 绘制单个卦爻图形 ──
+function renderHexagramSVG(hexIdx, size) {
+  const gua = HEXAGRAMS[hexIdx];
+  const upper = TRIGRAMS[gua[3]] || [1,1,1];
+  const lower = TRIGRAMS[gua[4]] || [1,1,1];
+  const lines = [...lower, ...upper]; // 从下到上6爻
+  const s = size || 40;
+  const lw = Math.round(s * 0.7), lh = 3, gap = 4, pad = (s - lw) / 2;
+  let svg = `<svg width="${s}" height="${s}" viewBox="0 0 ${s} ${s}">`;
+  lines.forEach((yang, i) => {
+    const y = s - pad - (i + 1) * (lh + gap) + gap;
+    if (yang) {
+      svg += `<rect x="${pad}" y="${y}" width="${lw}" height="${lh}" rx="1" fill="var(--iching)"/>`;
+    } else {
+      const hw = (lw - 4) / 2;
+      svg += `<rect x="${pad}" y="${y}" width="${hw}" height="${lh}" rx="1" fill="var(--iching)"/>`;
+      svg += `<rect x="${pad + hw + 4}" y="${y}" width="${hw}" height="${lh}" rx="1" fill="var(--iching)"/>`;
+    }
+  });
+  svg += `</svg>`;
+  return svg;
+}
+
+// ── 渲染易经面板（右侧模块）──
+function renderIching(price) {
+  const el = document.getElementById('ichingPanel');
+  if (!el) return;
+  if (!price || price <= 0) { el.innerHTML = '<span style="color:var(--muted);font-size:11px">等待价格...</span>'; return; }
+
+  const res = S.lastSignal || null;
+  let ic;
+  try { ic = computeIching(price, S.klines[S.sym + (S.chartTF || '4h')] || [], res); }
+  catch(e) { el.innerHTML = '<span style="color:var(--muted);font-size:11px">计算中...</span>'; return; }
+  if (!ic) return;
+
+  const resColor = ic.resonance === 'high' ? 'var(--green)' : ic.resonance === 'conflict' ? 'var(--red)' : 'var(--amber)';
+  const resLabel = ic.resonance === 'high' ? '✅ 与技术共振' : ic.resonance === 'conflict' ? '⚠️ 与技术相悖' : '⚡ 中性';
+
+  const benGua = ic.ben.gua;
+  const zhiGua = ic.zhi.gua;
+
+  let html = `
+    <div style="display:flex;align-items:stretch;gap:10px;margin-bottom:10px;">
+      <!-- 本卦 -->
+      <div class="iching-card" style="flex:1;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+          ${renderHexagramSVG(ic.ben.idx, 44)}
+          <div>
+            <div style="font-size:10px;color:var(--muted);letter-spacing:1px;">本卦 · Present</div>
+            <div class="iching-name-cn">${benGua[1]}</div>
+            <div style="font-size:10px;color:var(--iching)">${benGua[2]}</div>
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--text);line-height:1.7;margin-bottom:5px;">${benGua[6]}</div>
+        <div style="font-size:11px;font-weight:700;color:var(--iching);padding:4px 7px;background:rgba(107,52,16,0.06);border-radius:3px;">💼 ${benGua[7]}</div>
+      </div>
+      <!-- 之卦 (只在有变爻时) -->
+      ${ic.changeYao > 0 ? `
+      <div class="iching-card" style="flex:1;border-color:rgba(88,24,144,0.2);background:rgba(88,24,144,0.05);">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+          ${renderHexagramSVG(ic.zhi.idx, 44)}
+          <div>
+            <div style="font-size:10px;color:var(--violet);letter-spacing:1px;">之卦 · Future</div>
+            <div class="iching-name-cn" style="color:var(--violet)">${zhiGua[1]}</div>
+            <div style="font-size:10px;color:var(--violet)">${zhiGua[2]}</div>
+          </div>
+        </div>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:4px;">第${ic.changeYao}爻变 → 走向</div>
+        <div style="font-size:11px;color:var(--text);line-height:1.7;">${zhiGua[6]}</div>
+      </div>` : ''}
+    </div>
+
+    <!-- 彖辞 -->
+    <div style="font-family:'Noto Serif SC',serif;font-size:12px;color:var(--iching);padding:8px 10px;background:var(--iching-bg);border:1px solid var(--iching-bd);border-radius:4px;line-height:2.0;margin-bottom:8px;">
+      <div style="font-size:10px;color:var(--muted);margin-bottom:3px;letter-spacing:1px;">彖辞</div>
+      「${benGua[9]}」
+    </div>
+
+    <!-- 共振情况 + 互卦 -->
+    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+      <span style="font-size:11px;font-weight:700;color:${resColor};padding:3px 9px;background:${ic.resonance==='high'?'rgba(26,107,58,0.08)':ic.resonance==='conflict'?'rgba(160,20,32,0.08)':'rgba(128,80,0,0.06)'};border-radius:10px;border:1px solid ${resColor}">${resLabel}</span>
+      <span style="font-size:10px;color:var(--muted);">互卦: ${ic.hu.gua[1]}（${ic.hu.gua[6].slice(0,12)}...）</span>
+    </div>`;
+
+  el.innerHTML = html;
+
+  // Update badge
+  const badge = document.getElementById('msig-iching');
+  if (badge) {
+    badge.textContent = benGua[1] + (ic.changeYao > 0 ? '→' + zhiGua[1] : '');
+    badge.style.color = resColor;
+  }
+
+  S.modData.iching = ic;
+}
+
+// ── 易经完整详细面板（用于江恩图表Modal）──
+function renderIchingFull(targetId) {
+  const el = document.getElementById(targetId);
+  if (!el) return;
+  const price = S.lastPx;
+  if (!price) { el.innerHTML = '<div style="color:var(--muted);padding:20px;text-align:center;">等待价格数据...</div>'; return; }
+
+  const res = S.lastSignal;
+  let ic;
+  try { ic = computeIching(price, S.klines[S.sym+(S.chartTF||'4h')]||[], res); }
+  catch(e) { el.innerHTML = '<div style="color:var(--muted);">计算出错</div>'; return; }
+
+  const allGuas = HEXAGRAMS.slice(0, 8); // 先天八卦
+  let fullHtml = `
+    <div style="margin-bottom:16px;">
+      <div style="font-size:13px;font-weight:700;color:var(--iching);margin-bottom:4px;">☯️ 当前卦象解读</div>
+      <div style="font-size:11px;color:var(--muted);">基于价格数字能量 × 日期干支 × 技术指标变爻</div>
+    </div>`;
+
+  // Main reading
+  fullHtml += `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;">`;
+  [
+    { label: '本卦 · 当下', gua: ic.ben.gua, idx: ic.ben.idx, col: 'var(--iching)', note: '揭示当前市场格局' },
+    { label: `之卦 · 演变${ic.changeYao > 0 ? '（第'+ic.changeYao+'爻变）' : '（无变爻）'}`, gua: ic.zhi.gua, idx: ic.zhi.idx, col: 'var(--violet)', note: '预示走向变化' },
+    { label: '互卦 · 潜藏', gua: ic.hu.gua, idx: ic.hu.idx, col: 'var(--cyan)', note: '隐藏的市场力量' },
+  ].forEach(item => {
+    fullHtml += `<div style="background:var(--card);border:1px solid var(--card-bd);border-radius:6px;padding:12px;text-align:center;">
+      <div style="font-size:10px;color:var(--muted);margin-bottom:6px;">${item.label}</div>
+      <div style="display:flex;justify-content:center;margin-bottom:6px;">${renderHexagramSVG(item.idx, 48)}</div>
+      <div style="font-size:20px;font-family:'Noto Serif SC',serif;font-weight:600;color:${item.col};">${item.gua[1]}</div>
+      <div style="font-size:11px;color:${item.col};margin-top:2px;">${item.gua[2]}</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;">${item.note}</div>
+      <div style="font-size:11px;color:var(--text);margin-top:6px;line-height:1.6;">${item.gua[6]}</div>
+    </div>`;
+  });
+  fullHtml += `</div>`;
+
+  // Judgment + advice
+  fullHtml += `
+    <div style="background:var(--iching-bg);border:1px solid var(--iching-bd);border-radius:6px;padding:14px;margin-bottom:16px;">
+      <div style="font-family:'Noto Serif SC',serif;font-size:14px;color:var(--iching);margin-bottom:8px;">「${ic.ben.gua[9]}」</div>
+      <div style="font-size:12px;color:var(--text);line-height:1.8;margin-bottom:8px;">${ic.ben.gua[6]}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:140px;background:rgba(255,255,255,0.5);border-radius:4px;padding:8px 10px;">
+          <div style="font-size:10px;color:var(--muted);margin-bottom:3px;">操作建议</div>
+          <div style="font-size:12px;font-weight:700;color:var(--iching);">${ic.ben.gua[7]}</div>
+        </div>
+        <div style="flex:1;min-width:140px;background:rgba(255,255,255,0.5);border-radius:4px;padding:8px 10px;">
+          <div style="font-size:10px;color:var(--muted);margin-bottom:3px;">卦象属性</div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);">${ic.ben.gua[5]}</div>
+        </div>
+        <div style="flex:1;min-width:140px;background:rgba(255,255,255,0.5);border-radius:4px;padding:8px 10px;">
+          <div style="font-size:10px;color:var(--muted);margin-bottom:3px;">上下卦</div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);">${ic.ben.gua[3]}(上) / ${ic.ben.gua[4]}(下)</div>
+        </div>
+      </div>
+    </div>`;
+
+  // 64 hexagrams quick reference
+  fullHtml += `<div style="margin-bottom:10px;">
+    <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;">六十四卦 · 市场状态分布</div>
+    <div style="display:flex;flex-wrap:wrap;gap:4px;">`;
+  HEXAGRAMS.forEach((g, i) => {
+    const isCurrent = i === ic.ben.idx;
+    const isZhi = i === ic.zhi.idx;
+    const bull = g[6].includes('多') || g[6].includes('上涨') || g[6].includes('做多');
+    const bear = g[6].includes('空') || g[6].includes('防守') || g[6].includes('下跌');
+    const bg = isCurrent ? 'var(--iching)' : isZhi ? 'var(--violet)' : bull ? 'rgba(26,107,58,0.12)' : bear ? 'rgba(160,20,32,0.08)' : 'var(--bg2)';
+    const tc = isCurrent || isZhi ? '#fff' : 'var(--text)';
+    fullHtml += `<div title="${g[1]} · ${g[6]}" style="width:30px;height:30px;background:${bg};border-radius:3px;display:flex;align-items:center;justify-content:center;cursor:default;font-size:11px;font-family:'Noto Serif SC',serif;color:${tc};border:1px solid ${isCurrent?'var(--iching)':isZhi?'var(--violet)':'var(--line2)'};">${g[1]}</div>`;
+  });
+  fullHtml += `</div></div>`;
+
+  el.innerHTML = fullHtml;
+}
+
+// ── Hook renderIching into renderGann ──
+const _prevRenderGann = renderGann;
+renderGann = function(price) {
+  _prevRenderGann(price);
+  setTimeout(() => { try { renderIching(price); } catch(e) {} }, 600);
+};
+
+
+// ╔══════════════════════════════════════════════════════════════════════╗
+// ║  FINCH MODULE 6 — 江恩周期图表 (Gann Cycle Charts)                  ║
+// ║  图表类型：                                                           ║
+// ║  1. Sq9 螺旋：价格从1向外螺旋，标注当前价附近节点                    ║
+// ║  2. 时间周期图：横轴=时间，纵轴=价格，叠加所有时间节点竖线           ║
+// ║  3. 角度射线：K线图上叠加1×1/2×1/1×2/4×1角度线                     ║
+// ║  4. 时间之轮：360°圆形，过去/未来节点按角度分布                      ║
+// ╚══════════════════════════════════════════════════════════════════════╝
+
+function openGannCycleModal() {
+  const modal = document.getElementById('gannCycleModal');
+  if (!modal) return;
+  modal.classList.add('open');
+  // Default to spiral tab
+  setTimeout(() => {
+    try { renderGannSpiral(); } catch(e) {}
+  }, 50);
+}
+
+function closeGannCycleModal() {
+  const modal = document.getElementById('gannCycleModal');
+  if (modal) modal.classList.remove('open');
+}
+
+function switchGCMTab(tab, btn) {
+  document.querySelectorAll('.gcm-content').forEach(el => el.style.display = 'none');
+  document.querySelectorAll('.gcm-tab').forEach(b => b.classList.remove('active'));
+  const el = document.getElementById('gcm-' + tab);
+  if (el) el.style.display = 'block';
+  if (btn) btn.classList.add('active');
+
+  // Lazy render
+  setTimeout(() => {
+    try {
+      if (tab === 'spiral') renderGannSpiral();
+      else if (tab === 'cycles') renderGannCycleTimeline();
+      else if (tab === 'angles') renderGannAngles();
+      else if (tab === 'iching') renderIchingFull('gannIChingFull');
+      else if (tab === 'wheel') renderGannWheel();
+    } catch(e) { console.warn('GCM tab render error:', tab, e.message); }
+  }, 30);
+}
+
+// ── 1. Sq9 SPIRAL ──
+function renderGannSpiral() {
+  const canvas = document.getElementById('gannSpiralCanvas');
+  const infoEl = document.getElementById('gannSpiralLevels');
+  if (!canvas) return;
+  const price = S.lastPx || 0;
+
+  const dpr = window.devicePixelRatio || 1;
+  const W = Math.min(canvas.parentElement.clientWidth - 24, 560);
+  const H = W;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  const cx = W / 2, cy = H / 2;
+  const bg = '#F8F5EE';
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+
+  // Draw spiral grid
+  const maxRings = 12;
+  for (let r = 1; r <= maxRings; r++) {
+    const radius = (r / maxRings) * (W / 2 - 20);
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(0,0,0,0.06)';
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+  }
+
+  // Draw angle lines (every 45°)
+  for (let a = 0; a < 360; a += 45) {
+    const rad = (a - 90) * Math.PI / 180;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + Math.cos(rad) * (W/2-10), cy + Math.sin(rad) * (H/2-10));
+    ctx.strokeStyle = 'rgba(0,0,0,0.06)';
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+    // Angle label
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.font = '9px Verdana';
+    ctx.textAlign = 'center';
+    ctx.fillText(a + '°', cx + Math.cos(rad) * (W/2-8), cy + Math.sin(rad) * (H/2-8));
+  }
+
+  // Sq9 levels: starting from √price, step 0.5 in sqrt space
+  const sqrtPrice = Math.sqrt(price);
+  const levels = [];
+  for (let i = -8; i <= 8; i++) {
+    const sqrtVal = sqrtPrice + i * 0.5;
+    if (sqrtVal > 0) levels.push({ val: Math.round(sqrtVal * sqrtVal), step: i });
+  }
+
+  // Plot levels as points on spiral
+  levels.forEach((lv, idx) => {
+    const angle = (idx / levels.length) * Math.PI * 6 - Math.PI / 2; // 3 rotations
+    const radius = (Math.abs(lv.step) / 8) * (W / 2 - 30) + 15;
+    const x = cx + Math.cos(angle) * radius;
+    const y = cy + Math.sin(angle) * radius;
+
+    const isCurrent = lv.step === 0;
+    const isNear = Math.abs(lv.step) <= 1;
+
+    ctx.beginPath();
+    ctx.arc(x, y, isCurrent ? 7 : isNear ? 5 : 3.5, 0, Math.PI * 2);
+    ctx.fillStyle = isCurrent ? '#8B6914' : lv.step > 0 ? '#1A6B3A' : '#A01420';
+    ctx.fill();
+
+    if (isCurrent || isNear) {
+      ctx.fillStyle = '#2C2418';
+      ctx.font = isCurrent ? 'bold 10px Verdana' : '9px Verdana';
+      ctx.textAlign = x > cx ? 'left' : 'right';
+      const priceStr = price > 10000 ? Math.round(lv.val / 100) * 100 : lv.val;
+      ctx.fillText(priceStr.toLocaleString(), x + (x > cx ? 6 : -6), y + 3);
+    }
+  });
+
+  // Center dot + current price
+  ctx.beginPath();
+  ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+  ctx.fillStyle = '#8B6914';
+  ctx.fill();
+  ctx.fillStyle = '#8B6914';
+  ctx.font = 'bold 11px Verdana';
+  ctx.textAlign = 'center';
+  ctx.fillText('NOW ' + (price > 0 ? price.toLocaleString() : '--'), cx, cy - 12);
+
+  // Legend info
+  if (infoEl && price > 0) {
+    const nearest = levels.filter(l => l.step !== 0).sort((a,b) => Math.abs(a.step)-Math.abs(b.step));
+    const above = nearest.filter(l => l.val > price).sort((a,b) => a.val-b.val)[0];
+    const below = nearest.filter(l => l.val < price).sort((a,b) => b.val-a.val)[0];
+    infoEl.innerHTML = `
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        ${above ? `<div style="flex:1;background:rgba(160,20,32,0.08);border:1px solid rgba(160,20,32,0.2);border-radius:5px;padding:8px 10px;">
+          <div style="font-size:10px;color:var(--muted);margin-bottom:2px;">▲ 上方阻力 Sq9+</div>
+          <div style="font-size:14px;font-weight:700;color:var(--red);">${above.val.toLocaleString()}</div>
+          <div style="font-size:10px;color:var(--muted);">+${((above.val-price)/price*100).toFixed(2)}%</div>
+        </div>` : ''}
+        ${below ? `<div style="flex:1;background:rgba(26,107,58,0.08);border:1px solid rgba(26,107,58,0.2);border-radius:5px;padding:8px 10px;">
+          <div style="font-size:10px;color:var(--muted);margin-bottom:2px;">▼ 下方支撑 Sq9-</div>
+          <div style="font-size:14px;font-weight:700;color:var(--green);">${below.val.toLocaleString()}</div>
+          <div style="font-size:10px;color:var(--muted);">${((below.val-price)/price*100).toFixed(2)}%</div>
+        </div>` : ''}
+      </div>
+      <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px;">
+        ${levels.filter(l=>l.step!==0).slice(0,10).map(l => {
+          const diff = ((l.val-price)/price*100).toFixed(1);
+          const col = l.val > price ? '#A01420' : '#1A6B3A';
+          return `<span style="font-size:11px;padding:3px 8px;border-radius:4px;background:${l.val>price?'rgba(160,20,32,0.08)':'rgba(26,107,58,0.08)'};color:${col};border:1px solid ${l.val>price?'rgba(160,20,32,0.2)':'rgba(26,107,58,0.2)'};">${l.val.toLocaleString()} <span style="opacity:.7">${diff}%</span></span>`;
+        }).join('')}
+      </div>`;
+  }
+}
+
+// ── 2. TIME CYCLE TIMELINE ──
+function renderGannCycleTimeline() {
+  const canvas = document.getElementById('gannCycleCanvas');
+  const infoEl = document.getElementById('gannCycleNodes');
+  if (!canvas) return;
+
+  const price = S.lastPx || 0;
+  const kl = S.klines[S.sym + (document.getElementById('gcmCycleTF')?.value || '4h')] || [];
+
+  const dpr = window.devicePixelRatio || 1;
+  const W = Math.max(canvas.parentElement.clientWidth - 24, 300);
+  const H = 200;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.fillStyle = '#F8F5EE';
+  ctx.fillRect(0, 0, W, H);
+
+  if (kl.length < 20 || !price) {
+    ctx.fillStyle = '#887860';
+    ctx.font = '12px Verdana';
+    ctx.textAlign = 'center';
+    ctx.fillText('等待K线数据...', W/2, H/2);
+    return;
+  }
+
+  // Price chart background (last 60 bars)
+  const recent = kl.slice(-60);
+  const prices = recent.map(k => k.c);
+  const pMin = Math.min(...prices), pMax = Math.max(...prices);
+  const pRange = pMax - pMin || price * 0.1;
+  const tMin = recent[0].t, tMax = recent[recent.length-1].t;
+  const tRange = tMax - tMin || 1;
+
+  const toX = t => ((t - tMin) / tRange) * (W - 40) + 20;
+  const toY = p => H - 30 - ((p - pMin) / pRange) * (H - 50);
+
+  // Draw price line
+  ctx.beginPath();
+  recent.forEach((k, i) => {
+    const x = toX(k.t), y = toY(k.c);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.strokeStyle = 'rgba(139,105,20,0.4)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // Draw Gann time cycle vertical lines
+  const gannCycles = [30, 45, 60, 90, 120, 135, 180, 270, 360];
+  const now = Date.now();
+  const DAY_MS = 86400000;
+
+  // Use last swing low as reference
+  const recentKL = kl.slice(-120);
+  let refT = recentKL[0]?.t || (now - 90 * DAY_MS);
+  if (recentKL.length > 5) {
+    const loIdx = recentKL.reduce((mi, k, i) => k.l < recentKL[mi].l ? i : mi, 0);
+    refT = recentKL[loIdx].t;
+  }
+
+  gannCycles.forEach(days => {
+    const nodeT = refT + days * DAY_MS;
+    const isPast = nodeT < now;
+    const isNear = Math.abs(nodeT - now) < 3 * DAY_MS;
+
+    if (nodeT < tMin || nodeT > tMax + 60 * DAY_MS) return;
+    const x = toX(Math.min(nodeT, tMax));
+
+    ctx.beginPath();
+    ctx.moveTo(x, 10);
+    ctx.lineTo(x, H - 20);
+    ctx.strokeStyle = isNear ? '#8B6914' : isPast ? 'rgba(139,105,20,0.3)' : 'rgba(10,88,112,0.5)';
+    ctx.lineWidth = isNear ? 2 : 1;
+    ctx.setLineDash(isPast ? [3, 3] : []);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.fillStyle = isNear ? '#8B6914' : isPast ? 'rgba(139,105,20,0.6)' : 'rgba(10,88,112,0.8)';
+    ctx.font = '8px Verdana';
+    ctx.textAlign = 'center';
+    ctx.fillText(days + '°', x, H - 8);
+  });
+
+  // Current time line
+  if (now >= tMin && now <= tMax + 60 * DAY_MS) {
+    const nowX = toX(Math.min(now, tMax));
+    ctx.beginPath();
+    ctx.moveTo(nowX, 0);
+    ctx.lineTo(nowX, H);
+    ctx.strokeStyle = '#A01420';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4, 4]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#A01420';
+    ctx.font = 'bold 9px Verdana';
+    ctx.textAlign = 'center';
+    ctx.fillText('NOW', nowX, 10);
+  }
+
+  // Price axis labels
+  ctx.fillStyle = '#887860';
+  ctx.font = '9px Verdana';
+  ctx.textAlign = 'right';
+  [0, 0.25, 0.5, 0.75, 1].forEach(frac => {
+    const p = pMin + pRange * frac;
+    const y = toY(p);
+    ctx.fillText(p.toFixed(0), W - 2, y + 3);
+  });
+
+  // Render node list
+  if (infoEl) {
+    // Use _gannNodesCache if available
+    const nodes = _gannNodesCache || [];
+    if (nodes.length) {
+      let html = '<div style="display:flex;flex-direction:column;gap:5px;">';
+      nodes.slice(0, 8).forEach(n => {
+        const urgCol = n.confidence === 'high' ? 'var(--red)' : n.confidence === 'medium' ? 'var(--amber)' : 'var(--muted)';
+        html += `<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px;background:var(--card);border:1px solid var(--card-bd);border-radius:5px;">
+          <div>
+            <span style="font-size:11px;font-weight:700;color:var(--cyan)">${n.label}</span>
+            <span style="font-size:10px;color:var(--muted);margin-left:6px">${n.date.split(' ')[0]}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:11px;font-weight:700;color:${n.price > price ? 'var(--red)' : 'var(--green)'}">${fmtP(n.price)}</span>
+            <span style="font-size:11px;font-weight:700;color:${urgCol}">${n.probability}%</span>
+          </div>
+        </div>`;
+      });
+      html += '</div>';
+      infoEl.innerHTML = html;
+    }
+  }
+}
+
+// ── 3. GANN ANGLES ──
+function renderGannAngles() {
+  const canvas = document.getElementById('gannAnglesCanvas');
+  const infoEl = document.getElementById('gannAnglesInfo');
+  if (!canvas) return;
+
+  const price = S.lastPx || 0;
+  const kl = S.klines[S.sym + (S.chartTF || '4h')] || S.klines[S.sym + '4h'] || [];
+  if (kl.length < 20) return;
+
+  const dpr = window.devicePixelRatio || 1;
+  const W = Math.max(canvas.parentElement.clientWidth - 24, 300);
+  const H = 280;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.fillStyle = '#F8F5EE';
+  ctx.fillRect(0, 0, W, H);
+
+  const recent = kl.slice(-80);
+  const prices = recent.map(k => k.c);
+  const highs = recent.map(k => k.h);
+  const lows = recent.map(k => k.l);
+
+  const pMin = Math.min(...lows) * 0.995;
+  const pMax = Math.max(...highs) * 1.005;
+  const pRange = pMax - pMin;
+
+  const xPad = 8, yPad = 10;
+  const chartW = W - xPad * 2 - 30;
+  const chartH = H - yPad * 2;
+
+  const toX = i => xPad + (i / (recent.length - 1)) * chartW;
+  const toY = p => yPad + (1 - (p - pMin) / pRange) * chartH;
+
+  // Draw price bars
+  recent.forEach((k, i) => {
+    const x = toX(i);
+    const barW = Math.max(1, chartW / recent.length - 1);
+    const bull = k.c >= k.o;
+    ctx.fillStyle = bull ? 'rgba(26,107,58,0.6)' : 'rgba(160,20,32,0.6)';
+    const bodyH = Math.max(1, Math.abs(toY(k.c) - toY(k.o)));
+    const bodyY = Math.min(toY(k.c), toY(k.o));
+    ctx.fillRect(x - barW/2, bodyY, barW, bodyH);
+    ctx.strokeStyle = bull ? 'rgba(26,107,58,0.8)' : 'rgba(160,20,32,0.8)';
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    ctx.moveTo(x, toY(k.h));
+    ctx.lineTo(x, toY(k.l));
+    ctx.stroke();
+  });
+
+  // Find recent swing low as Gann origin
+  const loIdx = lows.reduce((mi, l, i) => l < lows[mi] ? i : mi, 0);
+  const loPrice = lows[loIdx];
+  const loX = toX(loIdx);
+  const loY = toY(loPrice);
+
+  // Gann angle lines from swing low
+  const gannAngles = [
+    { label: '4×1', mult: 4, col: '#1A3A8A' },
+    { label: '2×1', mult: 2, col: '#1A6B3A' },
+    { label: '1×1', mult: 1, col: '#8B6914', bold: true },
+    { label: '1×2', mult: 0.5, col: '#805000' },
+    { label: '1×4', mult: 0.25, col: '#A01420' },
+  ];
+
+  const barsFromLo = recent.length - 1 - loIdx;
+  const pricePerBar = barsFromLo > 0 ? (price - loPrice) / barsFromLo : price * 0.002;
+
+  gannAngles.forEach(ga => {
+    ctx.beginPath();
+    ctx.moveTo(loX, loY);
+    // Draw to edge of chart
+    const endBars = recent.length - 1 - loIdx + Math.floor((W - toX(recent.length-1)) / (chartW / recent.length));
+    const endPrice = loPrice + ga.mult * pricePerBar * endBars;
+    const endX = Math.min(W - 5, loX + endBars * (chartW / recent.length));
+    const endY = Math.max(yPad, Math.min(H - yPad, toY(endPrice)));
+    ctx.lineTo(endX, endY);
+    ctx.strokeStyle = ga.col;
+    ctx.lineWidth = ga.bold ? 2 : 1;
+    ctx.setLineDash(ga.bold ? [] : [4, 3]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Label
+    ctx.fillStyle = ga.col;
+    ctx.font = ga.bold ? 'bold 10px Verdana' : '9px Verdana';
+    ctx.textAlign = 'left';
+    const labelX = Math.min(endX - 2, W - 30);
+    const labelY = Math.max(yPad + 8, Math.min(H - yPad, endY - 3));
+    ctx.fillText(ga.label, labelX + 2, labelY);
+  });
+
+  // Origin point
+  ctx.beginPath();
+  ctx.arc(loX, loY, 5, 0, Math.PI * 2);
+  ctx.fillStyle = '#8B6914';
+  ctx.fill();
+  ctx.fillStyle = '#8B6914';
+  ctx.font = 'bold 9px Verdana';
+  ctx.textAlign = 'center';
+  ctx.fillText('起点', loX, loY - 8);
+
+  // Current price line
+  const nowX = toX(recent.length - 1);
+  ctx.beginPath();
+  ctx.moveTo(nowX, yPad);
+  ctx.lineTo(nowX, H - yPad);
+  ctx.strokeStyle = 'rgba(160,20,32,0.4)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([3, 3]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Price axis
+  ctx.fillStyle = '#887860';
+  ctx.font = '9px Verdana';
+  ctx.textAlign = 'right';
+  [pMin, (pMin+pMax)/2, pMax].forEach(p => {
+    const y = toY(p);
+    ctx.fillText(Math.round(p).toLocaleString(), W - 2, y + 3);
+    ctx.beginPath();
+    ctx.moveTo(W - 35, y);
+    ctx.lineTo(W - 5, y);
+    ctx.strokeStyle = 'rgba(0,0,0,0.06)';
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+  });
+
+  // Info box
+  if (infoEl) {
+    const currentAngle = pricePerBar !== 0 ? (price - loPrice) / (pricePerBar * barsFromLo) : 1;
+    const angleName = currentAngle > 3.5 ? '4×1 (76°) — 极强多头' : currentAngle > 1.5 ? '2×1 (63°) — 强多头' : currentAngle > 0.75 ? '1×1 (45°) — 均衡趋势' : currentAngle > 0.35 ? '1×2 (27°) — 弱多头' : '1×4 (14°) — 极弱';
+    const angleColor = currentAngle > 1.5 ? 'var(--green)' : currentAngle > 0.75 ? 'var(--amber)' : 'var(--red)';
+    infoEl.innerHTML = `
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+        <div style="flex:1;background:var(--card);border:1px solid var(--card-bd);border-radius:5px;padding:9px 11px;">
+          <div style="font-size:10px;color:var(--muted);margin-bottom:3px;">当前角度位置</div>
+          <div style="font-size:13px;font-weight:700;color:${angleColor};">${angleName}</div>
+        </div>
+        <div style="flex:1;background:var(--card);border:1px solid var(--card-bd);border-radius:5px;padding:9px 11px;">
+          <div style="font-size:10px;color:var(--muted);margin-bottom:3px;">起点</div>
+          <div style="font-size:13px;font-weight:700;color:var(--text);">${fmtP(loPrice)}</div>
+          <div style="font-size:10px;color:var(--muted);">${barsFromLo}根K前</div>
+        </div>
+        <div style="flex:1;background:var(--card);border:1px solid var(--card-bd);border-radius:5px;padding:9px 11px;">
+          <div style="font-size:10px;color:var(--muted);margin-bottom:3px;">1×1线当前值</div>
+          <div style="font-size:13px;font-weight:700;color:var(--gold);">${fmtP(loPrice + pricePerBar * barsFromLo)}</div>
+        </div>
+      </div>`;
+  }
+}
+
+// ── 4. WHEEL OF TIME ──
+function renderGannWheel() {
+  const canvas = document.getElementById('gannWheelCanvas');
+  const infoEl = document.getElementById('gannWheelInfo');
+  if (!canvas) return;
+
+  const dpr = window.devicePixelRatio || 1;
+  const size = Math.min(canvas.parentElement.clientWidth - 24, 480);
+  canvas.width = size * dpr;
+  canvas.height = size * dpr;
+  canvas.style.width = size + 'px';
+  canvas.style.height = size + 'px';
+
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  const cx = size / 2, cy = size / 2, R = size / 2 - 16;
+  ctx.fillStyle = '#F8F5EE';
+  ctx.fillRect(0, 0, size, size);
+
+  // Rings
+  [0.35, 0.55, 0.75, 1.0].forEach(frac => {
+    ctx.beginPath();
+    ctx.arc(cx, cy, R * frac, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(0,0,0,0.06)';
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+  });
+
+  // Degree lines (every 30°)
+  for (let a = 0; a < 360; a += 30) {
+    const rad = (a - 90) * Math.PI / 180;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(rad) * R * 0.35, cy + Math.sin(rad) * R * 0.35);
+    ctx.lineTo(cx + Math.cos(rad) * R, cy + Math.sin(rad) * R);
+    ctx.strokeStyle = 'rgba(0,0,0,0.08)';
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+    // Degree label
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.font = '9px Verdana';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(a + '°', cx + Math.cos(rad) * (R + 10), cy + Math.sin(rad) * (R + 10));
+  }
+
+  // Gann natural day cycles
+  const gannCycles = [30,45,60,90,120,135,180,270,360];
+  const now = Date.now();
+  const DAY_MS = 86400000;
+  const kl = S.klines[S.sym + (S.chartTF || '4h')] || [];
+  let refT = now - 90 * DAY_MS;
+  if (kl.length > 5) {
+    const recentKL = kl.slice(-120);
+    const loIdx = recentKL.reduce((mi, k, i) => k.l < recentKL[mi].l ? i : mi, 0);
+    refT = recentKL[loIdx].t;
+  }
+
+  const allNodes = [];
+  gannCycles.forEach(days => {
+    const nodeT = refT + days * DAY_MS;
+    const angle = (days / 360) * 360; // Map days directly to degrees
+    allNodes.push({ days, nodeT, angle, isPast: nodeT < now, isNear: Math.abs(nodeT - now) < 5 * DAY_MS });
+  });
+
+  // Plot nodes
+  allNodes.forEach(n => {
+    const rad = (n.angle - 90) * Math.PI / 180;
+    const radius = n.isPast ? R * 0.55 : R * 0.80;
+    const x = cx + Math.cos(rad) * radius;
+    const y = cy + Math.sin(rad) * radius;
+
+    ctx.beginPath();
+    ctx.arc(x, y, n.isNear ? 8 : 5, 0, Math.PI * 2);
+    ctx.fillStyle = n.isNear ? '#8B6914' : n.isPast ? 'rgba(139,105,20,0.4)' : '#0A5870';
+    ctx.fill();
+
+    if (n.isNear) {
+      ctx.strokeStyle = '#8B6914';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(x, y, 13, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    ctx.fillStyle = n.isNear ? '#8B6914' : n.isPast ? '#887860' : '#0A5870';
+    ctx.font = n.isNear ? 'bold 10px Verdana' : '9px Verdana';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(n.days, x, y);
+  });
+
+  // NOW indicator
+  const nowAngle = -90; // top
+  const nowRad = nowAngle * Math.PI / 180;
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(cx + Math.cos(nowRad) * R * 0.9, cy + Math.sin(nowRad) * R * 0.9);
+  ctx.strokeStyle = '#A01420';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Center text
+  ctx.fillStyle = '#8B6914';
+  ctx.font = 'bold 12px Verdana';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('NOW', cx, cy - 6);
+  ctx.font = '10px Verdana';
+  ctx.fillStyle = '#5C5040';
+  ctx.fillText(S.sym?.replace('USDT','') || 'BTC', cx, cy + 8);
+
+  // Legend
+  if (infoEl) {
+    const nextNode = allNodes.filter(n => !n.isPast).sort((a,b) => a.nodeT - b.nodeT)[0];
+    const daysLeft = nextNode ? ((nextNode.nodeT - now) / DAY_MS).toFixed(1) : '--';
+    infoEl.innerHTML = `
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+        <div style="flex:1;background:var(--gann-cycle-bg);border:1px solid rgba(10,88,112,0.2);border-radius:5px;padding:8px 10px;">
+          <div style="font-size:10px;color:var(--muted);">最近节点</div>
+          <div style="font-size:13px;font-weight:700;color:var(--cyan);">${nextNode ? nextNode.days + '° (' + daysLeft + '天)' : '--'}</div>
+        </div>
+        <div style="flex:1;background:rgba(139,105,20,0.06);border:1px solid rgba(139,105,20,0.2);border-radius:5px;padding:8px 10px;">
+          <div style="font-size:10px;color:var(--muted);">参考起点</div>
+          <div style="font-size:12px;font-weight:700;color:var(--gold);">${new Date(refT).toISOString().slice(0,10)}</div>
+        </div>
+      </div>
+      <div style="margin-top:6px;font-size:10px;color:var(--muted);line-height:1.6;">圆圈内环=历史节点（已过），外环=未来节点。金色=近期(5天内)，蓝色=未来节点。红色指针=当前时间(NOW)。</div>`;
+  }
+}
+
+// ── Auto-open Gann chart from mobile tab ──
+function openGannChartMobile() {
+  openGannCycleModal();
+}
+
+// ── Hook into mobile modules tab to show Gann chart button ──
+// Update switchMobileModTab to include gann chart trigger
+const _prevSwitchMobileModTab = switchMobileModTab;
+switchMobileModTab = function(tab, btn) {
+  _prevSwitchMobileModTab(tab, btn);
+  // If indicators tab, add Gann chart launch button
+  if (tab === 'indicators') {
+    setTimeout(() => {
+      const cont = document.getElementById('mobileIndicatorsContent');
+      if (cont && !cont.querySelector('#mobileGannChartBtn')) {
+        const gannBtn = document.createElement('div');
+        gannBtn.style.cssText = 'padding:12px 14px;border-top:2px solid var(--gold);';
+        gannBtn.innerHTML = `<button id="mobileGannChartBtn" onclick="openGannCycleModal()" style="width:100%;padding:12px;border:1px solid var(--cyan);border-radius:7px;background:var(--gann-cycle-bg);color:var(--cyan);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:1px;">📊 江恩周期图表 · Gann Cycle Chart</button>`;
+        cont.insertBefore(gannBtn, cont.firstChild);
+      }
+    }, 100);
+  }
+};
 </script>
 <!-- ══ FINCH SMART ASSISTANT ══ -->
 <div id="finchAiOverlay" class="finch-ai-overlay">
@@ -9745,6 +11081,82 @@ if (_origRenderSummary) {
       <div id="finchAutoLog" style="font-size:11px;color:var(--text);line-height:1.9;padding:0 14px 8px;"></div>
     </div>
 
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     GANN CYCLE CHART MODAL
+     ═══════════════════════════════════════════════════════════ -->
+<div id="gannCycleModal">
+  <div class="gcm-panel">
+    <div class="gcm-header">
+      <div>
+        <div style="font-size:15px;font-weight:700;color:var(--gold);letter-spacing:2px;">📊 江恩周期图表 · Gann Cycle Chart</div>
+        <div style="font-size:11px;color:var(--dim);margin-top:2px;">时间×价格几何关系 · 自然日周期 · 平方九 · 易经六十四卦</div>
+      </div>
+      <button onclick="closeGannCycleModal()" style="padding:7px 16px;border:1px solid var(--line2);border-radius:6px;background:var(--bg2);color:var(--muted);font-family:inherit;font-size:12px;cursor:pointer;font-weight:700;">✕ 关闭</button>
+    </div>
+    <div class="gcm-body">
+      <!-- Tab bar -->
+      <div class="gcm-tabs">
+        <button class="gcm-tab active" onclick="switchGCMTab('spiral',this)">🌀 Sq9螺旋</button>
+        <button class="gcm-tab" onclick="switchGCMTab('cycles',this)">⏰ 时间周期</button>
+        <button class="gcm-tab" onclick="switchGCMTab('angles',this)">📐 角度射线</button>
+        <button class="gcm-tab" onclick="switchGCMTab('iching',this)">☯️ 易经卦象</button>
+        <button class="gcm-tab" onclick="switchGCMTab('wheel',this)">⚙️ 时间之轮</button>
+      </div>
+
+      <!-- TAB: Sq9 Spiral -->
+      <div id="gcm-spiral" class="gcm-content">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px;">
+          <div style="font-size:11px;color:var(--muted);">Gann 平方九（Sq9）— 价格从中心向外螺旋扩展，每90°一个关键价格节点</div>
+          <button onclick="renderGannSpiral()" style="padding:4px 12px;border:1px solid var(--cyan);border-radius:4px;background:var(--gann-cycle-bg);color:var(--cyan);font-size:11px;cursor:pointer;font-family:inherit;">↺ 刷新</button>
+        </div>
+        <div class="cycle-chart-wrap">
+          <canvas id="gannSpiralCanvas" style="width:100%;max-width:600px;display:block;margin:0 auto;"></canvas>
+        </div>
+        <div id="gannSpiralLevels" style="margin-top:10px;"></div>
+      </div>
+
+      <!-- TAB: Time Cycles -->
+      <div id="gcm-cycles" class="gcm-content" style="display:none;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px;">
+          <div style="font-size:11px;color:var(--muted);">江恩时间周期 — 从当前日期推算未来所有关键时间节点，颜色深度=置信度</div>
+          <div style="display:flex;gap:6px;">
+            <select id="gcmCycleTF" onchange="renderGannCycleTimeline()" style="padding:4px 7px;border:1px solid var(--line2);border-radius:4px;background:var(--bg);color:var(--text);font-size:11px;font-family:inherit;">
+              <option value="1h">1H</option><option value="4h" selected>4H</option><option value="1d">1D</option>
+            </select>
+          </div>
+        </div>
+        <div class="cycle-chart-wrap" style="padding:12px;">
+          <canvas id="gannCycleCanvas" height="200" style="width:100%;display:block;"></canvas>
+        </div>
+        <div id="gannCycleNodes" style="margin-top:10px;"></div>
+      </div>
+
+      <!-- TAB: Gann Angles -->
+      <div id="gcm-angles" class="gcm-content" style="display:none;">
+        <div style="margin-bottom:8px;font-size:11px;color:var(--muted);">江恩角度射线 — 以最近重大低点为起点，绘制1×1/2×1/1×2/4×1等角度线与当前价格交叉分析</div>
+        <div class="cycle-chart-wrap">
+          <canvas id="gannAnglesCanvas" height="280" style="width:100%;display:block;"></canvas>
+        </div>
+        <div id="gannAnglesInfo" style="margin-top:10px;"></div>
+      </div>
+
+      <!-- TAB: I-Ching -->
+      <div id="gcm-iching" class="gcm-content" style="display:none;">
+        <div id="gannIChingFull"></div>
+      </div>
+
+      <!-- TAB: Wheel of Time -->
+      <div id="gcm-wheel" class="gcm-content" style="display:none;">
+        <div style="margin-bottom:8px;font-size:11px;color:var(--muted);">江恩时间之轮 — 360°圆形时间视图，过去与未来的周期节点分布</div>
+        <div class="cycle-chart-wrap" style="text-align:center;padding:12px;">
+          <canvas id="gannWheelCanvas" style="max-width:500px;width:100%;display:inline-block;"></canvas>
+        </div>
+        <div id="gannWheelInfo" style="margin-top:10px;"></div>
+      </div>
+    </div>
   </div>
 </div>
 
