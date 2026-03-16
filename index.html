@@ -1240,7 +1240,7 @@ canvas.main-c{width:100%!important;}
             <div style="font-size:14px;font-weight:700;color:var(--gold);letter-spacing:2px">📅 时间节点 · Timeline (MYT)</div>
             <div style="font-size:11px;color:var(--dim);margin-top:2px">斐波·江恩·月相·缠论 · 价格插针区 · 全部节点</div>
           </div>
-          <button onclick="document.getElementById('timelineExpandOverlay').style.display='none'" style="background:var(--red);border:none;border-radius:6px;padding:7px 16px;color:#fff;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">✕ 关闭</button>
+          <button onclick="var _o=$id('timelineExpandOverlay');if(_o)_o.style.display='none'" style="background:var(--red);border:none;border-radius:6px;padding:7px 16px;color:#fff;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">✕ 关闭</button>
         </div>
         <div id="timelineExpandBody" style="overflow-y:auto;padding:16px 18px;flex:1;-webkit-overflow-scrolling:touch;"></div>
       </div>
@@ -1511,7 +1511,7 @@ canvas.main-c{width:100%!important;}
           <button onclick="runFinchBacktest()" id="backtestRunBtn" style="padding:5px 12px;border:1px solid var(--gold);border-radius:4px;background:rgba(139,105,20,0.1);color:var(--gold);font-family:inherit;font-size:11px;cursor:pointer;font-weight:700;transition:all .15s;">
             ▶ 运行回测
           </button>
-          <button onclick="document.getElementById('backtestBody').style.display=document.getElementById('backtestBody').style.display==='none'?'block':'none'" style="padding:5px 10px;border:1px solid var(--line2);border-radius:4px;background:transparent;color:var(--muted);font-family:inherit;font-size:11px;cursor:pointer;">
+          <button onclick="var _b=$id('backtestBody');if(_b)_b.style.display=_b.style.display==='none'?'block':'none'" style="padding:5px 10px;border:1px solid var(--line2);border-radius:4px;background:transparent;color:var(--muted);font-family:inherit;font-size:11px;cursor:pointer;">
             折叠
           </button>
         </div>
@@ -1574,7 +1574,7 @@ canvas.main-c{width:100%!important;}
       🌀 斐波那契 (×0.9) · ⚔️ 江恩 (×0.7) · 🌕 月相 (×0.5)<br>
       🔮 玄学 (×0.4，参考) · 🌍 宏观F&G (×1.2)
     </div>
-    <button onclick="document.getElementById('filterWeightInfo').style.display=document.getElementById('filterWeightInfo').style.display==='none'?'block':'none'"
+    <button onclick="var _f=$id('filterWeightInfo');if(_f)_f.style.display=_f.style.display==='none'?'block':'none'"
       style="font-size:10px;color:var(--muted);border:none;background:transparent;cursor:pointer;padding:0 0 8px;text-decoration:underline;text-underline-offset:2px;font-family:inherit;">
       ℹ️ 查看权重说明
     </button>
@@ -1812,6 +1812,8 @@ var $id=function(id){return document.getElementById(id);};
 var $set=function(id,val){var el=$id(id);if(el)el.textContent=val;};
 var $html=function(id,html){var el=$id(id);if(el)el.innerHTML=html;};
 var $cls=function(id,method,cls){var el=$id(id);if(el)el.classList[method](cls);};
+var $styl=function(id,prop,val){var el=$id(id);if(el)el.style[prop]=val;};
+var $val=function(id,val){var el=$id(id);if(el)el.value=val;};
 
 // ═══ STATE ═══
 const S={
@@ -3154,8 +3156,8 @@ function renderTech(kl,price){
       <div class="mod-row"><span class="mod-row-k">交叉信号</span><span class="mod-row-v" style="color:${crossCol}">${cross}</span></div>
       <div class="mod-row"><span class="mod-row-k">底背驰</span><span class="mod-row-v" style="color:${macd.bullDiv?'var(--green)':'var(--muted)'}">${macd.bullDiv?'✅ 检测到':'--'}</span></div>
       <div class="mod-row"><span class="mod-row-k">顶背驰</span><span class="mod-row-v" style="color:${macd.bearDiv?'var(--red)':'var(--muted)'}">${macd.bearDiv?'⚠️ 检测到':'--'}</span></div>`;
-    document.getElementById('msig-macd').textContent=macd.macd>macd.signal?'金叉':'死叉';
-    var _mmc=$id('msig-macd');if(_mmc)_mmc.style.color=macd.macd>macd.signal?'var(--green)':'var(--red)';
+    var _mmc2=$id('msig-macd');if(_mmc2){_mmc2.textContent=macd.macd>macd.signal?'金叉':'死叉';_mmc2.style.color=macd.macd>macd.signal?'var(--green)':'var(--red)';}
+
   }
   // RSI detail
   const rdp=document.getElementById('rsiDetailPanel');
@@ -3168,8 +3170,8 @@ function renderTech(kl,price){
       <div class="mod-row"><span class="mod-row-k">状态</span><span class="mod-row-v" style="color:${rsi>70?'var(--red)':rsi<30?'var(--green)':'var(--muted)'}">${rsi>70?'超买 Overbought':rsi<30?'超卖 Oversold':rsi>50?'偏多 Above 50':'偏空 Below 50'}</span></div>
       <div class="mod-row"><span class="mod-row-k">方向</span><span class="mod-row-v">${rsiTrend}</span></div>
       <div class="mod-row"><span class="mod-row-k">Stoch RSI K</span><span class="mod-row-v" style="color:${stoch.k>80?'var(--red)':stoch.k<20?'var(--green)':'var(--text)'}">${stoch.k.toFixed(1)}</span></div>`;
-    document.getElementById('msig-rsimod').textContent='RSI '+rsi.toFixed(0);
-    var _mrsi=$id('msig-rsimod');if(_mrsi)_mrsi.style.color=rsi>70?'var(--red)':rsi<30?'var(--green)':'var(--muted)';
+    $set('msig-rsimod','RSI '+rsi.toFixed(0));
+    $styl('msig-rsimod','color',rsi>70?'var(--red)':rsi<30?'var(--green)':'var(--muted)');
   }
   const bull=(rsi<38)||(macd.hist>0&&ma20&&ma55&&ma20>ma55);
   $set('msig-tech',bull?'▲ 看多':'▼ 看空');
@@ -3209,8 +3211,8 @@ function renderTech(kl,price){
       <div class="mod-row"><span class="mod-row-k">ADX</span><span class="mod-row-v" style="color:${adx2.strong?'var(--blue)':adx2.ranging?'var(--amber)':'var(--text)'}">${adx2.adx.toFixed(1)} · +DI ${adx2.pdi.toFixed(1)} -DI ${adx2.ndi.toFixed(1)}</span></div>
       <div class="mod-row"><span class="mod-row-k">Supertrend</span><span class="mod-row-v" style="color:${st2.bull?'var(--green)':'var(--red)'}">${st2.bull?'▲ 多头支撑':'▼ 空头压力'} @ ${fmtP(st2.value)}</span></div>
       <div class="mod-row"><span class="mod-row-k">历史波动率</span><span class="mod-row-v">${hv2.hv.toFixed(1)}% 年化${hv2.expanding?' (扩张↑)':hv2.contracting?' (收缩↓)':''}</span></div>`;
-    document.getElementById('msig-rsimod').textContent='RSI '+rsi.toFixed(0);
-    var _mrsi=$id('msig-rsimod');if(_mrsi)_mrsi.style.color=rsi>70?'var(--red)':rsi<30?'var(--green)':'var(--muted)';
+    $set('msig-rsimod','RSI '+rsi.toFixed(0));
+    $styl('msig-rsimod','color',rsi>70?'var(--red)':rsi<30?'var(--green)':'var(--muted)');
   }
   S.modData.tech={rsi,macd,stoch:stoch.k,ma20,ma55,ma200,bbU,bbL,bbPos,trend,obv:obv2,adx:adx2,supertrend:st2,hv:hv2,cvd:cvdData2,mktStr:mktStr2,candles:candles2};
 }
@@ -3253,11 +3255,10 @@ function renderFib(price,kl){
     const pc=curr?'color:var(--gold);font-weight:700':above?'color:var(--red)':'color:var(--green)';
     return`<div class="mod-row"><span class="mod-row-k">${lbl}</span><span class="mod-row-v" style="${pc};font-variant-numeric:tabular-nums">${fmtP(p)} <span style="font-size:11px;font-weight:400;color:var(--muted)">${fmtPct(diff)}</span></span></div>`;
   }).join('');
-  document.getElementById('fibPanel').innerHTML=html;
-  // Find nearest level
+  $html('fibPanel',html);
   const nearest=levels.reduce((best,[ratio,lbl])=>{const p=lo+rng*(1-ratio);const d=Math.abs(p-price)/price;return d<best.d?{d,lbl}:best;},{d:999,lbl:'--'});
-  document.getElementById('msig-fib').textContent='近'+nearest.lbl;
-  var _mfib=$id('msig-fib');if(_mfib)_mfib.style.color=nearest.d<0.015?'var(--violet)':'var(--muted)';
+  $set('msig-fib','近'+nearest.lbl);
+  $styl('msig-fib','color',nearest.d<0.015?'var(--violet)':'var(--muted)');
   S.modData.fib={hi,lo,rng,price};
 }
 function renderGann(price){
@@ -3275,8 +3276,11 @@ function renderGann(price){
   const above=lvs.filter(l=>l.above).sort((a,b)=>a.price-b.price);
   const below=lvs.filter(l=>!l.above).sort((a,b)=>b.price-a.price);
   const nearRes=above[0];const nearSup=below[0];
-  document.getElementById('msig-gann').textContent=nearSup&&Math.abs(nearSup.price-price)/price<0.018?'支撑附近':nearRes&&Math.abs(nearRes.price-price)/price<0.018?'阻力附近':'区间中';
-  document.getElementById('msig-gann').style.color=nearSup&&Math.abs(nearSup.price-price)/price<0.018?'var(--green)':nearRes&&Math.abs(nearRes.price-price)/price<0.018?'var(--red)':'var(--muted)';
+  const _msigGann=document.getElementById('msig-gann');
+  if(_msigGann){
+    _msigGann.textContent=nearSup&&Math.abs(nearSup.price-price)/price<0.018?'支撑附近':nearRes&&Math.abs(nearRes.price-price)/price<0.018?'阻力附近':'区间中';
+    _msigGann.style.color=nearSup&&Math.abs(nearSup.price-price)/price<0.018?'var(--green)':nearRes&&Math.abs(nearRes.price-price)/price<0.018?'var(--red)':'var(--muted)';
+  }
   S.modData.gann={lvs,above,below,angles};
 }
 function renderChan(kl,price){
@@ -3287,28 +3291,28 @@ function renderChan(kl,price){
   else if(c.bearDiv){bias='📉 顶背驰 Bear Divergence';bc='var(--red)';}
   else if(c.bullBi){bias='↗ 上升笔 Bullish Stroke';bc='var(--green)';}
   else{bias='↘ 下降笔 Bearish Stroke';bc='var(--red)';}
-  document.getElementById('chanPanel').innerHTML=`
+  $html('chanPanel',`
     <div class="mod-row"><span class="mod-row-k">方向偏向</span><span class="mod-row-v" style="color:${bc}">${bias}</span></div>
     <div class="mod-row"><span class="mod-row-k">缠论支撑</span><span class="mod-row-v" style="color:var(--green)">${fmtP(c.chanSup)}</span></div>
     <div class="mod-row"><span class="mod-row-k">缠论阻力</span><span class="mod-row-v" style="color:var(--red)">${fmtP(c.chanRes)}</span></div>
     <div class="mod-row"><span class="mod-row-k">中枢范围</span><span class="mod-row-v" style="color:var(--muted)">${c.zhLo&&c.zhHi?fmtP(c.zhLo)+' – '+fmtP(c.zhHi):'未成形'}</span></div>
-    <div class="mod-row"><span class="mod-row-k">中枢位置</span><span class="mod-row-v" style="color:${c.inZH?'var(--amber)':'var(--muted)'}">${c.inZH?'⚡ 中枢内':'中枢外'}</span></div>`;
-  document.getElementById('msig-chan').textContent=c.bullDiv?'底背驰':c.bearDiv?'顶背驰':c.bullBi?'上升笔':'下降笔';
-  var _mchan=$id('msig-chan');if(_mchan)_mchan.style.color=c.bullDiv||c.bullBi?'var(--green)':'var(--red)';
+    <div class="mod-row"><span class="mod-row-k">中枢位置</span><span class="mod-row-v" style="color:${c.inZH?'var(--amber)':'var(--muted)'}">${c.inZH?'⚡ 中枢内':'中枢外'}</span></div>`);
+  $set('msig-chan',c.bullDiv?'底背驰':c.bearDiv?'顶背驰':c.bullBi?'上升笔':'下降笔');
+  $styl('msig-chan','color',c.bullDiv||c.bullBi?'var(--green)':'var(--red)');
   S.modData.chan=c;
 }
 function renderLunar(){
   const l=getLunar();
-  document.getElementById('lunarPanel').innerHTML=`
+  $html('lunarPanel',`
     <div class="mod-row"><span class="mod-row-k">月相</span><span class="mod-row-v">${l.icon} ${l.name}</span></div>
     <div class="mod-row"><span class="mod-row-k">周期</span><span class="mod-row-v" style="color:var(--muted)">${l.phase}天 / 29.53</span></div>
     <div class="mod-row"><span class="mod-row-k">市场偏向</span><span class="mod-row-v" style="color:${l.bias==='bull'?'var(--green)':l.bias==='bear'?'var(--red)':'var(--muted)'}">${l.bias==='bull'?'↑ 看多':l.bias==='bear'?'↓ 看空':'→ 中性'}</span></div>
     <div class="mod-row"><span class="mod-row-k">距新月</span><span class="mod-row-v">${l.dTN}天</span></div>
     <div class="mod-row"><span class="mod-row-k">距满月</span><span class="mod-row-v">${l.dTF}天</span></div>
     <div class="mod-row"><span class="mod-row-k">太阳星座</span><span class="mod-row-v" style="color:var(--violet)">${l.sun}</span></div>
-    <div style="font-size:10px;color:var(--muted);padding-top:6px;line-height:1.5;">${l.note}</div>`;
-  document.getElementById('msig-lunar').textContent=l.icon+' '+l.name.split(' ')[0];
-  var _mlun=$id('msig-lunar');if(_mlun)_mlun.style.color=l.bias==='bull'?'var(--green)':l.bias==='bear'?'var(--red)':'var(--muted)';
+    <div style="font-size:10px;color:var(--muted);padding-top:6px;line-height:1.5;">${l.note}</div>`);
+  $set('msig-lunar',l.icon+' '+l.name.split(' ')[0]);
+  $styl('msig-lunar','color',l.bias==='bull'?'var(--green)':l.bias==='bear'?'var(--red)':'var(--muted)');
   $set('lunarMini',l.icon+' '+l.name.split(' ')[0]);
   S.modData.lunar=l;
 }
@@ -3323,14 +3327,14 @@ function renderMystic(price){
   // Qi Men Dun Jia simplified (hour palace)
   const hour=now.getHours();const palaces=['坎宫(水)','艮宫(土)','震宫(木)','巽宫(木)','中宫','乾宫(金)','兑宫(金)','坤宫(土)','离宫(火)'];
   const palace=palaces[Math.floor(hour/3)%9];
-  document.getElementById('mysticPanel').innerHTML=`
+  $html('mysticPanel',`
     <div class="mod-row"><span class="mod-row-k">价格命数</span><span class="mod-row-v" style="color:var(--violet)">${ln} · ${meanings[ln]||'--'}</span></div>
     <div class="mod-row"><span class="mod-row-k">日期数字</span><span class="mod-row-v" style="color:var(--violet)">${dn} · ${meanings[dn]||'--'}</span></div>
     <div class="mod-row"><span class="mod-row-k">奇门时宫</span><span class="mod-row-v" style="color:var(--gold)">${palace}</span></div>
     <div class="mod-row"><span class="mod-row-k">水星状态</span><span class="mod-row-v" style="color:${inRet?'var(--red)':'var(--green)'}">${inRet?'⚠️ 逆行 Retrograde':'✓ 顺行 Direct'}</span></div>
-    <div style="font-size:10px;color:var(--muted);padding-top:6px;line-height:1.5;">${inRet?'水星逆行期间市场波动性历史上高出约18%，注意风险管理':'水星顺行，市场信号相对清晰'}</div>`;
-  document.getElementById('msig-mystic').textContent='命数'+ln+(inRet?' ⚠️逆行':'');
-  var _mmys=$id('msig-mystic');if(_mmys)_mmys.style.color=inRet?'var(--red)':'var(--muted)';
+    <div style="font-size:10px;color:var(--muted);padding-top:6px;line-height:1.5;">${inRet?'水星逆行期间市场波动性历史上高出约18%，注意风险管理':'水星顺行，市场信号相对清晰'}</div>`);
+  $set('msig-mystic','命数'+ln+(inRet?' ⚠️逆行':''));
+  $styl('msig-mystic','color',inRet?'var(--red)':'var(--muted)');
   S.modData.mystic={ln,dn,palace,inRet,meaning:meanings[ln]};
 }
 async function loadFG(){
@@ -3338,16 +3342,16 @@ async function loadFG(){
     const data=d.data;const v=parseInt(data[0].value);
     const col=v>75?'var(--red)':v<25?'var(--green)':v<45?'var(--amber)':'var(--text)';
     const avg7=Math.round(data.reduce((s,x)=>s+parseInt(x.value),0)/data.length);
-    document.getElementById('fgPanel').innerHTML=`
+    $html('fgPanel',`
       <div class="fg-gauge"><div class="fg-num" style="color:${col}">${v}</div>
       <div class="fg-lbl">${data[0].value_classification.toUpperCase()}</div>
       <div class="fg-bar-wrap"><div class="fg-needle" style="left:${v}%"></div></div>
       <div style="font-size:10px;color:var(--muted);margin-top:3px">7日均: ${avg7}</div>
-      <div class="fg-7d">${data.slice().reverse().map(x=>`<div class="fg-bar" style="height:${x.value}%;background:${parseInt(x.value)>60?'var(--red)':parseInt(x.value)<40?'var(--green)':'var(--amber)'}"></div>`).join('')}</div></div>`;
-    document.getElementById('msig-fg').textContent=data[0].value_classification+' '+v;
-    var _mfg=$id('msig-fg');if(_mfg)_mfg.style.color=col;
+      <div class="fg-7d">${data.slice().reverse().map(x=>`<div class="fg-bar" style="height:${x.value}%;background:${parseInt(x.value)>60?'var(--red)':parseInt(x.value)<40?'var(--green)':'var(--amber)'}"></div>`).join('')}</div></div>`);
+    $set('msig-fg',data[0].value_classification+' '+v);
+    $styl('msig-fg','color',col);
     S.modData.fg={value:v,label:data[0].value_classification,avg7};
-  }catch(e){document.getElementById('fgPanel').innerHTML='<span style="color:var(--muted)">不可用</span>';}
+  }catch(e){$html('fgPanel','<span style="color:var(--muted)">不可用</span>');}
 }
 async function loadMacro(){
   try{const r=await wt(fetch('https://api.coingecko.com/api/v3/global'),9000);const d=await r.json();
@@ -3363,8 +3367,8 @@ async function loadMacro(){
     const fg=S.fg?parseInt(S.fg.value):50;
     const dxy=dom>55&&fg<40?'偏强':dom<50?'偏弱':'中性';
     $set('m-dxy',dxy);
-    document.getElementById('msig-macro').textContent='BTC主导 '+dom.toFixed(1)+'%';
-    document.getElementById('msig-macro').style.color=dom>55?'var(--amber)':'var(--green)';
+    const _msigMacro=document.getElementById('msig-macro');
+    if(_msigMacro){_msigMacro.textContent='BTC主导 '+dom.toFixed(1)+'%';_msigMacro.style.color=dom>55?'var(--amber)':'var(--green)';}
     S.modData.macro={...S.macro,dxy};
     renderStrategy();renderTimeline();renderSummary();
   }catch(e){}
@@ -3803,7 +3807,7 @@ async function fetchKlinesThrottled(sym,tf,limit){
 
 // ═══ LOAD ALL ═══
 async function loadAll(sym){
-  document.getElementById('chartLoad').style.display='flex';
+  const _cl=document.getElementById('chartLoad');if(_cl)_cl.style.display='flex';
   document.getElementById('stratArea').innerHTML=`
     <div style="padding:20px 0;text-align:center">
       <div style="font-size:13px;color:var(--muted);margin-bottom:12px">⏳ 获取价格中...</div>
@@ -3912,7 +3916,7 @@ async function loadAll(sym){
   bgLoad(); // fire and forget
 
   setProgress(100);
-  document.getElementById('chartLoad').style.display='none';
+  const _cl2=document.getElementById('chartLoad');if(_cl2)_cl2.style.display='none';
 
   if(!price){
     document.getElementById('stratArea').innerHTML=`<div style="padding:20px;color:var(--red);font-size:13px">
@@ -3927,7 +3931,7 @@ async function loadAll(sym){
 function renderChart(kl,sym){
   const canvas=document.getElementById('mainChart');
   if(S.chart){S.chart.destroy();S.chart=null;}
-  document.getElementById('chartLoad').style.display='none';
+  const _cl3=document.getElementById('chartLoad');if(_cl3)_cl3.style.display='none';
   if(!kl||!kl.length)return;
   const prices=kl.map(k=>k.c);const n=prices.length;
   const labels=kl.map(k=>{const d=new Date(k.t);return`${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:00`;});
@@ -6846,7 +6850,7 @@ function calcPortfolio(){
   portCalcData={capital,lev,tpPct,slPct,notional,openFee,netTP,roiTP,netSL,roiSL,
     liqPct,liqLoss,rr,winRate,kelly,kellyPct,recommendedSize,grossTP,grossSL};
 
-  document.getElementById('portResult').classList.add('show');
+  const _pr=document.getElementById('portResult');if(_pr)_pr.classList.add('show');
   portActiveScenario='tp';
   document.querySelectorAll('.port-sc-tab').forEach((b,i)=>{b.classList.toggle('active',i===0);});
   renderPortScenario();
@@ -6944,33 +6948,32 @@ function ptSave(){
 // ─── UI ───
 function openPaper(){
   ptLoad();
-  document.getElementById('paperOverlay').classList.add('open');
+  $cls('paperOverlay','add','open');
   // Pre-fill symbol from current selection
-  const symEl=document.getElementById('pnt-sym');
-  if(symEl)symEl.textContent=S.sym.replace('USDT','/USDT');
+  $set('pnt-sym',(S.sym||'').replace('USDT','/USDT'));
   renderPaperStats();
   renderOpenPositions();
   renderHistory();
   renderAnalytics();
   // Auto-fill from last signal if available
-  if(S.lastSignal&&!document.getElementById('pnt-entry').value){
-    document.getElementById('pnt-entry').value=S.lastSignal.entry.toFixed(2);
-    document.getElementById('pnt-tp1').value=S.lastSignal.tps[0].p.toFixed(2);
-    document.getElementById('pnt-sl1').value=S.lastSignal.sls[0].p.toFixed(2);
+  if(S.lastSignal){
+    const e=$id('pnt-entry');if(e&&!e.value)e.value=S.lastSignal.entry.toFixed(2);
+    const t=$id('pnt-tp1');if(t&&!t.value)t.value=S.lastSignal.tps[0].p.toFixed(2);
+    const s=$id('pnt-sl1');if(s&&!s.value)s.value=S.lastSignal.sls[0].p.toFixed(2);
   }
   // Start live PnL update (guard against double-start)
   if(PT._liveTimer)clearInterval(PT._liveTimer);
   PT._liveTimer=setInterval(updateLivePnL,3000);
 }
 function closePaper(){
-  document.getElementById('paperOverlay').classList.remove('open');
+  $cls('paperOverlay','remove','open');
   if(PT._liveTimer){clearInterval(PT._liveTimer);PT._liveTimer=null;}
 }
 function showPaperTab(tab,btn){
   document.querySelectorAll('.paper-tab-body').forEach(el=>el.style.display='none');
   document.querySelectorAll('.paper-tab').forEach(b=>b.classList.remove('active'));
-  document.getElementById('ptab-'+tab).style.display='block';
-  btn.classList.add('active');
+  const _pt=document.getElementById('ptab-'+tab);if(_pt)_pt.style.display='block';
+  if(btn)btn.classList.add('active');
   if(tab==='analytics')renderAnalytics();
   if(tab==='history')renderHistory();
 }
@@ -7005,7 +7008,7 @@ function renderPaperStats(){
   var _pswr=$id('ps-wr');if(_pswr)_pswr.style.color=parseFloat(wr)>=55?'var(--green)':parseFloat(wr)>=45?'var(--amber)':'var(--red)';
   $set('ps-trades',total);
   $set('ps-rr',avgRR?avgRR.toFixed(2)+':1':'--');
-  document.getElementById('ps-streak').textContent=streak?`${streak}${streakType}`:'--';
+  $set('ps-streak',streak?`${streak}${streakType}`:'--');
   // Live badge
   const badge=document.getElementById('paperLiveBadge');
   if(badge)badge.style.display=PT.positions.length?'inline':'none';
@@ -7023,26 +7026,28 @@ function fillFromSignal(){
   const res=S.lastSignal;
   if(!res){alert('请先等待信号加载完成');return;}
   $set('pnt-sym',S.sym.replace('USDT','/USDT'));
-  document.getElementById('pnt-entry').value=res.entry.toFixed(2);
-  document.getElementById('pnt-tp1').value=res.tps[0].p.toFixed(2);
-  document.getElementById('pnt-sl1').value=res.sls[0].p.toFixed(2);
+  $val('pnt-entry',res.entry.toFixed(2));
+  $val('pnt-tp1',res.tps[0].p.toFixed(2));
+  $val('pnt-sl1',res.sls[0].p.toFixed(2));
   // Set direction
-  const longBtn=document.getElementById('pnt-long');
-  const shortBtn=document.getElementById('pnt-short');
-  if(res.isBull){_paperDir='long';longBtn.classList.add('active','long');longBtn.classList.remove('short');shortBtn.classList.remove('active','long','short');}
-  else{_paperDir='short';shortBtn.classList.add('active','short');shortBtn.classList.remove('long');longBtn.classList.remove('active','long','short');}
+  const longBtn=$id('pnt-long');
+  const shortBtn=$id('pnt-short');
+  if(longBtn&&shortBtn){
+    if(res.isBull){_paperDir='long';longBtn.classList.add('active','long');longBtn.classList.remove('short');shortBtn.classList.remove('active','long','short');}
+    else{_paperDir='short';shortBtn.classList.add('active','short');shortBtn.classList.remove('long');longBtn.classList.remove('active','long','short');}
+  }
 }
 
 function openPaperTrade(){
   const sym=S.sym;
   const price=S.lastPx||0;
-  const entryInput=parseFloat(document.getElementById('pnt-entry').value);
+  const entryEl=$id('pnt-entry'); const entryInput=parseFloat(entryEl?.value||0);
   const entry=entryInput>0?entryInput:price;
-  const size=parseFloat(document.getElementById('pnt-size').value)||500;
-  const lev=parseInt(document.getElementById('pnt-lev').value)||1;
-  const tp1=parseFloat(document.getElementById('pnt-tp1').value)||0;
-  const sl1=parseFloat(document.getElementById('pnt-sl1').value)||0;
-  const note=document.getElementById('pnt-note').value||'';
+  const sizeEl=$id('pnt-size'); const size=parseFloat(sizeEl?.value||500)||500;
+  const levEl=$id('pnt-lev');   const lev=parseInt(levEl?.value||1)||1;
+  const tp1=parseFloat($id('pnt-tp1')?.value||0)||0;
+  const sl1=parseFloat($id('pnt-sl1')?.value||0)||0;
+  const note=$id('pnt-note')?.value||'';
   
   if(!entry||entry<=0){alert('请输入入场价或等待价格加载');return;}
   if(size>PT.balance){alert(`仓位 $${size} 超过余额 $${PT.balance.toFixed(2)}`);return;}
@@ -7077,11 +7082,8 @@ function openPaperTrade(){
   ptSave();
   renderOpenPositions();
   renderPaperStats();
-  // Clear form
-  document.getElementById('pnt-entry').value='';
-  document.getElementById('pnt-tp1').value='';
-  document.getElementById('pnt-sl1').value='';
-  document.getElementById('pnt-note').value='';
+  // Clear form safely
+  $val('pnt-entry','');$val('pnt-tp1','');$val('pnt-sl1','');$val('pnt-note','');
   ptAutoLog(`✅ 开仓 ${sym} ${_paperDir.toUpperCase()} @ ${fmtP(entry)} · 仓位$${size} · ${lev}× · 手续费$${fee.toFixed(2)}`);
 }
 
@@ -7384,9 +7386,9 @@ ptLoad();
 
 // ═══ WHATSAPP ═══
 function setupWA(){
-  const ph=document.getElementById('waPhone').value.trim().replace(/\s/g,'').replace(/^\+/,'');
+  const ph=$id('waPhone')?.value?.trim().replace(/\s/g,'').replace(/^\+/,'')||'';
   if(!ph||ph.length<6){alert('请输入正确手机号（含国码）');return;}
-  S.waPhone=ph;document.getElementById('waForm').classList.add('wa-active');
+  S.waPhone=ph;$cls('waForm','add','wa-active');
   $set('waPreview',buildWAText());
 }
 function buildWAText(){
@@ -7442,12 +7444,12 @@ const ASST={
 
 // ── Open / Close ──
 function openAssistant(){
-  document.getElementById('finchAiOverlay').classList.add('open');
+  $cls('finchAiOverlay','add','open');
   updateAssistantContext();
   // Auto-focus input
-  setTimeout(()=>{const inp=document.getElementById('chatInput');if(inp)inp.focus();},200);
+  setTimeout(()=>{const inp=$id('chatInput');if(inp)inp.focus();},200);
 }
-function closeFai(){document.getElementById('finchAiOverlay').classList.remove('open');}
+function closeFai(){$cls('finchAiOverlay','remove','open');}
 function openFai(){openAssistant();}  // backward compat
 
 // ── Update the context strip with live market data ──
@@ -7741,7 +7743,7 @@ function toggleChartCollapse(){
   const isStandalone=window.navigator.standalone===true;
   const dismissed=localStorage.getItem('finch_ios_dismissed');
   if(isIOS&&!isStandalone&&!dismissed){
-    setTimeout(()=>{document.getElementById('iosInstallBanner').classList.add('show');},3000);
+    setTimeout(()=>{ $cls('iosInstallBanner','add','show'); },3000);
   }
   // Lock orientation on iOS when standalone
   if(isStandalone&&screen.orientation&&screen.orientation.lock){
@@ -7982,7 +7984,7 @@ async function runFinchBacktestMobile() {
     // Refresh learning tab
     setTimeout(() => { try { renderLearningPanelMobile(); } catch(e) {} }, 400);
   } catch(e) {
-    resultEl.innerHTML = `<div style="color:var(--red);font-size:12px;padding:10px;">❌ 回测出错：${e.message}</div>`;
+    resultEl.innerHTML = `<div style="color:var(--red);font-size:12px;padding:10px;">❌ 回测出错：${e.message}<br><span style="color:var(--muted);font-size:10px;">请尝试切换时间框架后重新运行</span></div>`;
   }
 
   if (btn) { btn.textContent = '▶ 重新回测'; btn.style.opacity = '1'; btn.disabled = false; }
@@ -8149,7 +8151,7 @@ function setATSize(v,btn){
   });
   btn.style.borderColor='var(--gold)';btn.style.background='rgba(139,105,20,0.1)';
   btn.style.color='var(--gold)';btn.style.fontWeight='700';
-  document.getElementById('atCustomSize').value='';
+  $val('atCustomSize','');
   updateATPreview();
 }
 function setATLev(v,btn){
@@ -8284,7 +8286,7 @@ function confirmFinchAutoTrade(){
   if(_finchAutoLog.length>20)_finchAutoLog.pop();
 
   renderFinchAutoLog();
-  document.getElementById('finchAutoTradeOverlay').style.display='none';
+  $styl('finchAutoTradeOverlay','display','none');
 
   // Show confirmation
   const confMsg=document.createElement('div');
@@ -8888,6 +8890,95 @@ async function runFinchBacktest() {
   if (btn) { btn.textContent = '▶ 重新回测'; btn.style.opacity = '1'; }
 }
 
+// ╔══════════════════════════════════════════════════════════════════════╗
+// ║  _btInternalScore — 回测专用轻量评分器                               ║
+// ║  当 _Φ9x 因多时框数据缺失返回 null 时的回退方案                      ║
+// ║  完全自包含：只使用传入的 historicalKL 数组，不依赖 S.klines         ║
+// ╚══════════════════════════════════════════════════════════════════════╝
+function _btInternalScore(kl, price, tf) {
+  try {
+    if (!kl || kl.length < 20 || !price) return null;
+
+    const prices = kl.map(k => k.c).filter(v => v > 0);
+    const n = prices.length;
+    if (n < 20) return null;
+
+    // ── Core indicators (self-contained) ──
+    const rsi = calcRSI(prices, 14) || 50;
+    const macdD = calcMACD(prices);
+    const ma20 = calcMA(prices, Math.min(20, n))[n - 1] || price;
+    const ma55 = n >= 55 ? calcMA(prices, 55)[n - 1] : null;
+    const { up: bbU, lo: bbL } = calcBB(prices, Math.min(20, n), 2);
+    const bbUV = bbU[n - 1] || price * 1.02;
+    const bbLV = bbL[n - 1] || price * 0.98;
+    const bbPos = (bbUV - bbLV) > 0 ? (price - bbLV) / (bbUV - bbLV) : 0.5;
+    const atr = calcATR(kl, Math.min(14, kl.length - 1)) || price * 0.02;
+
+    let score = 0;
+    const sigs = [];
+
+    // RSI
+    if (rsi < 30) { score += 2.5; sigs.push({ l: 'RSI超卖', c: 'sig-bull' }); }
+    else if (rsi < 40) { score += 1.2; sigs.push({ l: 'RSI偏低', c: 'sig-bull' }); }
+    else if (rsi > 70) { score -= 2.5; sigs.push({ l: 'RSI超买', c: 'sig-bear' }); }
+    else if (rsi > 60) { score -= 1.2; sigs.push({ l: 'RSI偏高', c: 'sig-bear' }); }
+
+    // MACD
+    if (macdD?.hist > 0) { score += 1.2; sigs.push({ l: 'MACD多', c: 'sig-bull' }); }
+    else if (macdD?.hist < 0) { score -= 1.2; sigs.push({ l: 'MACD空', c: 'sig-bear' }); }
+    if (macdD?.bullDiv) { score += 2.0; sigs.push({ l: 'MACD底背驰', c: 'sig-bull' }); }
+    if (macdD?.bearDiv) { score -= 2.0; sigs.push({ l: 'MACD顶背驰', c: 'sig-bear' }); }
+
+    // MA trend
+    if (price > ma20) { score += 0.8; }
+    else { score -= 0.8; }
+    if (ma55 && price > ma55) { score += 1.0; }
+    else if (ma55) { score -= 1.0; }
+
+    // BB position
+    if (bbPos < 0.15) { score += 1.5; sigs.push({ l: 'BB下轨', c: 'sig-bull' }); }
+    else if (bbPos > 0.85) { score -= 1.5; sigs.push({ l: 'BB上轨', c: 'sig-bear' }); }
+
+    // Recent momentum (last 3 candles)
+    const last3 = kl.slice(-3);
+    const momentum = last3.reduce((s, k) => s + (k.c - k.o), 0);
+    if (momentum > 0) score += 0.5;
+    else score -= 0.5;
+
+    // Volume confirmation
+    if (kl.length >= 5) {
+      const avgVol = kl.slice(-20).reduce((s, k) => s + k.v, 0) / Math.min(20, kl.length);
+      const lastVol = kl[kl.length - 1].v;
+      if (lastVol > avgVol * 1.5 && momentum > 0) score += 0.8;
+      else if (lastVol > avgVol * 1.5 && momentum < 0) score -= 0.8;
+    }
+
+    const isBull = score > 0;
+
+    // Build confidence using logistic curve (same formula as main engine)
+    const absScore = Math.abs(score);
+    const base = 50 * (1 - Math.exp(-absScore * 0.38));
+    const conf = Math.min(88, Math.max(22, Math.round(28 + base)));
+
+    // TP/SL based on ATR
+    const atrMult = tf === '1d' ? 2.5 : tf === '4h' ? 1.8 : 1.4;
+    const tp1 = isBull ? price + atr * atrMult : price - atr * atrMult;
+    const sl1 = isBull ? price - atr * 1.0   : price + atr * 1.0;
+    const rr = Math.abs(tp1 - price) / Math.max(Math.abs(sl1 - price), 0.0001);
+
+    return {
+      isBull, conf, score, rsi,
+      macdD, bbPos, atrRaw: atr,
+      tps: [{ p: tp1 }, { p: isBull ? price + atr * atrMult * 1.8 : price - atr * atrMult * 1.8 }],
+      sls: [{ p: sl1 }, { p: isBull ? price - atr * 1.6 : price + atr * 1.6 }],
+      rr, sigs,
+      // Stub out fields the signal tracker checks
+      vegas: null, chan: null, adx: { trending: false }, obv: { obvDiv: false }, candles: { patterns: [] },
+      _isInternalScore: true,
+    };
+  } catch(e) { return null; }
+}
+
 function _runBacktestEngine(kl, tf, periodBars, positionSizePct, commission) {
   // ── Fix 1.2: Parameter validation — guard all edge cases ──
   if (!kl || !Array.isArray(kl) || kl.length < 30) {
@@ -8918,8 +9009,9 @@ function _runBacktestEngine(kl, tf, periodBars, positionSizePct, commission) {
     mystic: { win: 0, total: 0 },
   };
 
-  const usedKL = kl.slice(-Math.min(periodBars + 60, kl.length));
-  const startIdx = Math.min(60, Math.floor(usedKL.length * 0.3));
+  const usedKL = kl.slice(-Math.min(periodBars + 80, kl.length));
+  // startIdx: need at least 60 bars of lookback for indicators to warm up
+  const startIdx = Math.max(60, Math.min(80, Math.floor(usedKL.length * 0.35)));
 
   let capital = 10000;
   const initCapital = capital;
@@ -8930,8 +9022,22 @@ function _runBacktestEngine(kl, tf, periodBars, positionSizePct, commission) {
   let maxDrawdown = 0;
   let consLoss = 0, maxConsLoss = 0, curConsLoss = 0;
 
+  // Diagnostic counters
+  let diagNullRes = 0, diagLowConf = 0, diagLowRR = 0, diagOpened = 0;
+
   // ── 月度分组 ──
   const monthlyMap = {};
+
+  // ── Adaptive thresholds — scale down for smaller data sets ──
+  // With limited bars, being strict means zero trades. Better to show noisy
+  // data with a disclaimer than show nothing at all.
+  const totalBars = usedKL.length - startIdx;
+  const confThresh = totalBars < 80  ? 35 :   // Very short: nearly everything
+                     totalBars < 150 ? 42 :   // Short: low bar
+                     totalBars < 200 ? 48 : 52; // Normal: moderate
+  const rrThresh   = totalBars < 80  ? 0.8 :
+                     totalBars < 150 ? 1.0 :
+                     totalBars < 200 ? 1.2 : 1.3;
 
   for (let i = startIdx; i < usedKL.length; i++) {
     const historicalKL = usedKL.slice(0, i + 1);
@@ -8953,7 +9059,6 @@ function _runBacktestEngine(kl, tf, periodBars, positionSizePct, commission) {
       }
 
       if (!closed && i === usedKL.length - 1) {
-        // 最后一根K线强制平仓
         closed = true;
         openTrade.exit = price;
         openTrade.win = (dir === 'long') ? price > entry : price < entry;
@@ -8976,14 +9081,12 @@ function _runBacktestEngine(kl, tf, periodBars, positionSizePct, commission) {
         openTrade.closeTime = cur.t;
         trades.push({ ...openTrade });
 
-        // 月度记录
         const mo = new Date(cur.t).toISOString().slice(0, 7);
         if (!monthlyMap[mo]) monthlyMap[mo] = { pnl: 0, wins: 0, total: 0 };
         monthlyMap[mo].pnl += netPnl;
         monthlyMap[mo].total++;
         if (openTrade.win) monthlyMap[mo].wins++;
 
-        // 信号因子追踪
         openSigs.forEach(sig => {
           if (sigTracker[sig]) {
             sigTracker[sig].total++;
@@ -8991,14 +9094,12 @@ function _runBacktestEngine(kl, tf, periodBars, positionSizePct, commission) {
           }
         });
 
-        // 连续亏损追踪
         if (!openTrade.win) { curConsLoss++; maxConsLoss = Math.max(maxConsLoss, curConsLoss); }
         else { curConsLoss = 0; }
 
         openTrade = null;
         equityCurve.push({ t: cur.t, v: capital });
 
-        // 最大回撤
         maxEquity = Math.max(maxEquity, capital);
         const dd = (maxEquity - capital) / maxEquity * 100;
         maxDrawdown = Math.max(maxDrawdown, dd);
@@ -9007,9 +9108,9 @@ function _runBacktestEngine(kl, tf, periodBars, positionSizePct, commission) {
 
     // ── 无持仓时，运行策略判断是否开仓 ──
     if (!openTrade && historicalKL.length >= 60) {
+      // ── Strategy 1: Try full _Φ9x engine (may return null if multi-TF data missing) ──
       let res = null;
       try {
-        // 临时替换S.klines数据来模拟历史信号
         const origKL = S.klines[S.sym + tf];
         S.klines[S.sym + tf] = historicalKL;
         const origPx = S.lastPx;
@@ -9017,43 +9118,53 @@ function _runBacktestEngine(kl, tf, periodBars, positionSizePct, commission) {
         res = _Φ9x(tf);
         S.klines[S.sym + tf] = origKL;
         S.lastPx = origPx;
-      } catch(e) { continue; }
+      } catch(e) { res = null; }
+
+      // ── Strategy 2: If _Φ9x returned null, use lightweight internal scorer ──
+      // This is a self-contained scorer that only uses the historicalKL array
+      // so it never fails due to missing multi-TF data
+      if (!res) {
+        diagNullRes++;
+        res = _btInternalScore(historicalKL, price, tf);
+      }
 
       if (!res) continue;
 
-      // 只在高置信度信号下开仓（防止过拟合）
-      if (res.conf < 55) continue;
-      // 需要至少2:1的R:R
-      if (res.rr < 1.5) continue;
+      // Adaptive threshold check
+      if (res.conf < confThresh) { diagLowConf++; continue; }
+      if (res.rr < rrThresh)     { diagLowRR++;   continue; }
+
+      diagOpened++;
 
       // ── 识别参与此信号的子因子 ──
       const openSigs = [];
-      if (res.rsi !== undefined) {
-        const rsi = res.rsi;
-        if (rsi < 38 || rsi > 62) openSigs.push('rsi');
-      }
-      if (res.macdD?.bullDiv || res.macdD?.bearDiv || res.macdD?.hist !== undefined) openSigs.push('macd');
+      const rsi = res.rsi || 50;
+      if (rsi < 40 || rsi > 60) openSigs.push('rsi');
+      if (res.macdD?.bullDiv || res.macdD?.bearDiv) openSigs.push('macd');
+      if (res.macdD?.hist !== undefined) openSigs.push('macd');
       if (res.vegas) openSigs.push('vegas');
       if (res.chan) openSigs.push('chan');
       if (res.adx?.trending) openSigs.push('adx');
       if (res.obv?.obvDiv) openSigs.push('obv');
       if (res.candles?.patterns?.length) openSigs.push('candle');
-      // 月相信号（根据置信度判断）
       const lunar = getLunar();
       if (lunar.bias === (res.isBull ? 'bull' : 'bear')) openSigs.push('lunar');
-      // 玄学：若置信度 > 60 且有方向
-      if (res.conf > 60) openSigs.push('mystic');
+      if (res.conf > 55) openSigs.push('mystic');
+      // Deduplicate
+      const uniqSigs = [...new Set(openSigs)];
+
+      const tp1 = res.tps?.[0]?.p || (res.isBull ? price * (1 + Math.max(0.01, (res.atrRaw||price*0.02)/price*1.5)) : price * (1 - Math.max(0.01, (res.atrRaw||price*0.02)/price*1.5)));
+      const sl1 = res.sls?.[0]?.p || (res.isBull ? price * (1 - Math.max(0.005, (res.atrRaw||price*0.02)/price)) : price * (1 + Math.max(0.005, (res.atrRaw||price*0.02)/price)));
 
       openTrade = {
         dir:      res.isBull ? 'long' : 'short',
         entry:    price,
-        tp1:      res.tps[0]?.p || (res.isBull ? price * 1.03 : price * 0.97),
-        sl1:      res.sls[0]?.p || (res.isBull ? price * 0.98 : price * 1.02),
+        tp1, sl1,
         conf:     res.conf,
         score:    res.score,
         openBar:  i,
         openTime: cur.t,
-        openSigs,
+        openSigs: uniqSigs,
         pnl: 0, win: false, exit: price,
       };
     }
@@ -9061,7 +9172,17 @@ function _runBacktestEngine(kl, tf, periodBars, positionSizePct, commission) {
 
   // ── 计算汇总指标 ──
   const total = trades.length;
-  if (total === 0) return { error: '回测期间无有效信号（置信度≥55%，R:R≥1.5）', trades: [] };
+  if (total === 0) {
+    // Provide detailed diagnostic
+    const diagMsg = [
+      `回测区间 ${usedKL.length - startIdx} 根K线`,
+      `策略引擎返回null: ${diagNullRes}次`,
+      `置信度<${confThresh}%过滤: ${diagLowConf}次`,
+      `R:R<${rrThresh.toFixed(1)}过滤: ${diagLowRR}次`,
+      `建议：切换更长时间框架（1D）或增加K线数量（200根）`
+    ].join(' · ');
+    return { error: diagMsg, trades: [], diagNullRes, diagLowConf, diagLowRR };
+  }
 
   const wins = trades.filter(t => t.win);
   const losses = trades.filter(t => !t.win);
@@ -9101,6 +9222,10 @@ function _runBacktestEngine(kl, tf, periodBars, positionSizePct, commission) {
     sharpe, capital, initCapital,
     signalAccuracy, monthly, equityCurve,
     tf, periodBars, trades,
+    // Diagnostics
+    confThresh, rrThresh, diagOpened,
+    diagNullRes, diagLowConf, diagLowRR,
+    internalScoreCount: diagNullRes - (diagNullRes > 0 ? Math.max(0, diagNullRes - diagOpened) : 0),
   };
 }
 
@@ -9109,7 +9234,25 @@ function renderBacktestResult(r) {
   if (!el) return;
 
   if (r.error) {
-    el.innerHTML = `<div style="color:var(--amber);font-size:12px;padding:10px 0;">${r.error}</div>`;
+    const hasNullDiag = r.diagNullRes !== undefined;
+    el.innerHTML = `
+      <div style="background:rgba(128,80,0,0.07);border:1px solid rgba(128,80,0,0.25);border-radius:6px;padding:12px 14px;">
+        <div style="font-size:12px;font-weight:700;color:var(--amber);margin-bottom:8px;">⚠️ 未找到有效信号</div>
+        <div style="font-size:11px;color:var(--text);line-height:1.8;">${r.error}</div>
+        ${hasNullDiag ? `
+        <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:5px;">
+          <div style="background:var(--bg2);border-radius:4px;padding:6px 9px;font-size:11px;"><span style="color:var(--muted)">引擎返回null</span><br><strong>${r.diagNullRes}</strong>次</div>
+          <div style="background:var(--bg2);border-radius:4px;padding:6px 9px;font-size:11px;"><span style="color:var(--muted)">置信度过低</span><br><strong>${r.diagLowConf}</strong>次</div>
+          <div style="background:var(--bg2);border-radius:4px;padding:6px 9px;font-size:11px;"><span style="color:var(--muted)">R:R过低</span><br><strong>${r.diagLowRR}</strong>次</div>
+        </div>` : ''}
+        <div style="margin-top:10px;font-size:11px;color:var(--muted);line-height:1.7;">
+          💡 <strong>解决方法：</strong><br>
+          1. 切换到 <strong>1D</strong> 时间框架（每日K线信号更清晰）<br>
+          2. 增加回测周期至 <strong>200根K</strong><br>
+          3. 先切换到该时间框架让系统加载足够K线，再运行回测
+        </div>
+        <button onclick="runFinchBacktest()" style="margin-top:10px;width:100%;padding:8px;border:1px solid var(--gold);border-radius:5px;background:rgba(139,105,20,0.08);color:var(--gold);font-family:inherit;font-size:11px;cursor:pointer;font-weight:700;">↺ 重新尝试</button>
+      </div>`;
     return;
   }
 
@@ -9117,8 +9260,13 @@ function renderBacktestResult(r) {
   const pfColor = r.profitFactor >= 1.5 ? 'var(--green)' : r.profitFactor >= 1 ? 'var(--amber)' : 'var(--red)';
   const retColor = r.totalReturn >= 0 ? 'var(--green)' : 'var(--red)';
 
+  // Adaptive threshold note
+  const adaptiveNote = r.confThresh && r.confThresh < 52
+    ? `<div style="background:rgba(128,80,0,0.07);border:1px solid rgba(128,80,0,0.2);border-radius:4px;padding:6px 9px;margin-bottom:10px;font-size:10px;color:var(--amber);line-height:1.6;">⚡ 自适应阈值模式：置信度≥${r.confThresh}%，R:R≥${r.rrThresh?.toFixed(1)||'1.0'}（K线较少时自动降低门槛）${r.internalScoreCount > 0 ? ` · ${r.internalScoreCount}次使用轻量评分器` : ''}</div>`
+    : (r.internalScoreCount > 0 ? `<div style="background:rgba(0,0,0,0.03);border:1px solid var(--line2);border-radius:4px;padding:5px 9px;margin-bottom:8px;font-size:10px;color:var(--muted);">ℹ️ ${r.internalScoreCount}/${r.total}次信号使用内置轻量评分器（多时框数据不足时）</div>` : '');
+
   // ── 总体统计卡片 ──
-  let html = `
+  let html = adaptiveNote + `
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px;">
       <div style="background:var(--card);border:1px solid var(--card-bd);border-radius:5px;padding:9px 11px;box-shadow:var(--shadow);">
         <div style="font-size:10px;color:var(--muted);margin-bottom:3px">胜率</div>
@@ -10999,7 +11147,7 @@ switchMobileModTab = function(tab, btn) {
 <div class="ios-install-banner" id="iosInstallBanner">
   📲 在 Safari 中点击 <strong>分享</strong> → <strong>添加到主屏幕</strong><br>
   <span style="font-size:11px;opacity:.7">即可像 App 一样使用 FINCH · Add to Home Screen for app experience</span>
-  <span class="ios-install-close" onclick="document.getElementById('iosInstallBanner').classList.remove('show');localStorage.setItem('finch_ios_dismissed','1')">✕</span>
+  <span class="ios-install-close" onclick="$cls('iosInstallBanner','remove','show');localStorage.setItem('finch_ios_dismissed','1')">✕</span>
 </div>
 
 
@@ -11013,7 +11161,7 @@ switchMobileModTab = function(tab, btn) {
         <div style="font-size:15px;font-weight:700;color:var(--bright);letter-spacing:1px">🤖 FINCH 自动开仓</div>
         <div style="font-size:11px;color:var(--muted);margin-top:2px">模拟盘测试 · 不涉及真实资金</div>
       </div>
-      <button onclick="document.getElementById('finchAutoTradeOverlay').style.display='none'" style="background:transparent;border:1px solid var(--line2);border-radius:6px;padding:6px 12px;color:var(--muted);font-family:inherit;font-size:12px;cursor:pointer;">✕</button>
+      <button onclick="$styl('finchAutoTradeOverlay','display','none')" style="background:transparent;border:1px solid var(--line2);border-radius:6px;padding:6px 12px;color:var(--muted);font-family:inherit;font-size:12px;cursor:pointer;">✕</button>
     </div>
 
     <!-- Signal summary -->
