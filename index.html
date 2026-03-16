@@ -5626,6 +5626,555 @@ function _Φ9x(tf){
 }
 
 
+// ╔══════════════════════════════════════════════════════════════════════╗
+// ║  FINCH STRATEGY INTELLIGENCE ENGINE v1                              ║
+// ║  综合策略推理引擎 — 融合趋势/形态/缠论/江恩/结构/动能               ║
+// ║                                                                      ║
+// ║  核心输出：                                                           ║
+// ║  ·  当前市场状态的完整叙事（趋势/形态/关键位）                       ║
+// ║  ·  精准的操作策略（做多/做空/等待 + 入场条件 + 仓位建议）           ║
+// ║  ·  关键价格线位（趋势线价位/形态目标/斐波关键位）                   ║
+// ║  ·  多级别嵌套分析（大小级别趋势冲突识别）                           ║
+// ╚══════════════════════════════════════════════════════════════════════╝
+
+// ── 趋势识别引擎 ────────────────────────────────────────────────────────
+function _TrendAnalysis(kl, price) {
+  if (!kl || kl.length < 30) return null;
+  try {
+    const n = kl.length;
+    const prices = kl.map(k => k.c);
+    const highs  = kl.map(k => k.h);
+    const lows   = kl.map(k => k.l);
+
+    // ── 1. 趋势线计算（连接波段高点/低点）──
+    const { peaks, troughs } = _Δ1p(kl.slice(-80), 3);
+
+    // 下降趋势线：连接最近两个下降波段高点
+    let downTrendLine = null;
+    if (peaks.length >= 2) {
+      const p1 = peaks[peaks.length - 2];
+      const p2 = peaks[peaks.length - 1];
+      if (p2.price < p1.price) { // 确认下降
+        const slope = (p2.price - p1.price) / (p2.idx - p1.idx);
+        const currentVal = p2.price + slope * (n - 1 - p2.idx);
+        const futureVal  = p2.price + slope * (n + 4 - p2.idx);
+        downTrendLine = {
+          slope, p1, p2,
+          currentPrice: currentVal,
+          futurePrice: futureVal,
+          broken: price > currentVal * 1.005,
+          tested: Math.abs(price - currentVal) / price < 0.012,
+        };
+      }
+    }
+
+    // 上升趋势线：连接最近两个上升波段低点
+    let upTrendLine = null;
+    if (troughs.length >= 2) {
+      const t1 = troughs[troughs.length - 2];
+      const t2 = troughs[troughs.length - 1];
+      if (t2.price > t1.price) { // 确认上升
+        const slope = (t2.price - t1.price) / (t2.idx - t1.idx);
+        const currentVal = t2.price + slope * (n - 1 - t2.idx);
+        const futureVal  = t2.price + slope * (n + 4 - t2.idx);
+        upTrendLine = {
+          slope, t1, t2,
+          currentPrice: currentVal,
+          futurePrice: futureVal,
+          broken: price < currentVal * 0.995,
+          tested: Math.abs(price - currentVal) / price < 0.012,
+        };
+      }
+    }
+
+    // ── 2. 趋势强度 & 方向 ──
+    const ma20 = calcMA(prices, 20);
+    const ma55 = calcMA(prices, 55);
+    const ma200arr = prices.length >= 200 ? calcMA(prices, 200) : null;
+    const m20 = ma20[n-1], m55 = ma55[n-1], m200 = ma200arr ? ma200arr[n-1] : null;
+
+    // 多头排列 vs 空头排列
+    const bullishAlignment = m20 && m55 && m20 > m55 && price > m20;
+    const bearishAlignment = m20 && m55 && m20 < m55 && price < m20;
+    const ma200Bull = m200 ? price > m200 : null;
+
+    // ADX 趋势强度
+    const adxData = _calcADX(kl, 14);
+    const trendStrength = adxData.adx > 35 ? 'strong' : adxData.adx > 20 ? 'moderate' : 'weak';
+
+    // ── 3. 市场结构 HH/HL/LH/LL ──
+    const recentPeaks   = peaks.slice(-3);
+    const recentTroughs = troughs.slice(-3);
+    let structure = 'neutral';
+    let structureDetail = '';
+    if (recentPeaks.length >= 2 && recentTroughs.length >= 2) {
+      const hhhl = recentPeaks[recentPeaks.length-1].price > recentPeaks[recentPeaks.length-2].price &&
+                   recentTroughs[recentTroughs.length-1].price > recentTroughs[recentTroughs.length-2].price;
+      const lllh = recentPeaks[recentPeaks.length-1].price < recentPeaks[recentPeaks.length-2].price &&
+                   recentTroughs[recentTroughs.length-1].price < recentTroughs[recentTroughs.length-2].price;
+      if (hhhl)      { structure = 'uptrend';   structureDetail = 'HH+HL 上升结构'; }
+      else if (lllh) { structure = 'downtrend'; structureDetail = 'LH+LL 下降结构'; }
+      else {
+        // 检查是否有CHoCH（结构转换）
+        const bullCHoCH = lllh && price > recentPeaks[recentPeaks.length-1].price;
+        const bearCHoCH = hhhl && price < recentTroughs[recentTroughs.length-1].price;
+        if (bullCHoCH)  { structure = 'choch_bull'; structureDetail = 'CHoCH 看涨结构转换'; }
+        else if (bearCHoCH) { structure = 'choch_bear'; structureDetail = 'CHoCH 看跌结构转换'; }
+        else                { structure = 'ranging';    structureDetail = '高低点无序 震荡结构'; }
+      }
+    }
+
+    // ── 4. 关键支撑阻力线位（供需区聚类）──
+    const allLevels = [
+      ...peaks.map(p => ({ price: p.price, type: 'res', count: 1 })),
+      ...troughs.map(t => ({ price: t.price, type: 'sup', count: 1 }))
+    ].filter(l => l.price > 0);
+
+    // 聚类：价格相差<0.5%归为同一水平
+    const clustered = [];
+    allLevels.sort((a,b)=>a.price-b.price).forEach(lvl => {
+      const existing = clustered.find(c => Math.abs(c.price - lvl.price) / lvl.price < 0.005);
+      if (existing) { existing.count++; existing.price = (existing.price + lvl.price) / 2; }
+      else clustered.push({ ...lvl });
+    });
+
+    // 按强度排序（被测试次数越多越强）
+    const strongLevels = clustered.filter(l => l.count >= 2).sort((a,b) => b.count - a.count);
+    const nearestRes = clustered.filter(l => l.price > price * 1.003).sort((a,b)=>a.price-b.price)[0];
+    const nearestSup = clustered.filter(l => l.price < price * 0.997).sort((a,b)=>b.price-a.price)[0];
+
+    // ── 5. 斐波那契关键位 ──
+    const fibLow  = troughs.length ? Math.min(...troughs.slice(-3).map(t=>t.price)) : price * 0.9;
+    const fibHigh = peaks.length   ? Math.max(...peaks.slice(-3).map(p=>p.price))   : price * 1.1;
+    const fibRange = fibHigh - fibLow;
+    const fibs = [0.236, 0.382, 0.5, 0.618, 0.786].map(r => ({
+      ratio: r,
+      price: fibHigh - fibRange * r,
+      label: `${(r*100).toFixed(1)}%`,
+      near: false,
+    }));
+    fibs.forEach(f => { f.near = Math.abs(f.price - price) / price < 0.012; });
+    const nearFib = fibs.find(f => f.near);
+
+    // ── 6. 综合趋势判断 ──
+    const overallBull = structure === 'uptrend' || structure === 'choch_bull' ||
+                        (bullishAlignment && trendStrength !== 'weak');
+    const overallBear = structure === 'downtrend' || structure === 'choch_bear' ||
+                        (bearishAlignment && trendStrength !== 'weak');
+
+    return {
+      // 趋势线
+      downTrendLine, upTrendLine,
+      // 结构
+      structure, structureDetail, bullishAlignment, bearishAlignment, ma200Bull,
+      // MA
+      m20, m55, m200,
+      // ADX
+      adxData, trendStrength,
+      // 关键位
+      strongLevels, nearestRes, nearestSup, fibs, nearFib,
+      fibLow, fibHigh, fibRange,
+      // 峰谷
+      peaks: peaks.slice(-5), troughs: troughs.slice(-5),
+      // 综合
+      overallBull, overallBear,
+    };
+  } catch(e) { console.warn('_TrendAnalysis error:', e); return null; }
+}
+
+// ── ADX计算辅助（供_TrendAnalysis内部使用）──
+function _calcADX(kl, period=14) {
+  if (!kl || kl.length < period + 2) return { adx: 20, pdi: 0, ndi: 0, trending: false, strong: false };
+  try {
+    const n = kl.length;
+    const tr=[], pdm=[], ndm=[];
+    for (let i=1; i<n; i++) {
+      tr.push(Math.max(kl[i].h-kl[i].l, Math.abs(kl[i].h-kl[i-1].c), Math.abs(kl[i].l-kl[i-1].c)));
+      pdm.push(Math.max(kl[i].h-kl[i-1].h, 0));
+      ndm.push(Math.max(kl[i-1].l-kl[i].l, 0));
+    }
+    const ws=(arr,p)=>{
+      let s=arr.slice(0,p).reduce((a,b)=>a+b,0);
+      const r=[s];
+      for(let i=p;i<arr.length;i++){s=s-s/p+arr[i];r.push(s);}
+      return r;
+    };
+    const sTR=ws(tr,period),sPDM=ws(pdm,period),sNDM=ws(ndm,period);
+    const dxArr=sTR.map((t,i)=>{
+      if(!t)return 0;
+      const p=sPDM[i]/t*100,nm=sNDM[i]/t*100;
+      const sum=p+nm;
+      return sum?Math.abs(p-nm)/sum*100:0;
+    });
+    const adxArr=ws(dxArr,period);
+    const adx=adxArr[adxArr.length-1]||20;
+    const pdi=sTR[sTR.length-1]>0?sPDM[sPDM.length-1]/sTR[sTR.length-1]*100:0;
+    const ndi=sTR[sTR.length-1]>0?sNDM[sNDM.length-1]/sTR[sTR.length-1]*100:0;
+    return { adx, pdi, ndi, trending: adx>20, strong: adx>35, ranging: adx<18 };
+  } catch(e) { return { adx: 20, pdi: 0, ndi: 0, trending: false, strong: false, ranging: true }; }
+}
+
+// ── 综合策略生成器 ──────────────────────────────────────────────────────
+// 这是核心：把所有分析模块融合成一份完整的、可读的策略报告
+function _buildComprehensiveStrategy(res) {
+  if (!res) return null;
+  try {
+    const kl     = S.klines[S.sym + (res.tf || S.stratTF)] || [];
+    const price  = res.price || res.entry || S.lastPx;
+    const tf     = res.tf || S.stratTF;
+    const isBull = res.isBull;
+
+    // ── 运行所有分析引擎 ──
+    const trend   = _TrendAnalysis(kl, price);
+    const chan     = _ChanFull(kl, price);
+    const pattern  = _PatternRecognition(kl, price);
+    const gann     = _GannAdvanced(kl, price, tf);
+    const advStruct = _advancedStructure(kl, price, res);
+
+    if (!trend) return null;
+
+    // ── 策略评分矩阵 ──
+    // 每个维度独立打分，最终合并成一个策略建议
+    let bullScore = 0, bearScore = 0;
+    const bullReasons = [], bearReasons = [], neutralReasons = [];
+
+    // [1] 趋势结构评分
+    if (trend.structure === 'uptrend') {
+      bullScore += 3;
+      bullReasons.push(`市场结构：${trend.structureDetail}，MA${trend.m20?'20>MA55 多头排列':'排列中'}`);
+    } else if (trend.structure === 'downtrend') {
+      bearScore += 3;
+      bearReasons.push(`市场结构：${trend.structureDetail}，价格受压`);
+    } else if (trend.structure === 'choch_bull') {
+      bullScore += 2;
+      bullReasons.push(`结构转换 CHoCH：空头结构被打破，多头开始接管`);
+    } else if (trend.structure === 'choch_bear') {
+      bearScore += 2;
+      bearReasons.push(`结构转换 CHoCH：多头结构被打破，空头开始接管`);
+    } else {
+      neutralReasons.push(`震荡结构（${trend.structureDetail}），方向待确认`);
+    }
+
+    // [2] 趋势线突破/测试评分
+    if (trend.downTrendLine) {
+      if (trend.downTrendLine.broken) {
+        bullScore += 2;
+        bullReasons.push(`下降趋势线已突破（当前趋势线位 ${fmtP(trend.downTrendLine.currentPrice)}），看涨`);
+      } else if (trend.downTrendLine.tested) {
+        bearScore += 1.5;
+        bearReasons.push(`正测试下降趋势线阻力（${fmtP(trend.downTrendLine.currentPrice)}），需放量突破才能转多`);
+      } else {
+        bearReasons.push(`下降趋势线压制在 ${fmtP(trend.downTrendLine.currentPrice)}`);
+        bearScore += 1;
+      }
+    }
+    if (trend.upTrendLine) {
+      if (trend.upTrendLine.broken) {
+        bearScore += 2;
+        bearReasons.push(`上升趋势线已跌破（当前趋势线位 ${fmtP(trend.upTrendLine.currentPrice)}），看跌`);
+      } else if (trend.upTrendLine.tested) {
+        bullScore += 1.5;
+        bullReasons.push(`正测试上升趋势线支撑（${fmtP(trend.upTrendLine.currentPrice)}），企稳则看多`);
+      } else {
+        bullReasons.push(`上升趋势线支撑在 ${fmtP(trend.upTrendLine.currentPrice)}`);
+        bullScore += 1;
+      }
+    }
+
+    // [3] 斐波那契位评分
+    if (trend.nearFib) {
+      const f = trend.nearFib;
+      const isSupport = f.ratio >= 0.382;
+      if (isSupport && isBull) {
+        bullScore += 1.5;
+        bullReasons.push(`价格贴近斐波 ${f.label} 回撤位（${fmtP(f.price)}）—— 黄金支撑区`);
+      } else if (!isSupport && !isBull) {
+        bearScore += 1;
+        bearReasons.push(`斐波 ${f.label} 位（${fmtP(f.price)}）形成阻力`);
+      } else {
+        neutralReasons.push(`斐波 ${f.label} 位（${fmtP(f.price)}）为关键价格节点`);
+      }
+    }
+
+    // [4] 图表形态评分
+    if (pattern.dominant) {
+      const p = pattern.dominant;
+      const isBullPat = p.type.includes('bull');
+      const isBearPat = p.type.includes('bear');
+      if (isBullPat) {
+        bullScore += (p.confidence / 100) * 3;
+        bullReasons.push(`图表形态「${p.name}」(${p.confidence}%) — ${p.desc}`);
+      } else if (isBearPat) {
+        bearScore += (p.confidence / 100) * 3;
+        bearReasons.push(`图表形态「${p.name}」(${p.confidence}%) — ${p.desc}`);
+      } else {
+        neutralReasons.push(`图表形态「${p.name}」— 整理延续，等待突破方向`);
+      }
+    }
+
+    // [5] 缠论评分
+    if (chan) {
+      if (chan.bullDivStrong || chan.bullDiv) {
+        const w = chan.bullDivStrong ? 2.5 : 1.5;
+        bullScore += w;
+        bullReasons.push(`缠论${chan.bullDivStrong?'强':''}底背驰 — 空头动能衰竭${chan.bs1==='bull'?'，一买点确认':chan.bs2==='bull'?'，二买点入场':''}`);
+      }
+      if (chan.bearDivStrong || chan.bearDiv) {
+        const w = chan.bearDivStrong ? 2.5 : 1.5;
+        bearScore += w;
+        bearReasons.push(`缠论${chan.bearDivStrong?'强':''}顶背驰 — 多头动能衰竭${chan.bs1==='bear'?'，一卖点确认':chan.bs2==='bear'?'，二卖点入场':''}`);
+      }
+      if (chan.inPivot) {
+        neutralReasons.push(`缠论中枢内（${fmtP(chan.zhLo||0)}–${fmtP(chan.zhHi||0)}）— 多空博弈区，方向待定`);
+      }
+    }
+
+    // [6] 江恩时间窗口
+    if (gann.timeWindow) {
+      neutralReasons.push(`江恩时间共振（${gann.windowSummary}）— 当前处于重要转折时间窗口`);
+      // 时间窗口叠加技术信号，放大评分
+      bullScore *= 1.1;
+      bearScore *= 1.1;
+    }
+
+    // [7] 动能衰竭/反弹识别
+    if (advStruct.exhaustion) {
+      if (advStruct.exhaustionDir === 'bull') {
+        bullScore += 1.5;
+        bullReasons.push(`空头动能衰竭 — 连续新低但幅度递减，底部反转信号增强`);
+      } else {
+        bearScore += 1.5;
+        bearReasons.push(`多头动能衰竭 — 连续新高但幅度递减，顶部风险上升`);
+      }
+    }
+    if (advStruct.isRebound) {
+      neutralReasons.push(`⚠️ 当前上涨属于大级别下降趋势中的反弹 — 非趋势反转，反弹高度有限`);
+      bullScore *= 0.6; // 反弹时缩减多头评分
+    }
+    if (advStruct.isRetrace) {
+      neutralReasons.push(`当前下跌为大级别上升趋势中的回调 — 可关注回调结束后做多机会`);
+    }
+
+    // [8] 波动率变盘预警
+    if (advStruct.volCompressing) {
+      neutralReasons.push(`波动率极度收缩（仅${(advStruct.volRatio*100).toFixed(0)}%正常水平）— 变盘在即，即将出现方向性突破`);
+    }
+
+    // ── 策略决策 ──
+    const totalScore = bullScore + bearScore;
+    const dominance  = totalScore > 0 ? Math.abs(bullScore - bearScore) / totalScore : 0;
+    let strategyType, strategyConf, actionClass;
+
+    if (bullScore > bearScore && dominance > 0.25) {
+      strategyType = 'long';
+      strategyConf = Math.min(92, Math.round(45 + dominance * 50 + (trend.trendStrength === 'strong' ? 10 : 0)));
+      actionClass = 'bull';
+    } else if (bearScore > bullScore && dominance > 0.25) {
+      strategyType = 'short';
+      strategyConf = Math.min(92, Math.round(45 + dominance * 50 + (trend.trendStrength === 'strong' ? 10 : 0)));
+      actionClass = 'bear';
+    } else {
+      strategyType = 'wait';
+      strategyConf = Math.round(30 + dominance * 20);
+      actionClass = 'neutral';
+    }
+
+    // ── 关键价格汇总 ──
+    const keySupport = [
+      trend.nearestSup?.price,
+      trend.upTrendLine?.currentPrice,
+      chan?.chanSup,
+      res.sls?.[0]?.p,
+    ].filter(p => p && p > 0 && p < price * 0.998).sort((a,b)=>b-a);
+
+    const keyResistance = [
+      trend.nearestRes?.price,
+      trend.downTrendLine?.currentPrice,
+      chan?.chanRes,
+      res.tps?.[0]?.p,
+    ].filter(p => p && p > 0 && p > price * 1.002).sort((a,b)=>a-b);
+
+    // ── 入场条件 ──
+    let entryCondition = '', riskNote = '';
+    if (strategyType === 'long') {
+      const trigger = trend.downTrendLine && !trend.downTrendLine.broken
+        ? `突破下降趋势线 ${fmtP(trend.downTrendLine.currentPrice)} 收盘确认`
+        : trend.upTrendLine && trend.upTrendLine.tested
+        ? `上升趋势线 ${fmtP(trend.upTrendLine.currentPrice)} 企稳反弹确认`
+        : `守稳 ${fmtP(keySupport[0]||res.entry)} 支撑并出现缠论买点`;
+      entryCondition = trigger;
+      riskNote = `止损设于上升趋势线下方或 ${fmtP(keySupport[0]||res.sls?.[0]?.p)} 以下`;
+    } else if (strategyType === 'short') {
+      const trigger = trend.upTrendLine && trend.upTrendLine.broken
+        ? `上升趋势线已跌破，反抽 ${fmtP(trend.upTrendLine.currentPrice)} 压力位做空`
+        : trend.downTrendLine && trend.downTrendLine.tested
+        ? `下降趋势线 ${fmtP(trend.downTrendLine.currentPrice)} 反弹受压确认`
+        : `无法突破 ${fmtP(keyResistance[0]||res.tps?.[0]?.p)} 阻力，出现缠论卖点`;
+      entryCondition = trigger;
+      riskNote = `止损设于下降趋势线上方或 ${fmtP(keyResistance[0]||res.sls?.[0]?.p)} 以上`;
+    } else {
+      entryCondition = `等待价格突破 ${fmtP(keyResistance[0]||0)} 或跌破 ${fmtP(keySupport[0]||0)} 确认方向`;
+      riskNote = `当前处于多空博弈区，强行入场风险>收益`;
+    }
+
+    return {
+      // 核心策略
+      strategyType, strategyConf, actionClass,
+      bullScore, bearScore,
+      // 分析依据
+      bullReasons, bearReasons, neutralReasons,
+      // 关键线位
+      keySupport, keyResistance,
+      entryCondition, riskNote,
+      // 子模块结果
+      trend, chan, pattern, gann, advStruct,
+      // 多级别嵌套判断
+      isRebound: advStruct.isRebound,
+      isRetrace: advStruct.isRetrace,
+      trendStructure: trend.structureDetail,
+    };
+  } catch(e) { console.warn('_buildComprehensiveStrategy error:', e); return null; }
+}
+
+// ── 策略HTML渲染器 ─────────────────────────────────────────────────────
+function _renderStrategyBlock(res) {
+  const strat = _buildComprehensiveStrategy(res);
+  if (!strat) return '';
+
+  const { strategyType, strategyConf, bullReasons, bearReasons, neutralReasons,
+          keySupport, keyResistance, entryCondition, riskNote,
+          trend, chan, pattern, gann, advStruct } = strat;
+
+  const isBull = strategyType === 'long';
+  const isBear = strategyType === 'short';
+  const isWait = strategyType === 'wait';
+
+  const dirColor  = isBull ? 'var(--green)' : isBear ? 'var(--red)' : 'var(--amber)';
+  const dirBg     = isBull ? 'rgba(26,107,58,0.06)' : isBear ? 'rgba(160,20,32,0.06)' : 'rgba(128,80,0,0.04)';
+  const dirBorder = isBull ? 'var(--green)' : isBear ? 'var(--red)' : 'var(--amber)';
+  const dirIcon   = isBull ? '▲' : isBear ? '▼' : '◉';
+  const dirLabel  = isBull ? 'LONG 做多' : isBear ? 'SHORT 做空' : 'WAIT 等待';
+  const confColor = strategyConf >= 70 ? 'var(--green)' : strategyConf >= 55 ? 'var(--amber)' : 'var(--red)';
+
+  // 趋势线位描述
+  const trendLineHtml = (() => {
+    const lines = [];
+    if (trend.downTrendLine) {
+      const tl = trend.downTrendLine;
+      const status = tl.broken ? '✅ 已突破' : tl.tested ? '⚡ 正测试' : '📍 上方压制';
+      lines.push(`<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--line);">
+        <span style="font-size:11px;color:var(--red)">↘ 下降趋势线 ${status}</span>
+        <span style="font-size:12px;font-weight:700;color:var(--red)">${fmtP(tl.currentPrice)}</span>
+      </div>`);
+    }
+    if (trend.upTrendLine) {
+      const tl = trend.upTrendLine;
+      const status = tl.broken ? '❌ 已跌破' : tl.tested ? '⚡ 正测试' : '📍 下方支撑';
+      lines.push(`<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--line);">
+        <span style="font-size:11px;color:var(--green)">↗ 上升趋势线 ${status}</span>
+        <span style="font-size:12px;font-weight:700;color:var(--green)">${fmtP(tl.currentPrice)}</span>
+      </div>`);
+    }
+    return lines.join('');
+  })();
+
+  // 斐波那契关键位
+  const fibHtml = trend.fibs.filter(f => {
+    const dist = Math.abs(f.price - (res.price||res.entry)) / (res.price||res.entry);
+    return dist < 0.08;
+  }).map(f => {
+    const isNear = f.near;
+    const col = f.price > (res.price||res.entry) ? 'var(--red)' : 'var(--green)';
+    return `<div style="display:flex;justify-content:space-between;padding:3px 0;${isNear?'background:rgba(139,105,20,0.06);padding:3px 6px;border-radius:3px;':''}">
+      <span style="font-size:10px;color:${isNear?'var(--gold)':'var(--muted)'}">Fib ${f.label} ${isNear?'← 当前':''}}</span>
+      <span style="font-size:11px;font-weight:700;color:${isNear?'var(--gold)':col}">${fmtP(f.price)}</span>
+    </div>`;
+  }).join('');
+
+  // 形态说明
+  const patHtml = pattern.dominant ? `
+    <div style="background:${pattern.dominant.type.includes('bull')?'var(--green-bg)':'pattern.dominant.type.includes(\'bear\')?\'var(--red-bg)\':\'var(--iching-bg)\''};border:1px solid ${pattern.dominant.type.includes('bull')?'var(--green-bd)':'var(--red-bd)'};border-radius:5px;padding:8px 10px;margin-bottom:8px;">
+      <div style="font-size:11px;font-weight:700;color:${pattern.dominant.type.includes('bull')?'var(--green)':'var(--red)'};margin-bottom:3px">
+        📐 ${pattern.dominant.name} · 置信度 ${pattern.dominant.confidence}%
+      </div>
+      <div style="font-size:10px;color:var(--muted);line-height:1.6">${pattern.dominant.desc}</div>
+      ${pattern.patterns.length > 1 ? `<div style="font-size:10px;color:var(--dim);margin-top:4px">其他形态: ${pattern.patterns.slice(1,3).map(p=>p.name).join('、')}</div>` : ''}
+    </div>` : '';
+
+  // 分析依据列表
+  const reasonsHtml = (reasons, color, icon) => reasons.length
+    ? reasons.map(r => `<div style="display:flex;gap:6px;padding:4px 0;border-bottom:1px solid var(--line);font-size:11px;line-height:1.5;">
+        <span style="color:${color};flex-shrink:0">${icon}</span>
+        <span style="color:var(--text)">${r}</span>
+      </div>`).join('')
+    : '';
+
+  return `
+  <!-- ═══════════════════════════════════════ -->
+  <!-- 综合策略分析报告                          -->
+  <!-- ═══════════════════════════════════════ -->
+  <div style="border:2px solid ${dirBorder};border-radius:12px;background:${dirBg};margin-bottom:10px;overflow:hidden;">
+
+    <!-- 策略主裁决 -->
+    <div style="padding:14px 16px;border-bottom:1px solid ${dirBorder}20;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;">
+        <div style="flex:1;">
+          <div style="font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:5px">🎯 综合策略研判 · ${trend.trendStructure||'--'}</div>
+          <div style="font-size:24px;font-weight:700;color:${dirColor};line-height:1.1">${dirIcon} ${dirLabel}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px">
+            多头依据 ${strat.bullScore.toFixed(1)}分 · 空头依据 ${strat.bearScore.toFixed(1)}分
+          </div>
+        </div>
+        <div style="text-align:center;flex-shrink:0">
+          <div style="font-size:34px;font-weight:700;color:${confColor};line-height:1">${strategyConf}<span style="font-size:16px">%</span></div>
+          <div style="font-size:9px;color:var(--muted);letter-spacing:1px">${strategyConf>=70?'高置信度':strategyConf>=55?'中置信度':'低置信度'}</div>
+          <div style="height:4px;background:var(--bg3);border-radius:2px;margin-top:5px;overflow:hidden;">
+            <div style="height:100%;width:${strategyConf}%;background:${confColor};border-radius:2px;transition:width .6s;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 入场条件 -->
+    <div style="padding:12px 16px;background:rgba(255,255,255,0.45);border-bottom:1px solid ${dirBorder}15;">
+      <div style="font-size:10px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:6px">📍 入场条件</div>
+      <div style="font-size:12px;color:var(--text);line-height:1.7;font-weight:600">${entryCondition}</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px">${riskNote}</div>
+    </div>
+
+    <!-- 趋势线位 + 斐波 -->
+    ${(trendLineHtml||fibHtml)?`
+    <div style="padding:10px 16px;border-bottom:1px solid ${dirBorder}15;">
+      <div style="font-size:10px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:6px">📐 关键线位</div>
+      ${trendLineHtml}
+      ${fibHtml?`<div style="margin-top:6px;border-top:1px solid var(--line);padding-top:5px;"><div style="font-size:10px;color:var(--muted);margin-bottom:3px">🌀 斐波那契关键位</div>${fibHtml}</div>`:''}
+    </div>`:''}
+
+    <!-- 图表形态 -->
+    ${patHtml?`<div style="padding:10px 16px;border-bottom:1px solid ${dirBorder}15;">${patHtml}</div>`:''}
+
+    <!-- 分析依据 -->
+    <div style="padding:10px 16px;">
+      <div style="font-size:10px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:5px">📊 分析依据</div>
+      ${reasonsHtml(strat.bullReasons, 'var(--green)', '▲')}
+      ${reasonsHtml(strat.bearReasons, 'var(--red)', '▼')}
+      ${reasonsHtml(strat.neutralReasons, 'var(--amber)', '◉')}
+    </div>
+
+    <!-- 特殊警示 -->
+    ${advStruct.isRebound?`
+    <div style="padding:8px 16px;background:rgba(128,80,0,0.06);border-top:1px solid rgba(128,80,0,0.2);">
+      <div style="font-size:11px;color:var(--amber);font-weight:700">⚠️ 反弹行情警示</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:2px;line-height:1.5">当前上涨为大级别下降趋势中的反弹，非趋势反转。反弹高度有限，不宜重仓追高。宜波段操作，见好就收。</div>
+    </div>`:''}
+    ${gann.timeWindow?`
+    <div style="padding:8px 16px;background:var(--gann-cycle-bg);border-top:1px solid rgba(10,88,112,0.2);">
+      <div style="font-size:11px;color:var(--cyan);font-weight:700">🕐 江恩时间窗口</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:2px">${gann.windowSummary} · 当前处于重要时间转折窗口，波动可能加剧</div>
+    </div>`:''}
+  </div>`;
+}
+
 // ═══ RENDER STRATEGY ═══
 function renderStrategy(){
   const tf=S.stratTF;
@@ -6187,6 +6736,12 @@ function _doRenderStrategy(res){
       <div style="font-size:12px;color:var(--text);padding:8px 12px;border-left:3px solid ${actionColor};background:rgba(255,255,255,0.5);border-radius:0 6px 6px 0;line-height:1.7">${verdict.watchFor}</div>
     </div>`:''}
   </div>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- BLOCK 1b: 🎯 综合策略分析报告                  -->
+  <!-- 趋势线 + 形态 + 斐波 + 缠论 + 江恩 综合策略    -->
+  <!-- ══════════════════════════════════════════════ -->
+  ${(()=>{try{return _renderStrategyBlock(res);}catch(e){return '';}})()}
 
   <!-- ══════════════════════════════════════ -->
   <!-- BLOCK 2: 🔮 MYSTIC UNIFIED READING   -->
