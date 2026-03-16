@@ -12,6 +12,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="robots" content="noindex,nofollow">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://fonts.googleapis.com https://fonts.gstatic.com https://api.binance.com https://api1.binance.com https://api2.binance.com https://api3.binance.com https://api4.binance.com https://data-api.binance.vision https://fapi.binance.com https://api.alternative.me https://api.coingecko.com https://api.llama.fi https://corsproxy.io https://api.allorigins.win https://thingproxy.freeboard.io https://api.anthropic.com https://api.blockchain.info wss://stream.binance.com; frame-ancestors 'none';">
+<meta http-equiv="X-Frame-Options" content="DENY">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
 <title>FINCH — 全维度市场分析</title>
 
@@ -43,8 +45,22 @@
       ol.apply(console,arguments);
     };
   }
+  // Block iframe embedding
+  if(window.top!==window.self){
+    try{window.top.location.href=window.location.href;}catch(e){
+      document.body.style.cssText='display:flex;align-items:center;justify-content:center;height:100vh;';
+      document.body.innerHTML='<p style="font-family:sans-serif;color:#8B6914">⚠️ 请直接访问 FINCH</p>';
+    }
+    return;
+  }
   // Disable right-click on canvas
   document.addEventListener('contextmenu',function(e){if(e.target.tagName==='CANVAS')e.preventDefault();});
+  // Subtle devtools detection
+  var _dt=false;
+  setInterval(function(){
+    var w=window.outerWidth-window.innerWidth>160||window.outerHeight-window.innerHeight>160;
+    if(w&&!_dt){_dt=true;console.clear();}else if(!w){_dt=false;}
+  },2500);
 })();
 </script>
 <style>
@@ -248,7 +264,7 @@ button,input,select{touch-action:manipulation;}
 /* ══ SHELL — new layout ══ */
 .shell{
   display:grid;
-  grid-template-columns:168px minmax(0,1fr) 318px 338px;
+  grid-template-columns:200px minmax(0,1fr) 380px;
   grid-template-rows:44px 1fr;
   height:calc(100vh - 50px);
   overflow:hidden;
@@ -532,7 +548,7 @@ canvas.main-c{width:100%!important;}
 .sg-sub{font-size:11px;color:var(--muted);margin-top:1px;}
 
 /* ══ RIGHT PANEL — ANALYSIS MODULES ══ */
-.right-panel{grid-column:4;grid-row:2;overflow-y:auto;background:var(--bg1);border-left:1px solid var(--line);}
+.right-panel{overflow-y:auto;background:var(--bg1);border-left:1px solid var(--line);}
 
 /* Module cards */
 .mod-section-head{
@@ -723,10 +739,10 @@ canvas.main-c{width:100%!important;}
 .disclaimer{font-size:11px;color:var(--dim);padding:10px 14px;border-top:1px solid var(--line);line-height:1.7;}
 
 /* ══ RESPONSIVE — FULL MOBILE REDESIGN ══ */
-@media(max-width:1600px){.shell{grid-template-columns:150px minmax(0,1fr) 298px 318px;}}
-@media(max-width:1400px){.shell{grid-template-columns:0px minmax(0,1fr) 280px 300px;}}
-@media(max-width:1200px){.shell{grid-template-columns:0px minmax(0,1fr) 265px 285px;}}
-@media(max-width:1000px){.shell{grid-template-columns:minmax(0,1fr) 245px 265px;}.left-panel{display:none;}}
+@media(max-width:1600px){.shell{grid-template-columns:200px minmax(0,1fr) 360px;}}
+@media(max-width:1400px){.shell{grid-template-columns:180px minmax(0,1fr) 320px;}}
+@media(max-width:1200px){.shell{grid-template-columns:170px minmax(0,1fr) 290px;}}
+@media(max-width:1000px){.shell{grid-template-columns:minmax(0,1fr) 260px;}.left-panel{display:none;}}
 
 /* Tablet portrait + large phones landscape */
 @media(max-width:768px){
@@ -1036,102 +1052,22 @@ canvas.main-c{width:100%!important;}
 .intel-v{font-size:14px;font-weight:700;color:var(--bright);font-variant-numeric:tabular-nums;line-height:1.2;}
 .intel-sub{font-size:10px;color:var(--muted);margin-top:2px;line-height:1.4;}
 @media(max-width:480px){.intel-grid4{grid-template-columns:1fr 1fr;}}
-
-
-/* ══ FINCH BRAIN PANEL ══ */
-.brain-panel{
-  grid-column:3;grid-row:2;
-  background:var(--bg1);
-  border-left:1px solid var(--line2);
-  border-right:1px solid var(--line2);
-  display:flex;flex-direction:column;
-  overflow:hidden;
-  -webkit-overflow-scrolling:touch;
-}
-.brain-hd{
-  padding:10px 12px 8px;
-  background:linear-gradient(135deg,rgba(26,58,138,0.06),rgba(88,24,144,0.04));
-  border-bottom:2px solid var(--indigo);
-  flex-shrink:0;
-}
-.brain-hd-title{
-  font-size:11px;font-weight:700;letter-spacing:2px;
-  color:var(--indigo);text-transform:uppercase;
-  display:flex;align-items:center;gap:6px;
-}
-.brain-orb-live{
-  width:8px;height:8px;border-radius:50%;
-  background:var(--green);animation:blink 1.8s infinite;
-}
-.brain-scroll{flex:1;overflow-y:auto;padding:0;-webkit-overflow-scrolling:touch;}
-.brain-scroll::-webkit-scrollbar{width:3px;}
-.brain-scroll::-webkit-scrollbar-thumb{background:var(--dim);border-radius:2px;}
-
-/* Thought card */
-.thought-card{
-  padding:10px 12px;border-bottom:1px solid var(--line);
-  transition:background .15s;
-}
-.thought-card:hover{background:rgba(26,58,138,0.03);}
-.thought-card-hd{
-  display:flex;align-items:center;justify-content:space-between;
-  margin-bottom:5px;
-}
-.thought-type{
-  font-size:9px;font-weight:700;letter-spacing:1.5px;
-  text-transform:uppercase;padding:1px 6px;border-radius:8px;
-}
-.thought-type.inference{background:rgba(26,58,138,0.1);color:var(--blue);}
-.thought-type.alert{background:rgba(160,20,32,0.1);color:var(--red);}
+/* ══ BRAIN ENGINE CSS ══ */
+.thought-card{background:var(--card);border:1px solid var(--card-bd);border-radius:6px;padding:10px 12px;margin-bottom:7px;box-shadow:var(--shadow);}
+.thought-card-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;}
+.thought-type{font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;letter-spacing:.5px;}
+.thought-type.inference{background:rgba(40,48,160,0.1);color:var(--indigo);}
+.thought-type.alert{background:rgba(128,80,0,0.1);color:var(--amber);}
 .thought-type.opportunity{background:rgba(26,107,58,0.1);color:var(--green);}
-.thought-type.risk{background:rgba(128,80,0,0.1);color:var(--amber);}
+.thought-type.risk{background:rgba(160,20,32,0.1);color:var(--red);}
 .thought-type.learning{background:rgba(88,24,144,0.1);color:var(--violet);}
-.thought-time{font-size:9px;color:var(--muted);}
-.thought-body{font-size:11px;color:var(--text);line-height:1.75;}
-.thought-conf{
-  display:inline-block;margin-top:4px;
-  font-size:9px;font-weight:700;padding:1px 6px;
-  border-radius:8px;background:rgba(0,0,0,0.04);color:var(--muted);
-}
+.thought-type.question{background:rgba(10,88,112,0.1);color:var(--cyan);}
+.thought-time{font-size:10px;color:var(--muted);}
+.thought-body{font-family:'Noto Sans SC',sans-serif;font-size:12px;color:var(--text);line-height:1.8;}
+.thought-conf{font-size:10px;font-weight:700;display:block;margin-top:4px;}
+.conf-bar-wrap{height:3px;background:var(--bg3);border-radius:2px;overflow:hidden;margin-top:5px;}
+.conf-bar-fill{height:100%;border-radius:2px;transition:width .5s;}
 
-/* Brain input */
-.brain-input-wrap{
-  padding:8px 10px;border-top:1px solid var(--line2);
-  background:var(--bg2);flex-shrink:0;
-}
-.brain-input-row{display:flex;gap:6px;}
-.brain-input{
-  flex:1;background:var(--bg);border:1px solid var(--line2);
-  border-radius:5px;padding:7px 10px;font-family:inherit;
-  font-size:11px;color:var(--text);outline:none;
-  transition:border-color .15s;
-}
-.brain-input:focus{border-color:var(--indigo);}
-.brain-ask-btn{
-  background:var(--indigo);border:none;border-radius:5px;
-  padding:7px 12px;color:#fff;font-family:inherit;
-  font-size:11px;font-weight:700;cursor:pointer;
-  transition:opacity .15s;white-space:nowrap;
-}
-.brain-ask-btn:hover{opacity:.85;}
-.brain-thinking{
-  display:flex;align-items:center;gap:6px;
-  padding:8px 12px;font-size:11px;color:var(--indigo);
-}
-.brain-dots span{
-  display:inline-block;width:4px;height:4px;border-radius:50%;
-  background:var(--indigo);margin:0 1px;
-  animation:brainDot 1.2s infinite;
-}
-.brain-dots span:nth-child(2){animation-delay:.2s;}
-.brain-dots span:nth-child(3){animation-delay:.4s;}
-@keyframes brainDot{0%,80%,100%{transform:scale(0);opacity:.3}40%{transform:scale(1);opacity:1}}
-
-/* Confidence bar */
-.conf-bar-wrap{height:3px;background:var(--bg3);border-radius:2px;margin-top:5px;}
-.conf-bar-fill{height:100%;border-radius:2px;transition:width .4s;}
-
-@media(max-width:768px){.brain-panel{display:none;}}
 </style>
 </head>
 <body>
@@ -1321,52 +1257,25 @@ canvas.main-c{width:100%!important;}
   </div>
 </div>
 
-
-<!-- ══ FINCH BRAIN — Intelligent Reasoning Panel ══ -->
-<div class="brain-panel" id="brainPanel">
-  <div class="brain-hd">
-    <div class="brain-hd-title">
-      <div class="brain-orb-live"></div>
-      🧠 FINCH 思维
-    </div>
-    <div style="font-size:9px;color:var(--muted);margin-top:3px;letter-spacing:.5px">实时推理 · 市场学习 · 智能判断</div>
-  </div>
-  <div class="brain-scroll" id="brainScroll">
-    <div id="brainFeed">
-      <div style="padding:16px 12px;text-align:center;color:var(--muted);font-size:11px">
-        <div style="font-size:20px;margin-bottom:6px">🧠</div>
-        正在初始化思维引擎...
-      </div>
-    </div>
-  </div>
-  <div class="brain-input-wrap">
-    <div class="brain-input-row">
-      <input class="brain-input" id="brainInput" placeholder="问 FINCH 任何市场问题..." 
-             onkeydown="if(event.key==='Enter')askBrain()" />
-      <button class="brain-ask-btn" onclick="askBrain()">推理</button>
-    </div>
-    <div style="font-size:9px;color:var(--muted);margin-top:4px;text-align:center">
-      FINCH 会结合实时价格与市场数据作答
-    </div>
-  </div>
-</div>
-
 <!-- ══ RIGHT — MODULES + SUMMARY ══ -->
 <div class="right-panel" id="rightPanel">
 
-  <!-- ══ MACRO PULSE — 5min refresh ══ -->
-  <div id="macroPulseBox" style="background:var(--bg1);border-bottom:2px solid var(--gold);padding:10px 14px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-      <div style="font-size:10px;letter-spacing:2px;color:var(--gold);font-weight:700;text-transform:uppercase">🌐 宏观脉搏 · Macro Pulse</div>
+  <!-- ══ MACRO PULSE — 5-min market snapshot ══ -->
+  <div id="macroPulsePanel" style="background:linear-gradient(135deg,rgba(26,58,138,0.04),rgba(88,24,144,0.04));border-bottom:2px solid var(--line2);">
+    <div style="padding:10px 14px 6px;display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:2px;color:var(--indigo);text-transform:uppercase;">📡 宏观脉搏 · Macro Pulse</div>
+        <div style="font-size:10px;color:var(--dim);margin-top:2px;">实时推理 · 市场学习 · 智能判断</div>
+      </div>
       <div style="display:flex;align-items:center;gap:6px;">
-        <span id="macroPulseTimer" style="font-size:10px;color:var(--muted)">5:00</span>
-        <button onclick="refreshMacroPulse(true)" style="padding:2px 8px;border:1px solid var(--line2);border-radius:3px;background:transparent;color:var(--muted);font-family:inherit;font-size:10px;cursor:pointer;">↺</button>
+        <span id="macroPulseTimer" style="font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums;">5:00</span>
+        <button onclick="refreshMacroPulse(true)" style="padding:3px 9px;border:1px solid var(--indigo);border-radius:3px;background:rgba(40,48,160,0.08);color:var(--indigo);font-family:inherit;font-size:10px;cursor:pointer;font-weight:700;">↺ 刷新</button>
       </div>
     </div>
-    <div id="macroPulseContent" style="font-size:12px;color:var(--text);line-height:1.75;min-height:32px;">
-      <span style="color:var(--muted)">⏳ 加载宏观分析...</span>
+    <div id="macroPulseContent" style="padding:0 14px 10px;font-size:12px;color:var(--text);line-height:1.8;">
+      <span style="color:var(--muted);font-size:11px">⏳ 初始化中...</span>
     </div>
-    <div id="macroPulseMeta" style="margin-top:5px;"></div>
+    <div id="macroPulseMeta" style="padding:0 14px 8px;"></div>
   </div>
 
   <!-- TIMELINE at top of right panel -->
@@ -1815,6 +1724,27 @@ canvas.main-c{width:100%!important;}
     </div>
   </div>
 
+  <!-- ══ BRAIN ENGINE — 纯本地主动推理 ══ -->
+  <div style="border-top:2px solid var(--line2);padding:12px 14px 0;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:2px;color:var(--violet);text-transform:uppercase;">🧠 FINCH 思维引擎</div>
+        <div style="font-size:10px;color:var(--dim);margin-top:1px;">本地推理 · 实时监控 · 主动预警</div>
+      </div>
+      <button onclick="brainManualInfer()" style="padding:3px 9px;border:1px solid var(--violet);border-radius:3px;background:rgba(88,24,144,0.08);color:var(--violet);font-family:inherit;font-size:10px;cursor:pointer;font-weight:700;">⚡ 立即推理</button>
+    </div>
+    <!-- Brain input -->
+    <div style="display:flex;gap:6px;margin-bottom:8px;">
+      <input id="brainInput" placeholder="问FINCH..." style="flex:1;background:var(--bg2);border:1px solid var(--line2);border-radius:5px;padding:7px 10px;font-family:inherit;font-size:12px;color:var(--text);outline:none;"
+        onkeydown="if(event.key==='Enter')brainAskLocal()"
+        onfocus="this.style.borderColor='var(--violet)'" onblur="this.style.borderColor='var(--line2)'">
+      <button onclick="brainAskLocal()" style="padding:7px 14px;background:var(--violet);border:none;border-radius:5px;color:#fff;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">问</button>
+    </div>
+    <div id="brainFeed" style="max-height:320px;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px;">
+      <div data-placeholder style="color:var(--muted);font-size:11px;padding:10px 0;text-align:center;">思维引擎启动后将主动推送分析...</div>
+    </div>
+  </div>
+
   <div class="disclaimer">⚠️ 所有分析仅供参考，不构成投资建议。过往表现不代表未来结果。All for informational purposes only, not financial advice.</div>
 </div>
 
@@ -2001,7 +1931,6 @@ const S={
   lastPx:0,chart:null,subChartInst:null,expChart:null,fg:null,macro:null,
   waPhone:'',lastSignal:null,
   modData:{},
-  _seedPrice:{'BTCUSDT':84000,'ETHUSDT':2000,'SOLUSDT':130,'BNBUSDT':600,'XRPUSDT':2.2,'DOGEUSDT':0.18,'ADAUSDT':0.7,'AVAXUSDT':25,'BNBUSDT':600,'LINKUSDT':14,'DOTUSDT':5,'MATICUSDT':0.5,'LTCUSDT':80},
   activeFilters:new Set(['tech','vegas','gann','fib','chan','lunar','mystic','macro']),
   // Signal cache: avoid re-calculating if price hasn't moved >0.05%
   _sigCache:{},
@@ -2125,19 +2054,18 @@ function toggleMod(id){
 // then fall back to CORS proxies. Cache the best working combo.
 
 const ENDPOINTS=[
-  'https://data-api.binance.vision',   // CDN endpoint — best for SEA / most reliable
+  'https://data-api.binance.vision',   // CDN endpoint — best for SEA
   'https://api.binance.com',
   'https://api1.binance.com',
   'https://api2.binance.com',
   'https://api3.binance.com',
   'https://api4.binance.com',
 ];
-// CORS proxies — ordered by reliability in sandboxed environments
+// CORS proxies — used only when direct fails
 const PROXIES=[
-  url=>url,  // direct (no proxy) — works when CORS headers present
-  url=>`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+  url=>url,  // direct (no proxy)
   url=>`https://corsproxy.io/?${encodeURIComponent(url)}`,
-  url=>`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+  url=>`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
   url=>`https://thingproxy.freeboard.io/fetch/${url}`,
 ];
 let _bestEp=0, _bestPx=0;
@@ -2146,64 +2074,23 @@ let _epHealthy=new Set(); // endpoints known to work
 function wt(p,ms){return Promise.race([p,new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),ms))]);}
 
 async function tryFetch(url, timeoutMs=7000){
-  // Use AbortController if available (modern browsers), fall back to Promise.race
   if(typeof AbortController!=='undefined'){
     const ctrl=new AbortController();
     const tid=setTimeout(()=>ctrl.abort(),timeoutMs);
     try{
       const r=await fetch(url,{mode:'cors',cache:'no-store',credentials:'omit',signal:ctrl.signal});
       clearTimeout(tid);
-      if(!r.ok) throw new Error(`HTTP ${r.status}`);
+      if(!r.ok)throw new Error(`HTTP ${r.status}`);
       return r;
-    }catch(e){
-      clearTimeout(tid);
-      throw e;
-    }
+    }catch(e){clearTimeout(tid);throw e;}
   }
-  // Fallback: Promise.race timeout
   const r=await wt(fetch(url,{mode:'cors',cache:'no-store',credentials:'omit'}),timeoutMs);
-  if(!r.ok) throw new Error(`HTTP ${r.status}`);
+  if(!r.ok)throw new Error(`HTTP ${r.status}`);
   return r;
 }
 
-// ── Universal download helper: Blob first, data URI fallback ──
-function _downloadText(content, filename, mimeType){
-  try{
-    const blob = new Blob([content], {type: mimeType});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = filename;
-    document.body.appendChild(a); a.click();
-    document.body.removeChild(a);
-    setTimeout(()=>URL.revokeObjectURL(url), 2000);
-  } catch(e){
-    // Fallback: data URI (works in Safari/sandboxed environments)
-    try{
-      const encoded = encodeURIComponent(content);
-      const a = document.createElement('a');
-      a.href = 'data:' + mimeType + ';charset=utf-8,' + encoded;
-      a.download = filename;
-      document.body.appendChild(a); a.click();
-      document.body.removeChild(a);
-    } catch(e2){
-      // Last resort: open in new tab
-      const w = window.open('', '_blank');
-      if(w){ w.document.write('<pre>'+content.replace(/</g,'&lt;')+'</pre>'); w.document.title=filename; }
-      else { alert('导出失败，请允许弹窗或手动复制数据'); }
-    }
-  }
-}
-
 async function bF(path){
-  // Fast path: try best-known endpoint directly first (3s timeout)
-  try{
-    const fastUrl=PROXIES[_bestPx](ENDPOINTS[_bestEp]+path);
-    const r=await tryFetch(fastUrl,3000);
-    updConn(true,ENDPOINTS[_bestEp].replace('https://','').split('/')[0]);
-    return r;
-  }catch(e){}
-
-  // Fallback: try all combos with reduced per-attempt timeout
+  // Build ordered endpoint list: last-known-good first
   const epOrd=[_bestEp,...ENDPOINTS.map((_,i)=>i).filter(i=>i!==_bestEp)];
   const pxOrd=[_bestPx,...PROXIES.map((_,i)=>i).filter(i=>i!==_bestPx)];
 
@@ -2212,7 +2099,7 @@ async function bF(path){
       try{
         const baseUrl=ENDPOINTS[ei]+path;
         const finalUrl=PROXIES[pi](baseUrl);
-        const r=await tryFetch(finalUrl,5000);
+        const r=await tryFetch(finalUrl,8000);
         // Success — cache this combo
         _bestEp=ei;_bestPx=pi;
         _epHealthy.add(ei);
@@ -2244,7 +2131,7 @@ async function fastPrice(sym){
 
 // Generate realistic mock klines — only used when ALL endpoints fail
 function mockKlines(sym,tf,lim){
-  const seedFallback={'BTCUSDT':83000,'ETHUSDT':1900,'SOLUSDT':130,'BNBUSDT':580,'XRPUSDT':2.1,'DOGEUSDT':0.17,'ADAUSDT':0.68};const basePrice=S.lastPx>0&&priceValid(sym,S.lastPx)?S.lastPx:(S._seedPrice[sym]||seedFallback[sym]||100);
+  const basePrice=S.lastPx>0&&priceValid(sym,S.lastPx)?S.lastPx:(S._seedPrice[sym]||2000);
   if(basePrice<=0)return[];
   if(basePrice<=0)return[];
   const tfVol={'15m':0.003,'30m':0.005,'1h':0.008,'4h':0.015,'1d':0.03,'1w':0.07};
@@ -2277,19 +2164,19 @@ function mockKlines(sym,tf,lim){
 
 // Known seed prices so mock data is roughly correct even before first API call
 S._seedPrice={
-  BTCUSDT:83000,ETHUSDT:1900,SOLUSDT:130,BNBUSDT:580,XRPUSDT:2.10,
-  DOGEUSDT:0.17,ADAUSDT:0.68,AVAXUSDT:20,DOTUSDT:4.2,LINKUSDT:13,
-  MATICUSDT:0.32,LTCUSDT:88,ATOMUSDT:4.5,NEARUSDT:2.8,
+  BTCUSDT:83000,ETHUSDT:2066,SOLUSDT:130,BNBUSDT:600,XRPUSDT:2.20,
+  DOGEUSDT:0.18,ADAUSDT:0.70,AVAXUSDT:22,DOTUSDT:4.5,LINKUSDT:13,
+  MATICUSDT:0.35,LTCUSDT:90,ATOMUSDT:5,NEARUSDT:3,
 };
 
 // Price sanity check: validate fetched price against expected range
 function priceValid(sym, px){
   const ranges={
-    BTCUSDT:[10000,250000],ETHUSDT:[300,30000],SOLUSDT:[5,5000],
-    BNBUSDT:[50,10000],XRPUSDT:[0.05,100],DOGEUSDT:[0.001,20],
-    ADAUSDT:[0.02,50],AVAXUSDT:[1,1000],DOTUSDT:[0.5,500],
-    LINKUSDT:[0.5,500],MATICUSDT:[0.005,50],LTCUSDT:[10,2000],
-    ATOMUSDT:[0.5,200],NEARUSDT:[0.2,200],
+    BTCUSDT:[10000,200000],ETHUSDT:[500,20000],SOLUSDT:[10,2000],
+    BNBUSDT:[100,5000],XRPUSDT:[0.1,50],DOGEUSDT:[0.01,5],
+    ADAUSDT:[0.05,10],AVAXUSDT:[3,500],DOTUSDT:[1,200],
+    LINKUSDT:[1,200],MATICUSDT:[0.01,20],LTCUSDT:[20,1000],
+    ATOMUSDT:[1,100],NEARUSDT:[0.5,100],
   };
   const r=ranges[sym];
   if(!r)return px>0;
@@ -2360,15 +2247,9 @@ async function refreshPrices(){
 }
 function updConn(ok,host){
   const dot=document.getElementById('connDot');const lbl=document.getElementById('connLbl');
-  if(!dot||!lbl)return;
   if(S.wsOk){dot.className='conn-dot live';lbl.textContent='Live WS';}
   else if(ok){dot.className='conn-dot rest';lbl.textContent=host?host.split('.')[0]:'REST';}
-  else{
-    // Check if sandboxed — if so show REST mode, not "Connecting"
-    const sandboxed=(function(){try{return window.top!==window.self;}catch(e){return true;}})();
-    dot.className='conn-dot rest';
-    lbl.textContent=sandboxed?'REST':'Connecting...';
-  }
+  else{dot.className='conn-dot';lbl.textContent='Connecting...';}
 }
 function updatePHPrice(px){
   if(!px||px<=0||!priceValid(S.sym,px))return;
@@ -2388,15 +2269,6 @@ function updatePHPrice(px){
 function connectWS(sym){
   if(S.ws){try{S.ws.close();}catch(e){}S.ws=null;}
   S.wsOk=false;updConn(false);
-  // In sandboxed iframes, WebSocket may be blocked — detect and skip gracefully
-  const isSandboxed = (function(){
-    try{ return window.top !== window.self; }catch(e){ return true; }
-  })();
-  if(isSandboxed){
-    // Skip WS entirely in sandboxed env — REST polling will handle updates
-    console.log('WS: sandboxed env detected, using REST only');
-    return;
-  }
   // Try both stream endpoints
   const wsUrls=[
     `wss://stream.binance.com:443/ws/${sym.toLowerCase()}@ticker`,
@@ -2498,8 +2370,6 @@ async function selectSym(sym){
   const el=document.getElementById('si-'+sym);if(el)el.classList.add('active');
   // Critical: reset price AND kline cache when switching symbols
   S.lastPx=0;
-  // Immediately seed price so mock data works without waiting for API
-  if(S._seedPrice[sym] > 0){ S.lastPx = S._seedPrice[sym]; updatePHPrice(S.lastPx); }
   S._sigCache={}; S._lastSigPx={}; S.modData={}; // clear memo + module cache on symbol switch
   S.wsOk=false;
   // Clear kline cache for new symbol so we don't show stale data
@@ -4678,7 +4548,7 @@ async function loadAll(sym){
     S.lastPx=0;
     const px=await fastPrice(sym).catch(()=>0);
     if(px>0&&priceValid(sym,px)){S.lastPx=px;S._seedPrice[sym]=px;updatePHPrice(px);}
-    else{S.lastPx=S._seedPrice[sym]||84000; updatePHPrice(S.lastPx);}
+    else{S.lastPx=S._seedPrice[sym]||2000;}
   }
   setProgress(20);
 
@@ -4731,23 +4601,14 @@ async function loadAll(sym){
     renderStrategy();renderTimeline();renderSummary();
   }
 
-  // SAFETY NET: If price still 0 after all data load attempts, use seed
-  if(S.lastPx <= 0){
-    S.lastPx = S._seedPrice[sym] || 84000;
-    updatePHPrice(S.lastPx);
-    // Force render with mock data
-    renderStrategy();
-  }
   setProgress(85);
 
   // ── STEP 4: Background load remaining TFs (200 bars each) for better accuracy ──
   // Don't await — let UI show immediately, update quietly when done
   const bgLoad=async()=>{
-    const bgSym = sym; // capture current sym to prevent stale renders
     const bgTFs=['1d','1w','30m','15m'];
     const extraTFs=tfsNeeded.includes(primaryTF)?bgTFs:[primaryTF,...bgTFs];
     for(const t of extraTFs){
-      if(S.sym!==bgSym)return; // abort if user switched symbol
       if(!S.klines[sym+t]||S.klines[sym+t].length<100){
         await fetchKlines(sym,t,200).catch(()=>{});
         await new Promise(r=>setTimeout(r,200)); // small gap between requests
@@ -4755,14 +4616,13 @@ async function loadAll(sym){
     }
     // Also upgrade primary TFs to full 250 bars silently
     for(const t of tfsNeeded){
-      if(S.sym!==bgSym)return; // abort if user switched symbol
       if(S.klines[sym+t]&&S.klines[sym+t].length<200){
         await fetchKlines(sym,t,250).catch(()=>{});
         await new Promise(r=>setTimeout(r,150));
       }
     }
     // Re-render with fuller data including all modules
-    if(S.sym===bgSym){
+    if(S.sym===sym){
       const px2=S.lastPx;
       if(px2>0){
         const klFull=S.klines[sym+S.chartTF]||S.klines[sym+S.stratTF]||[];
@@ -9576,10 +9436,7 @@ async function init(){
       console.log('Bootstrap price:',px);
       return true;
     }
-    // Final fallback: use seed price so app can at least show mock data
-    const seedPx = S._seedPrice['BTCUSDT'] || 84000;
-    if(S.lastPx <= 0){ S.lastPx = seedPx; S._seedPrice['BTCUSDT'] = seedPx; updatePHPrice(seedPx); }
-    return S.lastPx > 0;
+    return false;
   };
 
   // Step 2: Try REST 24hr ticker (has change%, volume etc)
@@ -9614,20 +9471,6 @@ async function init(){
   // Step 5: Start 30-second auto-refresh of signals
   startAutoRefresh();
 
-  // Step 6: If in sandboxed iframe (e.g. claude.ai), use faster REST polling to compensate for no WS
-  const _sandboxed=(function(){try{return window.top!==window.self;}catch(e){return true;}})();
-  if(_sandboxed){
-    // Poll price every 3 seconds instead of relying on WS
-    setInterval(async()=>{
-      try{
-        const px=await fastPrice(S.sym);
-        if(px>0&&priceValid(S.sym,px)){
-          S.lastPx=px;S._seedPrice[S.sym]=px;updatePHPrice(px);
-        }
-      }catch(e){}
-    },3000);
-  }
-
   // Step 6: Retry price if still 0 after 3s (network was slow)
   setTimeout(async()=>{
     if(S.lastPx<=0){
@@ -9637,11 +9480,367 @@ async function init(){
     }
   },3000);
 
-  // Step 7: Start auxiliary engines unconditionally
-  setTimeout(startMacroPulse, 3500);
+  // ── Start Brain Engine and Macro Pulse ──
   setTimeout(startBrainEngine, 2500);
+  setTimeout(startMacroPulse, 3500);
 }
 init();
+
+// ╔══════════════════════════════════════════════════════════════════════╗
+// ║  FINCH BRAIN ENGINE — 纯本地主动推理系统                             ║
+// ║  完全基于现有 S.lastSignal / S.lastPx 指标，无需额外 API 调用         ║
+// ║  独立模块，不干扰任何现有渲染逻辑                                     ║
+// ╚══════════════════════════════════════════════════════════════════════╝
+
+var BRAIN = {
+  lastInferTime: 0,
+  lastConfLevel: null,
+  lastPrice: 0,
+  priceHistory: [],  // {p, t} last 60 ticks
+  memory: [],        // persistent insights
+};
+
+function brainLoadMemory(){
+  try{ var s=localStorage.getItem('finch_brain_v36'); if(s) BRAIN.memory=JSON.parse(s).slice(-80); }catch(e){}
+}
+function brainSaveMemory(){
+  try{ localStorage.setItem('finch_brain_v36', JSON.stringify(BRAIN.memory.slice(-80))); }catch(e){}
+}
+
+function brainAddCard(type, title, body, conf){
+  var el = document.getElementById('brainFeed');
+  if(!el) return;
+  var ph = el.querySelector('[data-placeholder]');
+  if(ph) ph.remove();
+
+  var now = toMYT(new Date());
+  var ts = String(now.getUTCHours()).padStart(2,'0')+':'+String(now.getUTCMinutes()).padStart(2,'0');
+  var labels = {inference:'🔍 推理',alert:'⚠️ 警报',opportunity:'✅ 机会',risk:'🛑 风险',learning:'🎓 学习',question:'💬 问答'};
+  var confColor = conf>=70?'var(--green)':conf>=50?'var(--amber)':'var(--red)';
+
+  var div = document.createElement('div');
+  div.className = 'thought-card';
+  var html = '<div class="thought-card-hd">'
+    +'<span class="thought-type '+type+'">'+(labels[type]||type)+'</span>'
+    +'<span class="thought-time">'+ts+' MYT</span></div>';
+  if(title) html += '<div style="font-size:11px;font-weight:700;color:var(--bright);margin-bottom:4px">'+title+'</div>';
+  html += '<div class="thought-body">'+body+'</div>';
+  if(conf!=null){
+    html += '<div class="conf-bar-wrap"><div class="conf-bar-fill" style="width:'+conf+'%;background:'+confColor+'"></div></div>';
+    html += '<span class="thought-conf" style="color:'+confColor+'">置信度 '+conf+'%</span>';
+  }
+  div.innerHTML = html;
+  el.insertBefore(div, el.firstChild);
+  while(el.children.length > 35) el.removeChild(el.lastChild);
+
+  // Save to memory
+  BRAIN.memory.unshift({type,title,body,conf,ts});
+  if(BRAIN.memory.length>80) BRAIN.memory.pop();
+  brainSaveMemory();
+}
+
+function brainInfer(){
+  var sig = S.lastSignal;
+  var px  = S.lastPx;
+  if(!sig || !px) return;
+
+  var sym     = (S.sym||'BTC').replace('USDT','');
+  var isBull  = sig.isBull;
+  var rsi     = sig.rsi || 50;
+  var rr      = sig.rr  || 0;
+  var conf    = sig.conf || 50;
+  var adx     = sig.adx?.adx || 20;
+  var macd    = sig.macdD || {};
+  var chan     = sig.chan  || {};
+  var vegas   = sig.vegas || {};
+  var obv     = sig.obv   || {};
+  var mtf     = sig.mtf   || {};
+  var tps     = sig.tps   || [];
+  var sls     = sig.sls   || [];
+  var conflict= sig.conflictRatio || 0;
+
+  // ── 1. 价格动量监测 ──
+  BRAIN.priceHistory.push({p:px, t:Date.now()});
+  if(BRAIN.priceHistory.length > 60) BRAIN.priceHistory.shift();
+  if(BRAIN.priceHistory.length >= 5){
+    var rec5 = BRAIN.priceHistory.slice(-5);
+    var movePct = (rec5[rec5.length-1].p - rec5[0].p) / rec5[0].p * 100;
+    var timeDiff = (rec5[rec5.length-1].t - rec5[0].t) / 60000;
+    if(Math.abs(movePct)>0.4 && timeDiff<10){
+      var dir = movePct>0?'急涨':'急跌';
+      var aligned = (movePct>0&&isBull)||(movePct<0&&!isBull);
+      brainAddCard(
+        aligned?'opportunity':'alert',
+        sym+' '+dir+' '+Math.abs(movePct).toFixed(2)+'%',
+        aligned
+          ? '价格按预期方向移动 '+Math.abs(movePct).toFixed(2)+'%，动能与信号一致，可考虑按计划入场。止损 '+(sls[0]?fmtP(sls[0].p):'—')+'。'
+          : '价格出现反向移动 '+movePct.toFixed(2)+'%，与'+(isBull?'多头':'空头')+'信号相悖。建议等待方向确认后再行动。',
+        Math.min(85, Math.round(50+Math.abs(movePct)*12))
+      );
+    }
+  }
+  BRAIN.lastPrice = px;
+
+  // ── 2. RSI 极值推理 ──
+  if(rsi <= 27){
+    brainAddCard('opportunity', 'RSI '+rsi.toFixed(0)+' 极度超卖',
+      'RSI跌至'+rsi.toFixed(0)+'，历史上此区间反弹概率约65-72%。聪明钱往往在极度恐惧时入场。建议分批建仓，止损严格设于 '+(sls[0]?fmtP(sls[0].p):'支撑位下方')+'。',
+      72);
+  } else if(rsi >= 73){
+    brainAddCard('risk', 'RSI '+rsi.toFixed(0)+' 极度超买',
+      'RSI升至'+rsi.toFixed(0)+'，多头过热信号。追高风险显著上升，主力有出货动机。'+(isBull?'建议减仓或收紧止盈。':'可留意做空机会。'),
+      68);
+  }
+
+  // ── 3. 优质 R:R 识别 ──
+  if(rr >= 2.5){
+    brainAddCard('opportunity', '优质 R:R '+rr.toFixed(1)+'R',
+      'R:R达'+rr.toFixed(1)+'，这是高质量交易设置。TP1 '+(tps[0]?fmtP(tps[0].p):'—')+' · 止损 '+(sls[0]?fmtP(sls[0].p):'—')+'。即使胜率40%，长期期望值仍为正。',
+      Math.min(88, 58+Math.round(rr*5)));
+  } else if(rr>0 && rr<1.2){
+    brainAddCard('risk', 'R:R 偏低 '+rr.toFixed(1)+'R',
+      'R:R仅'+rr.toFixed(1)+'，低于1.5的推荐阈值。当前入场点的收益难以覆盖潜在损失，建议等待更优入场结构。',
+      55);
+  }
+
+  // ── 4. MACD 背驰识别 ──
+  if(macd.bullDiv && isBull){
+    brainAddCard('opportunity', 'MACD 底背驰 · 多头反转信号',
+      '价格创新低但MACD动能不创新低，空头力量正在衰竭。这是缠论与技术分析共同认可的高概率买点。配合RSI '+rsi.toFixed(0)+'，'+(rsi<35?'超卖区域信号叠加，力度强。':'但RSI尚未深度超卖，需确认。'),
+      78);
+  } else if(macd.bearDiv && !isBull){
+    brainAddCard('risk', 'MACD 顶背驰 · 空头反转信号',
+      '价格创新高但动能不创新高，多头力量正在衰退。历史上此类结构往往预示阶段性顶部。'+(rsi>65?'RSI '+rsi.toFixed(0)+' 同时处于超买区，双重确认。':''),
+      75);
+  }
+
+  // ── 5. 信号分歧警报 ──
+  if(conflict > 0.42){
+    brainAddCard('alert', '信号分歧率 '+(conflict*100).toFixed(0)+'% — 谨慎',
+      '当前多空信号分歧较大，市场处于多空博弈区。在分歧率超过40%时入场风险显著提升，建议等待方向明朗或缩小仓位。',
+      Math.round(40-conflict*20));
+  }
+
+  // ── 6. 多时框架共振 ──
+  if(mtf.fullyAligned){
+    var dir2 = (mtf.alignment||0)>0?'多头':'空头';
+    brainAddCard('opportunity', '多时间框架全面共振 · '+dir2,
+      '15M/1H/4H/1D多个时间框架方向完全一致，这是趋势行情中最强力的入场信号之一。共振行情通常持续时间更长、空间更大。',
+      82);
+  }
+
+  // ── 7. Vegas 通道位置 ──
+  if(vegas.above && isBull && adx>22){
+    brainAddCard('inference', '价格站稳Vegas通道 · 趋势健康',
+      '价格在EMA144/169通道上方，ADX '+adx.toFixed(0)+'确认趋势强度。中期多头格局成立，回调至通道附近是更好的入场机会。',
+      null);
+  } else if(vegas.below && !isBull){
+    brainAddCard('inference', '跌破Vegas通道 · 中期偏弱',
+      '价格在EMA144/169通道下方，中期趋势已转弱。即使短线反弹，通道下沿 '+fmtP(vegas.tLo||px)+' 将形成压力。',
+      null);
+  }
+
+  // ── 8. 缠论买卖点 ──
+  if(chan.bullDiv){
+    brainAddCard('opportunity', '缠论底背驰 · 一买区间',
+      '缠论笔背驰结构已形成，中枢支撑 '+fmtP(chan.chanSup||px*0.97)+'。关注能否走出上升段突破中枢，确认则加仓。',
+      null);
+  } else if(chan.bearDiv){
+    brainAddCard('risk', '缠论顶背驰 · 一卖区间',
+      '缠论顶背驰，中枢阻力 '+fmtP(chan.chanRes||px*1.03)+'。多头力量衰竭，建议逢高减仓或观望。',
+      null);
+  }
+}
+
+// ── 用户问答（纯本地逻辑）──
+function brainAskLocal(){
+  var inp = document.getElementById('brainInput');
+  if(!inp) return;
+  var q = inp.value.trim();
+  if(!q) return;
+  inp.value='';
+
+  var sig = S.lastSignal;
+  var px  = S.lastPx;
+  var sym = (S.sym||'BTC').replace('USDT','');
+  var answer = '';
+
+  if(!sig || !px){
+    brainAddCard('question', '"'+q.slice(0,40)+'"', '数据尚未加载，请稍候再问。', null);
+    return;
+  }
+
+  var ql = q.toLowerCase();
+
+  if(ql.includes('入场')||ql.includes('买')||ql.includes('开仓')||ql.includes('long')){
+    answer = '当前 '+sym+' '+fmtP(px)+'，信号'+( sig.isBull?'看多':'看空')+'，置信度 '+sig.conf+'%。'
+      +'建议入场价 '+fmtP(sig.entry)+' ('+sig.entryNote+')。'
+      +'TP1 '+fmtP(sig.tps[0].p)+' (+'+sig.tps[0].pct.toFixed(2)+'%)，'
+      +'止损 '+fmtP(sig.sls[0].p)+' ('+sig.sls[0].pct.toFixed(2)+'%)，'
+      +'R:R = '+sig.rr.toFixed(2)+'。'
+      +(sig.conf<55?' ⚠️ 置信度偏低，建议等待确认。':sig.rr<1.5?' ⚠️ R:R低于1.5，谨慎入场。':' 信号质量合格。');
+  } else if(ql.includes('止损')||ql.includes('sl')||ql.includes('stop')){
+    answer = sym+' 当前信号建议：'
+      +'SL1 '+fmtP(sig.sls[0].p)+' ('+sig.sls[0].pct.toFixed(2)+'%) — '+sig.sls[0].note+'；'
+      +'SL2 '+fmtP(sig.sls[1].p)+' ('+sig.sls[1].pct.toFixed(2)+'%) — '+sig.sls[1].note+'。'
+      +'所有止损均基于结构位，不是任意百分比。';
+  } else if(ql.includes('止盈')||ql.includes('tp')||ql.includes('target')){
+    answer = sym+' 目标位：'
+      +'TP1 '+fmtP(sig.tps[0].p)+' (+'+sig.tps[0].pct.toFixed(2)+'%) · '
+      +'TP2 '+fmtP(sig.tps[1].p)+' (+'+sig.tps[1].pct.toFixed(2)+'%) · '
+      +'TP3 '+fmtP(sig.tps[2].p)+' (+'+sig.tps[2].pct.toFixed(2)+'%)。'
+      +'建议分批减仓，不要一次全出。';
+  } else if(ql.includes('趋势')||ql.includes('trend')||ql.includes('方向')){
+    var adxV = sig.adx?.adx||20;
+    answer = sym+' '+(sig.isBull?'多头':'空头')+'趋势，ADX '+adxV.toFixed(0)+' ('+(adxV>25?'强趋势':adxV>20?'趋势':'震荡')+'). '
+      +'日线'+(sig.tr1d>0?'多头':'空头')+'，周线'+(sig.tr1w>0?'多头':'空头')+'。'
+      +'Vegas通道：'+(sig.vegas?.above?'上方(强势)':sig.vegas?.below?'下方(弱势)':'内部整理')+'。';
+  } else if(ql.includes('rsi')){
+    var r = sig.rsi||50;
+    answer = sym+' RSI 14 = '+r.toFixed(1)+'。'
+      +(r<30?'深度超卖区，历史反弹概率高。':r<38?'超卖区，注意底部信号。':r>72?'深度超买区，谨慎追多。':r>62?'超买区，注意回调。':'中性区间，无极端信号。');
+  } else if(ql.includes('风险')||ql.includes('risk')){
+    answer = '当前风险评估：信号分歧率 '+(sig.conflictRatio*100).toFixed(0)+'% ('+(sig.conflictRatio>0.4?'⚠️ 偏高':'正常')+')。'
+      +'R:R = '+sig.rr.toFixed(2)+' ('+(sig.rr>=2?'✅ 良好':sig.rr>=1.5?'△ 一般':'❌ 偏低')+')。'
+      +'置信度 '+sig.conf+'% ('+(sig.conf>=70?'强':sig.conf>=55?'中等':'弱')+'信号)。'
+      +(sig.conflictRatio>0.4||sig.rr<1.5||sig.conf<55?' 综合评估：当前风险偏高，建议缩仓或等待。':' 综合评估：风险可控，可按计划执行。');
+  } else if(ql.includes('缠')||ql.includes('chan')){
+    var c = sig.chan||{};
+    answer = '缠论分析：'+(c.bullDiv?'底背驰（买点）':c.bearDiv?'顶背驰（卖点）':c.bullBi?'上升笔':'下降笔')+'。'
+      +'缠论支撑 '+fmtP(c.chanSup||px*0.97)+'，缠论阻力 '+fmtP(c.chanRes||px*1.03)+'。'
+      +(c.inZH?' 当前处于中枢内，多空博弈，等待方向选择。':'');
+  } else if(ql.includes('macd')){
+    var m = sig.macdD||{};
+    answer = 'MACD: 柱状 '+(m.hist>0?'正值(多头动能)':'负值(空头动能)')+' '+(m.bullDiv?'⚡底背驰':m.bearDiv?'⚡顶背驰':'')+'。'
+      +(m.bullDiv||m.bearDiv?' 背驰是高概率反转信号，结合缠论更可靠。':'');
+  } else {
+    // General fallback
+    answer = sym+' 当前快照：价格 '+fmtP(px)
+      +'，信号 '+(sig.isBull?'▲ 做多':'▼ 做空')
+      +' · 置信度 '+sig.conf+'%'
+      +' · RSI '+sig.rsi.toFixed(0)
+      +' · R:R '+sig.rr.toFixed(2)
+      +' · 入场 '+fmtP(sig.entry)
+      +'。你可以问：入场、止损、止盈、趋势、RSI、风险、缠论、MACD。';
+  }
+
+  brainAddCard('question', '"'+q.slice(0,40)+(q.length>40?'…':'')+'"', answer, null);
+}
+
+// ── 手动触发推理 ──
+function brainManualInfer(){
+  brainInfer();
+  brainAddCard('learning', '手动推理完成',
+    '已基于当前信号完成全面分析。共检查: RSI极值 · R:R质量 · MACD背驰 · 信号分歧 · MTF共振 · Vegas位置 · 缠论结构。',
+    null);
+}
+
+// ── 启动 Brain Engine ──
+function startBrainEngine(){
+  brainLoadMemory();
+  brainAddCard('inference', 'FINCH 思维引擎启动',
+    '已初始化本地推理模块。将持续监控: RSI极值 · R:R质量 · MACD背驰 · 信号分歧率 · 多框架共振 · Vegas位置 · 缠论买卖点。可在下方直接提问。',
+    null);
+
+  // Run inference every 90s, or when confidence changes >5%
+  setInterval(function(){
+    var now = Date.now();
+    var sig = S.lastSignal;
+    var px  = S.lastPx;
+    if(!sig || !px) return;
+    var confChanged = BRAIN.lastConfLevel!==null && Math.abs(sig.conf - BRAIN.lastConfLevel) >= 5;
+    if(confChanged || (now - BRAIN.lastInferTime) > 90000){
+      BRAIN.lastInferTime = now;
+      BRAIN.lastConfLevel = sig.conf;
+      brainInfer();
+    }
+  }, 5000);
+}
+
+// ╔══════════════════════════════════════════════════════════════════════╗
+// ║  FINCH MACRO PULSE — 5分钟宏观脉搏 (使用 Claude API)                ║
+// ║  独立模块，不干扰任何现有逻辑                                         ║
+// ╚══════════════════════════════════════════════════════════════════════╝
+
+var _macroPulseLock = false;
+var _macroPulseCdown = 300;
+var _macroPulseInterval = null;
+
+function startMacroPulse(){
+  refreshMacroPulse(true);
+  _macroPulseInterval = setInterval(function(){
+    _macroPulseCdown--;
+    var min = Math.floor(_macroPulseCdown/60);
+    var sec = String(_macroPulseCdown%60).padStart(2,'0');
+    var te = document.getElementById('macroPulseTimer');
+    if(te) te.textContent = min+':'+sec;
+    if(_macroPulseCdown <= 0){
+      _macroPulseCdown = 300;
+      refreshMacroPulse(false);
+    }
+  }, 1000);
+}
+
+async function refreshMacroPulse(manual){
+  if(_macroPulseLock && !manual) return;
+  _macroPulseLock = true;
+
+  var el    = document.getElementById('macroPulseContent');
+  var metaEl= document.getElementById('macroPulseMeta');
+  if(el) el.innerHTML = '<span style="color:var(--muted);font-size:11px">🔄 更新中...</span>';
+
+  var sym  = (S.sym||'BTCUSDT').replace('USDT','');
+  var px   = S.lastPx>0 ? fmtP(S.lastPx) : '—';
+  var sig  = S.lastSignal;
+  var dir  = sig ? (sig.isBull?'▲多头':'▼空头') : '分析中';
+  var conf = sig ? sig.conf+'%' : '—';
+  var rsi  = sig ? sig.rsi.toFixed(0) : '—';
+  var rr   = sig ? sig.rr.toFixed(2) : '—';
+  var fg   = S.fg ? parseInt(S.fg.value) : null;
+  var fgLbl= fg!==null?(fg<20?'极度恐惧':fg<35?'恐惧':fg>80?'极度贪婪':fg>65?'贪婪':'中性'):'—';
+  var now  = new Date();
+  var nowStr = now.toISOString().replace('T',' ').slice(0,16)+' UTC';
+
+  var prompt = '你是顶级加密市场交易员，现在时间是 '+nowStr+'。\n'
+    +'当前分析币种：'+sym+'/USDT，价格：'+px+'，FINCH技术信号：'+dir+'，置信度：'+conf+'，RSI：'+rsi+'，R:R：'+rr+'，F&G：'+(fg||'—')+'（'+fgLbl+'）。\n\n'
+    +'请用100字以内中文，精炼输出：①今日加密市场整体走势 ②'+sym+'关键技术位和驱动因素 ③操作建议（做多/做空/等待）。\n'
+    +'专业直接，每点一句，不要废话和客套。';
+
+  try{
+    var resp = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model:'claude-sonnet-4-6',
+        max_tokens:350,
+        messages:[{role:'user',content:prompt}]
+      })
+    });
+    if(!resp.ok) throw new Error('HTTP '+resp.status);
+    var data = await resp.json();
+    var text = (data.content||[]).filter(function(b){return b.type==='text';}).map(function(b){return b.text;}).join('').trim();
+    if(text && el){
+      el.innerHTML = text.replace(/\n/g,'<br>');
+      var myt2 = toMYT(new Date());
+      var ts2  = String(myt2.getUTCHours()).padStart(2,'0')+':'+String(myt2.getUTCMinutes()).padStart(2,'0')+' MYT';
+      if(metaEl) metaEl.innerHTML = '<span style="font-size:10px;color:var(--muted)">更新: '+ts2+' · 每5分钟自动刷新</span>';
+    } else if(el){
+      el.innerHTML = '<span style="color:var(--muted);font-size:11px">⚠️ 暂无数据</span>';
+    }
+  } catch(e){
+    // Graceful fallback using local signal data only
+    var lines=[];
+    if(fg!==null) lines.push('市场情绪 '+fgLbl+'（F&G '+fg+'）');
+    if(sig) lines.push(sym+' '+dir+'信号，置信度 '+conf+'，RSI '+rsi+'，R:R '+rr);
+    if(el){
+      if(lines.length) el.innerHTML = '<span style="color:var(--amber)">⚠️ 网络受限 · </span>'+lines.join('。')+'。';
+      else             el.innerHTML = '<span style="color:var(--muted);font-size:11px">网络受限 · 仅本地数据可用</span>';
+    }
+  } finally {
+    _macroPulseLock = false;
+    _macroPulseCdown = 300;
+  }
+}
 
 // ╔══════════════════════════════════════════════════════════════════════╗
 // ║  FINCH MODULE 1 — 精确江恩时间节点 (Precise Gann Time Nodes)        ║
@@ -11151,9 +11350,15 @@ function exportBacktestResult() {
       monthly:      _btResults.monthly,
       equityCurve:  _btResults.equityCurve?.slice(-100),
     };
-    const jsonStr = JSON.stringify(exportData, null, 2);
-    const fname = `finch_backtest_${S.sym}_${new Date().toISOString().slice(0, 10)}.json`;
-    _downloadText(jsonStr, fname, 'application/json');
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `finch_backtest_${S.sym}_${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   } catch(e) { alert('导出失败: ' + e.message); }
 }
 
@@ -11166,9 +11371,15 @@ function exportLearnedWeights() {
     weights:   _learnedWeights,
     log:       _weightLog.slice(0, 20),
   };
-  const jsonStr = JSON.stringify(data, null, 2);
-  const fname = `finch_weights_${new Date().toISOString().slice(0, 10)}.json`;
-  _downloadText(jsonStr, fname, 'application/json');
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `finch_weights_${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 function importLearnedWeights() {
@@ -12277,714 +12488,7 @@ switchMobileModTab = function(tab, btn) {
     }, 100);
   }
 };
-
-
-// ═══════════════════════════════════════════════════
-// FINCH MACRO PULSE — 5-minute real-time macro feed
-// ═══════════════════════════════════════════════════
-let _macroPulseLock = false;
-let _macroPulseCdown = 300;
-let _macroPulseIntervalId = null;
-
-function startMacroPulse(){
-  refreshMacroPulse(true);
-  _macroPulseIntervalId = setInterval(function(){
-    _macroPulseCdown--;
-    var min = Math.floor(_macroPulseCdown/60);
-    var sec = String(_macroPulseCdown%60).padStart(2,'0');
-    var te = document.getElementById('macroPulseTimer');
-    if(te) te.textContent = min+':'+sec;
-    if(_macroPulseCdown <= 0){
-      _macroPulseCdown = 300;
-      refreshMacroPulse(false);
-    }
-  }, 1000);
-}
-
-async function refreshMacroPulse(manual){
-  if(_macroPulseLock && !manual) return;
-  _macroPulseLock = true;
-  var el = document.getElementById('macroPulseContent');
-  var metaEl = document.getElementById('macroPulseMeta');
-  if(el) el.innerHTML = '<span style="color:var(--muted);font-size:11px">🔄 更新中...</span>';
-  
-  var sym = (S.sym||'BTCUSDT').replace('USDT','');
-  var px = S.lastPx > 0 ? fmtP(S.lastPx) : '—';
-  var signal = S.lastSignal;
-  var dir = signal ? (signal.isBull ? '▲多头' : '▼空头') : '分析中';
-  var conf = signal ? signal.conf+'%' : '—';
-  var fg = S.fg ? parseInt(S.fg.value) : null;
-  var fgLabel = fg !== null ? (fg<20?'极度恐惧':fg<35?'恐惧':fg>80?'极度贪婪':fg>65?'贪婪':'中性') : '—';
-  var now = new Date();
-  var nowStr = now.toISOString().replace('T',' ').slice(0,16)+' UTC';
-  
-  var prompt = '你是顶级宏观交易员，现在时间是 '+nowStr+'。\n'+
-    '加密市场 '+sym+' 价格：'+px+'，FINCH信号：'+dir+'，置信度：'+conf+'，F&G：'+(fg||'—')+'（'+fgLabel+'）。\n\n'+
-    '请用100字以内（中文），精炼说明当前市场状况，含：①美股今日走势 ②比特币/加密关键动向 ③宏观催化剂 ④对'+sym+'的影响。\n'+
-    '专业直接，每点一句话，不要废话和客套。';
-
-  try {
-    var res = await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        model:'claude-sonnet-4-6',
-        max_tokens:400,
-        tools:[{type:'web_search_20250305',name:'web_search'}],
-        messages:[{role:'user',content:prompt}]
-      })
-    });
-    if(!res.ok){ throw new Error('HTTP '+res.status); }
-    var data = await res.json();
-    var text = (data.content||[]).filter(function(b){return b.type==='text';}).map(function(b){return b.text;}).join('');
-    if(text && el){
-      el.innerHTML = text.replace(/\n/g,'<br>');
-      var myt = toMYT(new Date());
-      var ts = String(myt.getUTCHours()).padStart(2,'0')+':'+String(myt.getUTCMinutes()).padStart(2,'0')+' MYT';
-      if(metaEl) metaEl.innerHTML = '<span style="font-size:10px;color:var(--muted)">更新: '+ts+' · 每5分钟自动刷新</span>';
-    } else if(el){
-      el.innerHTML = '<span style="color:var(--muted);font-size:11px">⚠️ 暂无数据</span>';
-    }
-  } catch(e){
-    var lines=[];
-    if(fg!==null) lines.push('市场情绪 '+fgLabel+'（F&G '+fg+'）');
-    if(signal) lines.push(sym+' '+dir+' · 置信度 '+conf);
-    if(lines.length&&el) el.innerHTML='<span style="color:var(--amber)">⚠️ 网络受限 · </span>'+lines.join('。')+'。';
-    else if(el) el.innerHTML='<span style="color:var(--muted);font-size:11px">网络受限 · 仅显示本地数据</span>';
-  } finally {
-    _macroPulseLock = false;
-    _macroPulseCdown = 300;
-  }
-}
-
-
-// ═══════════════════════════════════════════════════════════════
-// FINCH v37 — NEW RENDER STRATEGY (Summary-first, collapsible)
-// Override the original _doRenderStrategy
-// ═══════════════════════════════════════════════════════════════
-(function(){
-  
-  // Save original
-  var _origRender = window._doRenderStrategy;
-
-  window._doRenderStrategy = function(res){
-    try {
-      // Defensive null checks - prevent any TypeError
-      if(!res || !res.price || !res.tps || !res.sls) {
-        if(typeof _origRender==='function') { try{_origRender(res);}catch(e){} }
-        return;
-      }
-      var tf=res.tf||'4h', price=res.price||0, entry=res.entry||price, isBull=!!res.isBull;
-      var conf=res.conf||50, tps=res.tps||[], sls=res.sls||[], rr=res.rr||1;
-      var barMsVal=res.barMs||3600000;
-      var isWait = false;
-
-      // Determine verdict
-      var verdict = _Ψ7v ? _Ψ7v(res) : null;
-      var vAction = verdict ? verdict.action : (isBull ? 'long' : 'short');
-      var isLong = vAction==='long'||vAction==='lean-long';
-      var isShort = vAction==='short'||vAction==='lean-short';
-      isWait = !isLong && !isShort;
-
-      // ── Time estimator (inline) ──
-      function quickTime(targetPrice){
-        var dist=Math.abs(targetPrice-price);
-        if(dist<=0) return {label:'即刻',date:'--'};
-        var atrPerBar=Math.max(res.atrRaw||price*0.005, price*0.003);
-        var bars=Math.max(1,Math.round(dist/atrPerBar));
-        var ms=bars*barMsVal;
-        var dt=new Date(Date.now()+ms);
-        var myt=toMYT(dt);
-        var label=ms<3600000?'约'+Math.round(ms/60000)+'分钟'
-          :ms<86400000?'约'+Math.round(ms/3600000)+'小时'
-          :ms<7*86400000?'约'+Math.round(ms/86400000)+'天'
-          :ms<30*86400000?'约'+Math.round(ms/86400000/7)+'周'
-          :'约'+Math.round(ms/86400000/30)+'月';
-        var dateStr=(myt.getUTCMonth()+1).toString().padStart(2,'0')
-          +'/'+myt.getUTCDate().toString().padStart(2,'0')
-          +' '+myt.getUTCHours().toString().padStart(2,'0')
-          +':'+myt.getUTCMinutes().toString().padStart(2,'0')
-          +' MYT';
-        // Also provide week/month context
-        var daysOut = Math.round(ms/86400000);
-        var weekStr = daysOut >= 7 ? '（第'+(Math.ceil(daysOut/7))+'周）' : '';
-        var monthStr = daysOut >= 28 ? '（第'+(Math.ceil(daysOut/30))+'月）' : '';
-        return {label:label, date:dateStr, days:daysOut, week:weekStr, month:monthStr};
-      }
-
-      var bc = isLong?'var(--green)':isShort?'var(--red)':'var(--amber)';
-      var actionWord = isLong?'▲ 做多 LONG':isShort?'▼ 做空 SHORT':'◉ 等待 WAIT';
-      var mockBanner = res.isMock?'<div style="background:rgba(128,80,0,0.08);border:1px solid rgba(128,80,0,0.25);border-radius:5px;padding:6px 10px;margin-bottom:10px;font-size:11px;color:var(--amber)">⚠️ 模拟数据 — API受限 <button onclick="loadAll(S.sym)" style="margin-left:8px;padding:2px 8px;border:1px solid var(--amber);border-radius:3px;background:transparent;color:var(--amber);cursor:pointer;font-family:inherit;font-size:10px">🔄 重试</button></div>':' ';
-
-      // ─────────────────────────────────────────────
-      // SECTION 0: COMMAND SUMMARY CARD (always visible)
-      // ─────────────────────────────────────────────
-      var tp1 = tps[0], tp2 = tps[1], tp3 = tps[2];
-      var sl1 = sls[0];
-      var t1 = tp1 && (isBull?tp1.p>entry:tp1.p<entry) ? quickTime(tp1.p) : null;
-      var t2 = tp2 && (isBull?tp2.p>entry:tp2.p<entry) ? quickTime(tp2.p) : null;
-      var t3 = tp3 && (isBull?tp3.p>entry:tp3.p<entry) ? quickTime(tp3.p) : null;
-
-      var summaryCard = '<div style="background:var(--card);border:1px solid var(--card-bd);border-radius:10px;margin-bottom:12px;overflow:hidden;box-shadow:var(--shadow);">'
-        // Title row
-        +'<div style="padding:10px 14px;background:linear-gradient(90deg,'+(isLong?'rgba(26,107,58,0.06)':isShort?'rgba(160,20,32,0.06)':'rgba(0,0,0,0.02)')+',transparent);border-bottom:2px solid '+(isLong?'var(--green)':isShort?'var(--red)':'var(--amber)')+';display:flex;align-items:center;justify-content:space-between;">'
-        +'<div style="display:flex;align-items:center;gap:8px;">'
-        +'<span style="font-size:16px;font-weight:700;color:'+bc+'">'+actionWord+'</span>'
-        +'<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:'+(isLong?'rgba(26,107,58,0.1)':isShort?'rgba(160,20,32,0.1)':'rgba(128,80,0,0.1)')+';color:'+bc+';font-weight:700;">'+conf+'%</span>'
-        +'</div>'
-        +'<div style="font-size:11px;color:var(--muted)">'+res.tm.lbl+' · R:R <strong style="color:'+(rr>=2?'var(--green)':rr>=1.5?'var(--amber)':'var(--red)')+'">'+(rr||0).toFixed(1)+'</strong></div>'
-        +'</div>'
-        // Entry row
-        +'<div style="padding:8px 14px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'
-        +'<div><div style="font-size:9px;letter-spacing:1px;color:var(--muted);text-transform:uppercase">入场 Entry</div>'
-        +'<div style="font-size:17px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums">'+fmtP(entry)+'</div>'
-        +'<div style="font-size:10px;color:var(--muted)">'+res.entryNote+'</div></div>'
-        +'<div style="flex:1;display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">'
-        // TP/SL quick badges
-        +(tp1&&t1?'<div style="text-align:right;min-width:80px"><div style="font-size:9px;color:var(--teal);font-weight:700;letter-spacing:1px">TP1 · '+fmtPct(tp1.pct)+'</div><div style="font-size:15px;font-weight:700;color:var(--teal);font-variant-numeric:tabular-nums">'+fmtP(tp1.p)+'</div><div style="font-size:10px;color:var(--muted)">'+t1.label+t1.week+t1.month+'</div></div>':'')
-        +(sl1&&(isBull?sl1.p<entry:sl1.p>entry)?'<div style="text-align:right;min-width:80px"><div style="font-size:9px;color:var(--red);font-weight:700;letter-spacing:1px">SL1 · '+fmtPct(sl1.pct)+'</div><div style="font-size:15px;font-weight:700;color:var(--red);font-variant-numeric:tabular-nums">'+fmtP(sl1.p)+'</div><div style="font-size:10px;color:var(--muted)">风险 '+Math.abs((sl1.p-entry)/entry*100).toFixed(2)+'%</div></div>':'')
-        +'</div></div>';
-
-      // TP/SL full table (always visible — this was buried, now front and center)
-      if(!isWait){
-        summaryCard += '<div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--line);">'
-          +'<div style="padding:7px 10px;border-right:1px solid var(--line);background:rgba(10,96,80,0.03)">'
-          +'<div style="font-size:9px;letter-spacing:1px;color:var(--teal);font-weight:700;text-transform:uppercase;margin-bottom:4px">🎯 止盈 · TP</div>';
-        
-        [0,1,2].forEach(function(i){
-          var tp = tps[i]; if(!tp||!tp.p||!isFinite(tp.p)) return;
-          var valid = isBull ? tp.p>entry : tp.p<entry;
-          if(!valid) return;
-          var et = quickTime(tp.p);
-          var tpC = ['var(--teal)','var(--green)','var(--blue)'][i];
-          var probs = [68,45,28];
-          summaryCard += '<div style="padding:5px 0;border-bottom:1px solid var(--line);">'
-            +'<div style="display:flex;align-items:baseline;gap:6px;">'
-            +'<span style="font-size:9px;padding:1px 5px;border-radius:3px;background:rgba(10,96,80,0.08);color:'+tpC+';font-weight:700;">TP'+(i+1)+'</span>'
-            +'<span style="font-size:15px;font-weight:700;color:'+tpC+';font-variant-numeric:tabular-nums">'+fmtP(tp.p)+'</span>'
-            +'<span style="font-size:11px;font-weight:700;color:'+tpC+'">'+fmtPct(tp.pct)+'</span>'
-            +'</div>'
-            +'<div style="font-size:10px;color:var(--muted);margin-top:1px">⏱ '+et.label+et.week+et.month+'</div>'
-            +'<div style="font-size:10px;color:var(--dim)">'+et.date+'</div>'
-            +'<div style="font-size:9px;color:var(--muted)">概率 '+probs[i]+'%</div>'
-            +'</div>';
-        });
-        summaryCard += '</div>';
-
-        summaryCard += '<div style="padding:7px 10px;background:rgba(160,20,32,0.02)">'
-          +'<div style="font-size:9px;letter-spacing:1px;color:var(--red);font-weight:700;text-transform:uppercase;margin-bottom:4px">🛑 止损 · SL</div>';
-        
-        [0,1,2].forEach(function(i){
-          var sl = sls[i]; if(!sl||!sl.p||!isFinite(sl.p)) return;
-          var valid = isBull ? sl.p<entry : sl.p>entry;
-          if(!valid) return;
-          var risk = Math.abs((sl.p-entry)/entry*100).toFixed(2);
-          var slDesc = ['紧·新手推荐','中·常规使用','宽·长线适用'][i];
-          summaryCard += '<div style="padding:5px 0;border-bottom:1px solid var(--line);">'
-            +'<div style="display:flex;align-items:baseline;gap:6px;">'
-            +'<span style="font-size:9px;padding:1px 5px;border-radius:3px;background:var(--red-bg);color:var(--red);font-weight:700;">SL'+(i+1)+'</span>'
-            +'<span style="font-size:15px;font-weight:700;color:var(--red);font-variant-numeric:tabular-nums">'+fmtP(sl.p)+'</span>'
-            +'<span style="font-size:11px;font-weight:700;color:var(--red)">'+fmtPct(sl.pct)+'</span>'
-            +'</div>'
-            +'<div style="font-size:10px;color:var(--muted);margin-top:1px">风险 '+risk+'%</div>'
-            +'<div style="font-size:9px;color:var(--muted)">'+slDesc+'</div>'
-            +'</div>';
-        });
-        summaryCard += '</div></div>';
-      } else {
-        summaryCard += '<div style="padding:10px 14px;border-bottom:1px solid var(--line)">'
-          +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
-          +'<div style="padding:8px;background:var(--green-bg);border:1px solid var(--green-bd);border-radius:6px;text-align:center">'
-          +'<div style="font-size:9px;color:var(--green);font-weight:700;letter-spacing:1px">▲ 突破做多</div>'
-          +'<div style="font-size:18px;font-weight:700;color:var(--green)">'+fmtP(tps[0].p)+'</div>'
-          +'</div>'
-          +'<div style="padding:8px;background:var(--red-bg);border:1px solid var(--red-bd);border-radius:6px;text-align:center">'
-          +'<div style="font-size:9px;color:var(--red);font-weight:700;letter-spacing:1px">▼ 跌破做空</div>'
-          +'<div style="font-size:18px;font-weight:700;color:var(--red)">'+fmtP(sls[0].p)+'</div>'
-          +'</div></div></div>';
-      }
-
-      // TP action note
-      if(!isWait){
-        summaryCard += '<div style="padding:7px 14px;background:var(--bg2);font-size:10px;color:var(--muted);line-height:1.7">'
-          +'📌 TP1到达→平仓50%，止损移至成本 · TP2→再平30% · TP3→持余量 &nbsp;|&nbsp; 新手选SL1，常规SL2，长线SL3'
-          +'</div>';
-      }
-      summaryCard += '</div>';
-
-      // ─────────────────────────────────────────────
-      // SECTION 1: CONTEXT NARRATIVE (collapsible)
-      // ─────────────────────────────────────────────
-      var sigs = res.sigs || [];
-      var bullSigs = sigs.filter(function(s){return s.c==='sig-bull'||s.c==='sig-chan'||s.c==='sig-vegas';}).length;
-      var bearSigs = sigs.filter(function(s){return s.c==='sig-bear';}).length;
-      var sigsBadge = '<span style="font-size:10px;padding:1px 6px;border-radius:8px;background:'+(isBull?'rgba(26,107,58,0.1)':'rgba(160,20,32,0.1)')+';color:'+bc+'">'+sigs.length+'个信号</span>';
-
-      // Multi-timeframe alignment
-      var allTFs_chk=['15m','30m','4h','1d','1w'];
-      var tfResults={};
-      allTFs_chk.forEach(function(t){try{var r=buildStrategyMemo(t)||buildStrategy(t);if(r)tfResults[t]=r.isBull;}catch(e){}});
-      var bullTF=Object.values(tfResults).filter(function(v){return v===true;}).length;
-      var bearTF=Object.values(tfResults).filter(function(v){return v===false;}).length;
-      var totalTF=bullTF+bearTF;
-      var tfAlignment=totalTF?((isBull?bullTF:bearTF)/totalTF*100).toFixed(0):'—';
-      var tfHtml=allTFs_chk.map(function(t){
-        var v=tfResults[t];
-        if(v===undefined) return'';
-        return'<span style="font-size:10px;padding:2px 6px;border-radius:4px;background:'+(v?'rgba(26,107,58,0.1)':'rgba(160,20,32,0.1)')+';color:'+(v?'var(--green)':'var(--red)')+';font-weight:700">'+t+(v?' ▲':' ▼')+'</span>';
-      }).join('');
-
-      var contextSection = '<details style="margin-bottom:8px" open>'
-        +'<summary style="cursor:pointer;padding:9px 12px;background:var(--card);border:1px solid var(--card-bd);border-radius:8px;font-size:11px;font-weight:700;color:var(--gold);display:flex;align-items:center;justify-content:space-between;list-style:none;user-select:none;box-shadow:var(--shadow)">'
-        +'<span>📋 市场综述 · 信号概况</span>'
-        +'<div style="display:flex;align-items:center;gap:6px">'+sigsBadge+'<span style="font-size:10px;color:var(--muted)">▾</span></div>'
-        +'</summary>'
-        +'<div style="padding:10px 0">'
-        +'<div style="background:var(--card);border:1px solid var(--card-bd);border-radius:8px;padding:11px 13px;margin-bottom:8px;box-shadow:var(--shadow)">'
-        // Signals
-        +'<div style="font-size:9px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:7px">📡 活跃信号 ' + sigs.length + '个</div>'
-        +'<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px">'+sigs.map(function(s){return'<span class="sig '+s.c+'" style="font-size:10px">'+s.l+'</span>';}).join('')+'</div>'
-        // MTF
-        +'<div style="font-size:9px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:5px">📊 多周期一致性 '+tfAlignment+'%</div>'
-        +'<div style="display:flex;flex-wrap:wrap;gap:4px">'+tfHtml+'</div>'
-        +'</div>'
-        // Reasoning
-        +(res.reasoning?'<div style="background:var(--card);border:1px solid var(--card-bd);border-radius:8px;padding:11px 13px;box-shadow:var(--shadow)">'
-        +'<div style="font-size:9px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:6px">📝 综合研判</div>'
-        +'<div style="font-size:11px;color:var(--text);line-height:1.85">'+res.reasoning+'</div>'
-        +'</div>':'')
-        +'</div></details>';
-
-      // ─────────────────────────────────────────────
-      // SECTION 2: TECHNICAL INDICATORS (collapsible)
-      // ─────────────────────────────────────────────
-      var rsiC = res.rsi<35?'var(--green)':res.rsi>65?'var(--red)':'var(--muted)';
-      var macdStr = res.macdD ? (res.macdD.hist>0?'多头':'空头') : '--';
-      var macdC = res.macdD ? (res.macdD.hist>0?'var(--green)':'var(--red)') : 'var(--muted)';
-      var ichimokuStr = S.modData.ichimoku ? (S.modData.ichimoku.fullBull?'全多共振':S.modData.ichimoku.fullBear?'全空共振':S.modData.ichimoku.aboveCloud?'云上多':S.modData.ichimoku.belowCloud?'云下空':'云中整理') : '--';
-      
-      var indicators = [
-        {label:'RSI 14', val:res.rsi?res.rsi.toFixed(0):'--', note:res.rsi<35?'超卖':res.rsi>65?'超买':'中性', color:rsiC},
-        {label:'MACD', val:macdStr, note:res.macdD&&res.macdD.bullDiv?'底背驰':res.macdD&&res.macdD.bearDiv?'顶背驰':'', color:macdC},
-        {label:'Vegas', val:res.vegas?(res.vegas.above?'云上':res.vegas.below?'云下':'云内'):'--', note:'', color:res.vegas?(res.vegas.above?'var(--green)':res.vegas.below?'var(--red)':'var(--amber)'):'var(--muted)'},
-        {label:'ADX', val:res.adx?res.adx.adx.toFixed(0):'--', note:res.adx&&res.adx.adx>25?'趋势强':'震荡', color:res.adx&&res.adx.adx>25?'var(--green)':'var(--amber)'},
-        {label:'BB 位置', val:res.bbPos?(res.bbPos*100).toFixed(0)+'%':'--', note:res.bbPos<0.2?'下轨':res.bbPos>0.8?'上轨':'中轨', color:res.bbPos<0.2?'var(--green)':res.bbPos>0.8?'var(--red)':'var(--muted)'},
-        {label:'一目均衡', val:ichimokuStr, note:'', color:S.modData.ichimoku&&S.modData.ichimoku.fullBull?'var(--green)':S.modData.ichimoku&&S.modData.ichimoku.fullBear?'var(--red)':'var(--amber)'},
-        {label:'OBV', val:res.obv?(res.obv.obvTrend===1?'多头':'空头'):'--', note:res.obv&&res.obv.obvDiv?'⚡背驰':'', color:res.obv?(res.obv.obvTrend===1?'var(--green)':'var(--red)'):'var(--muted)'},
-        {label:'Supertrend', val:res.supertrend?(res.supertrend.bull?'多头':'空头'):'--', note:'', color:res.supertrend?(res.supertrend.bull?'var(--green)':'var(--red)'):'var(--muted)'},
-      ];
-      
-      var techSection = '<details style="margin-bottom:8px">'
-        +'<summary style="cursor:pointer;padding:9px 12px;background:var(--card);border:1px solid var(--card-bd);border-radius:8px;font-size:11px;font-weight:700;color:var(--gold);display:flex;align-items:center;justify-content:space-between;list-style:none;user-select:none;box-shadow:var(--shadow)">'
-        +'<span>📊 技术指标 · Technical</span>'
-        +'<span style="font-size:10px;color:var(--muted)">点击展开 ▾</span>'
-        +'</summary>'
-        +'<div style="padding:10px 0">'
-        +'<div style="background:var(--card);border:1px solid var(--card-bd);border-radius:8px;padding:11px 13px;box-shadow:var(--shadow)">'
-        +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">'
-        +indicators.map(function(ind){
-          return '<div style="background:var(--bg1);border-radius:5px;padding:8px 10px;border:1px solid var(--line)">'
-            +'<div style="font-size:9px;color:var(--muted);margin-bottom:2px">'+ind.label+'</div>'
-            +'<div style="font-size:14px;font-weight:700;color:'+ind.color+'">'+ind.val+'</div>'
-            +(ind.note?'<div style="font-size:10px;color:var(--muted)">'+ind.note+'</div>':'')
-            +'</div>';
-        }).join('')
-        +'</div>'
-        // Key levels
-        +'<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--line)">'
-        +'<div style="font-size:9px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:6px">关键价位 Key Levels</div>'
-        +'<div style="display:flex;flex-wrap:wrap;gap:5px">'
-        +(res.nearestSupport?'<div style="padding:4px 8px;background:rgba(26,107,58,0.08);border:1px solid var(--green-bd);border-radius:4px;font-size:11px"><span style="color:var(--muted)">支撑 </span><strong style="color:var(--green)">'+fmtP(res.nearestSupport)+'</strong></div>':'')
-        +(res.nearestResist?'<div style="padding:4px 8px;background:rgba(160,20,32,0.08);border:1px solid var(--red-bd);border-radius:4px;font-size:11px"><span style="color:var(--muted)">阻力 </span><strong style="color:var(--red)">'+fmtP(res.nearestResist)+'</strong></div>':'')
-        +(res.vwap?'<div style="padding:4px 8px;background:rgba(26,58,138,0.08);border:1px solid rgba(26,58,138,0.2);border-radius:4px;font-size:11px"><span style="color:var(--muted)">VWAP </span><strong style="color:var(--blue)">'+fmtP(res.vwap)+'</strong></div>':'')
-        +(res.fib618?'<div style="padding:4px 8px;background:rgba(88,24,144,0.07);border:1px solid rgba(88,24,144,0.2);border-radius:4px;font-size:11px"><span style="color:var(--muted)">Fib 61.8% </span><strong style="color:var(--violet)">'+fmtP(res.fib618)+'</strong>'+(res.nF618?'<span style="color:var(--violet)"> ⚡</span>':'')+'</div>':'')
-        +'</div></div></div></div></details>';
-
-      // ─────────────────────────────────────────────
-      // SECTION 3: SCENARIOS (collapsible)
-      // ─────────────────────────────────────────────
-      var scenarioSection = '';
-      if(verdict && verdict.scenarios){
-        scenarioSection = '<details style="margin-bottom:8px">'
-          +'<summary style="cursor:pointer;padding:9px 12px;background:var(--card);border:1px solid var(--card-bd);border-radius:8px;font-size:11px;font-weight:700;color:var(--gold);display:flex;align-items:center;justify-content:space-between;list-style:none;user-select:none;box-shadow:var(--shadow)">'
-          +'<span>📐 三种情景 · Scenarios</span>'
-          +'<span style="font-size:10px;color:var(--muted)">点击展开 ▾</span>'
-          +'</summary>'
-          +'<div style="padding:10px 0">'
-          +'<div style="background:var(--card);border:1px solid var(--card-bd);border-radius:8px;padding:11px 13px;box-shadow:var(--shadow)">'
-          +verdict.scenarios.map(function(s){
-            return '<div style="display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px solid var(--line)">'
-              +'<div style="width:3px;height:42px;background:'+s.color+';border-radius:2px;flex-shrink:0;margin-top:2px"></div>'
-              +'<div style="flex:1">'
-              +'<div style="font-size:12px;font-weight:700;color:var(--bright);margin-bottom:2px">'+s.name+'</div>'
-              +'<div style="font-size:11px;color:var(--muted);line-height:1.6">'+s.trigger+'</div>'
-              +'</div>'
-              +'<span style="font-size:11px;font-weight:700;color:'+(s.prob==='高'?'var(--green)':s.prob==='中'?'var(--amber)':'var(--muted)')+';flex-shrink:0">'+s.prob+'</span>'
-              +'</div>';
-          }).join('')
-          +'</div></div></details>';
-      }
-
-      // ─────────────────────────────────────────────
-      // SECTION 4: DEEP ANALYSIS (collapsible, closed by default)
-      // ─────────────────────────────────────────────
-      var deepSection = '<details style="margin-bottom:8px">'
-        +'<summary style="cursor:pointer;padding:9px 12px;background:var(--card);border:1px solid var(--card-bd);border-radius:8px;font-size:11px;font-weight:700;color:var(--gold);display:flex;align-items:center;justify-content:space-between;list-style:none;user-select:none;box-shadow:var(--shadow)">'
-        +'<span>🔬 深度分析 · Deep Analysis</span>'
-        +'<span style="font-size:10px;color:var(--muted)">点击展开 ▾</span>'
-        +'</summary>'
-        +'<div style="padding:10px 0">'
-        +(function(){try{return _Γ8p(res)||'';}catch(e){return'';}})()
-        +'<div style="background:var(--card);border:1px solid var(--card-bd);border-left:3px solid var(--gold);border-radius:8px;padding:12px;margin-bottom:8px">'
-        +'<div style="font-size:9px;letter-spacing:1.5px;color:var(--gold);text-transform:uppercase;margin-bottom:8px">🔮 多维战略矩阵</div>'
-        +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px">'
-        +[
-          {icon:'📊',lbl:'技术面',col:'var(--blue)',body:'RSI <strong style="color:'+(res.rsi<35?'var(--green)':res.rsi>65?'var(--red)':'var(--muted)')+'">'+res.rsi.toFixed(0)+'</strong> · MACD <strong style="color:'+(res.macdD&&res.macdD.hist>0?'var(--green)':'var(--red)')+'">'+macdStr+'</strong>'},
-          {icon:'🔱',lbl:'缠论结构',col:'var(--teal)',body:res.chan?(res.chan.bullDiv?'⚡底背驰':res.chan.bearDiv?'⚡顶背驰':res.chan.bullBi?'↗上升笔':'↘下降笔'):'--'},
-          {icon:'🌀',lbl:'斐波那契',col:'var(--gold)',body:'φ61.8%: <strong style="color:var(--violet)">'+(res.fib618?fmtP(res.fib618):'--')+'</strong>'+(res.nF618?' ⚡共振':'')},
-          {icon:'📈',lbl:'OBV / CVD',col:'var(--teal)',body:(res.obv?(res.obv.obvTrend===1?'OBV多头':'OBV空头'):'--')+(res.cvd?(res.cvd.bullishDelta?' · 买盘主导':' · 卖盘主导'):'')},
-          {icon:'⚔️',lbl:'江恩Sq9',col:'var(--violet)',body:'支撑: '+(S.modData.gann&&S.modData.gann.below&&S.modData.gann.below[0]?fmtP(S.modData.gann.below[0].price):'--')+'<br>阻力: '+(S.modData.gann&&S.modData.gann.above&&S.modData.gann.above[0]?fmtP(S.modData.gann.above[0].price):'--')},
-          {icon:'🏗',lbl:'市场结构',col:'var(--blue)',body:(res.mktStr?res.mktStr.bias==='bull'?'✅ HH/HL多头':res.mktStr.bias==='bear'?'❌ LL/LH空头':'⚡ 中性整理':'--')},
-        ].map(function(s){
-          return '<div style="background:var(--bg1);border-radius:5px;padding:8px;border:1px solid var(--line)">'
-            +'<div style="font-weight:700;color:'+s.col+';margin-bottom:3px;font-size:11px">'+s.icon+' '+s.lbl+'</div>'
-            +'<div style="color:var(--text);line-height:1.6;font-size:11px">'+s.body+'</div>'
-            +'</div>';
-        }).join('')
-        +'</div></div>'
-        // AI analysis box
-        +'<div class="ai-analysis-box" id="aiAnalysisBox">'
-        +'<div class="ai-hd">🤖 AI 深度市场解读</div>'
-        +'<div class="ai-loading" id="aiLoadingEl"><div class="ai-spinner"></div><span>分析中...</span></div>'
-        +'<div class="ai-body" id="aiBodyEl" style="display:none"></div>'
-        +'<button class="ai-trigger-btn" id="aiTriggerBtn" onclick="triggerAIAnalysis(S.lastSignal)">✨ 生成 AI 深度解读</button>'
-        +'</div>'
-        +'</div></details>';
-
-      // ─────────────────────────────────────────────
-      // SECTION 5: INLINE TIMELINE (compact, always visible)
-      // ─────────────────────────────────────────────
-      var timelineSection = '<div id="inlineTimelineContent" style="margin-bottom:8px;"></div>';
-
-      // ─────────────────────────────────────────────
-      // Timeframe view toggle (week/month)
-      // ─────────────────────────────────────────────
-      var horizonToggle = '<div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;padding:0 2px">'
-        +'<span style="font-size:10px;color:var(--muted);letter-spacing:1px">视野：</span>'
-        +'<div style="display:flex;gap:3px;background:var(--bg2);border-radius:5px;padding:2px">'
-        +'<button onclick="setStratHorizon('short',this)" id="horizonShort" style="padding:4px 10px;border:none;border-radius:4px;background:var(--gold);color:#fff;font-family:inherit;font-size:10px;cursor:pointer;font-weight:700;transition:all .12s">日内</button>'
-        +'<button onclick="setStratHorizon('week',this)" id="horizonWeek" style="padding:4px 10px;border:none;border-radius:4px;background:transparent;color:var(--muted);font-family:inherit;font-size:10px;cursor:pointer;transition:all .12s">周线</button>'
-        +'<button onclick="setStratHorizon('month',this)" id="horizonMonth" style="padding:4px 10px;border:none;border-radius:4px;background:transparent;color:var(--muted);font-family:inherit;font-size:10px;cursor:pointer;transition:all .12s">月线</button>'
-        +'</div>'
-        +'<span style="font-size:10px;color:var(--muted)">· 当前: <strong style="color:var(--text)">'+res.tm.lbl+'</strong></span>'
-        +'</div>';
-
-      // ─────────────────────────────────────────────
-      // Footer
-      // ─────────────────────────────────────────────
-      var nowMYT3 = toMYT(new Date());
-      var timeStr3 = String(nowMYT3.getUTCHours()).padStart(2,'0')+':'+String(nowMYT3.getUTCMinutes()).padStart(2,'0')+':'+String(nowMYT3.getUTCSeconds()).padStart(2,'0')+' MYT';
-      var footer = '<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 10px;background:var(--bg2);border-radius:6px;border:1px solid var(--line);margin-top:4px">'
-        +'<span style="font-size:10px;color:var(--muted)" id="lastRefreshLbl">🔄 '+timeStr3+' · 30s刷新</span>'
-        +'<button onclick="manualRefreshSignal()" style="padding:3px 10px;border:1px solid var(--gold);border-radius:4px;background:transparent;color:var(--gold);font-family:inherit;font-size:10px;cursor:pointer;font-weight:700">⚡ 立即刷新</button>'
-        +'</div>';
-
-      // ─────────────────────────────────────────────
-      // ASSEMBLE
-      // ─────────────────────────────────────────────
-      $html('stratArea', mockBanner + horizonToggle + summaryCard + contextSection + techSection + scenarioSection + deepSection + timelineSection + footer);
-
-      // Update bias badge
-      var badge = document.getElementById('biasBadge');
-      if(badge){
-        badge.style.cssText='background:'+(isLong?'rgba(26,107,58,0.08)':isShort?'rgba(160,20,32,0.08)':'rgba(0,0,0,0.03)')+';color:'+bc+';border:1px solid '+(isLong?'rgba(26,107,58,0.25)':isShort?'rgba(160,20,32,0.25)':'rgba(128,80,0,0.25)')+';';
-        badge.textContent=(isWait?'◉ 等待':isLong?'▲ 做多':'▼ 做空')+' · '+conf+'%';
-      }
-
-      try{ if(typeof renderInlineTimeline==='function') renderInlineTimeline(); }catch(e){}
-
-    } catch(e){
-      console.error('v37 render error:', e);
-      // Fallback to original
-      if(typeof _origRender === 'function') try{ _origRender(res); } catch(e2){}
-    }
-  };
-
-  // Horizon toggle handler
-  window.setStratHorizon = function(horizon, btn){
-    document.querySelectorAll('#horizonShort,#horizonWeek,#horizonMonth').forEach(function(b){
-      b.style.background='transparent';b.style.color='var(--muted)';b.style.fontWeight='400';
-    });
-    if(btn){btn.style.background='var(--gold)';btn.style.color='#fff';btn.style.fontWeight='700';}
-    // avoid reserved word 'short' as object key
-    var newTF = (horizon==='month') ? '1w' : (horizon==='week') ? '1d' : (S.stratTF||'4h');
-    if(horizon !== 'intraday' && S.stratTF !== newTF){
-      S.stratTF = newTF;
-      renderStrategy();
-    }
-  };
-
-})();
-
-// ═══════════════════════════════════════════════════════════════
-// FINCH BRAIN — Intelligent Reasoning Engine v1.0
-// ═══════════════════════════════════════════════════════════════
-var BRAIN = {
-  thoughts: [],
-  memory: [],
-  lastPrice: 0,
-  inferring: false,
-  priceHistory: [],
-};
-
-function brainLoadMemory(){
-  try {
-    var stored = localStorage.getItem('finch_brain_memory_v1');
-    if(stored) BRAIN.memory = JSON.parse(stored).slice(-100);
-  } catch(e){}
-}
-
-function brainSaveMemory(){
-  try {
-    localStorage.setItem('finch_brain_memory_v1', JSON.stringify(BRAIN.memory.slice(-100)));
-  } catch(e){}
-}
-
-var THOUGHT_LABELS = {
-  'inference': '🔍 推理',
-  'alert': '⚠️ 警报',
-  'opportunity': '✅ 机会',
-  'risk': '🛑 风险',
-  'learning': '🎓 学习',
-  'question': '💬 问答'
-};
-
-function brainAddThought(type, title, body, conf, extra){
-  var el = document.getElementById('brainFeed');
-  if(!el) return;
-
-  var ph = el.querySelector('[data-placeholder]');
-  if(ph && ph.parentNode) ph.parentNode.removeChild(ph);
-
-  var now = toMYT(new Date());
-  var ts = String(now.getUTCHours()).padStart(2,'0') + ':' + String(now.getUTCMinutes()).padStart(2,'0');
-  var confColor = (conf >= 70) ? 'var(--green)' : (conf >= 50) ? 'var(--amber)' : 'var(--red)';
-  var confW = conf || 0;
-  var label = THOUGHT_LABELS[type] || type;
-
-  var div = document.createElement('div');
-  div.className = 'thought-card';
-
-  var html = '<div class="thought-card-hd"><span class="thought-type ' + type + '">' + label + '</span><span class="thought-time">' + ts + ' MYT</span></div>';
-  if(title){ html += '<div style="font-size:11px;font-weight:700;color:var(--bright);margin-bottom:4px">' + title + '</div>'; }
-  html += '<div class="thought-body">' + body + '</div>';
-  if(typeof conf !== 'undefined' && conf !== null){
-    html += '<div class="conf-bar-wrap"><div class="conf-bar-fill" style="width:' + confW + '%;background:' + confColor + '"></div></div>';
-    html += '<span class="thought-conf" style="color:' + confColor + '">置信度 ' + conf + '%</span>';
-  }
-  if(extra){ html += extra; }
-  div.innerHTML = html;
-  el.insertBefore(div, el.firstChild);
-  while(el.children.length > 40){ el.removeChild(el.lastChild); }
-  BRAIN.thoughts.unshift({type:type, title:title, body:body, conf:conf, ts:ts});
-  if(BRAIN.thoughts.length > 100){ BRAIN.thoughts.pop(); }
-}
-
-function brainInfer(signal, price, prevPrice){
-  if(!signal || !price) return;
-  if(BRAIN.inferring) return;
-  BRAIN.inferring = true;
-  try {
-    var isBull = signal.isBull;
-    var tps = signal.tps || [];
-    var sls = signal.sls || [];
-    var rsi = signal.rsi || 50;
-    var rr = signal.rr || 0;
-    var sym = (S.sym || 'BTCUSDT').replace('USDT','');
-
-    BRAIN.priceHistory.push({p:price, t:Date.now()});
-    if(BRAIN.priceHistory.length > 60) BRAIN.priceHistory.shift();
-
-    // Momentum check
-    if(BRAIN.priceHistory.length >= 5){
-      var recent5 = BRAIN.priceHistory.slice(-5);
-      var movePct = (recent5[recent5.length-1].p - recent5[0].p) / recent5[0].p * 100;
-      var timeDiff = (recent5[recent5.length-1].t - recent5[0].t) / 60000;
-      if(Math.abs(movePct) > 0.5 && timeDiff < 10){
-        var dir = movePct > 0 ? '急涨' : '急跌';
-        var aligned = (movePct > 0 && isBull) || (movePct < 0 && !isBull);
-        var mbody = aligned
-          ? '价格按预期方向移动 ' + Math.abs(movePct).toFixed(2) + '%/' + Math.round(timeDiff) + '分钟，动能与信号一致，可考虑积极入场。'
-          : '价格出现反向移动 ' + movePct.toFixed(2) + '%/' + Math.round(timeDiff) + '分钟，与' + (isBull?'多头':'空头') + '信号相悖，建议等待方向确认。';
-        brainAddThought(aligned ? 'opportunity' : 'alert', sym + ' ' + dir + ' ' + Math.abs(movePct).toFixed(2) + '%', mbody, Math.min(85, Math.round(50 + Math.abs(movePct)*10)));
-      }
-    }
-
-    // RSI extremes
-    if(rsi <= 28){
-      brainAddThought('opportunity', 'RSI ' + rsi.toFixed(0) + ' 极度超卖',
-        'RSI跌至' + rsi.toFixed(0) + '，反弹概率约65-72%。建议分批建仓，止损设于 ' + (sls[0] ? fmtP(sls[0].p) : '支撑位下方') + '。', 72);
-    } else if(rsi >= 72){
-      brainAddThought('risk', 'RSI ' + rsi.toFixed(0) + ' 极度超买',
-        'RSI升至' + rsi.toFixed(0) + '，高风险区域。多头过热，获利回吐压力加大。' + (isBull ? '建议减仓或收紧止盈。' : '可考虑做空机会。'), 68);
-    }
-
-    // R:R quality
-    if(rr >= 2.5){
-      brainAddThought('opportunity', '优质R:R ' + rr.toFixed(1) + 'R',
-        'R:R达' + rr.toFixed(1) + '，高质量交易机会。TP1 ' + (tps[0] ? fmtP(tps[0].p) : '--') + '，止损 ' + (sls[0] ? fmtP(sls[0].p) : '--') + '。即使胜率40%长期期望值仍为正。',
-        Math.min(90, 60 + Math.round(rr*5)));
-    } else if(rr > 0 && rr < 1.2){
-      brainAddThought('risk', 'R:R偏低 ' + rr.toFixed(1) + 'R',
-        'R:R仅' + rr.toFixed(1) + '，低于1.5推荐阈值。收益难以覆盖潜在损失。建议等待更好入场点。', 55);
-    }
-
-    // Signal confluence
-    var sigs2 = signal.sigs || [];
-    var bullSigs = sigs2.filter(function(s){ return s.c==='sig-bull'||s.c==='sig-vegas'||s.c==='sig-chan'; }).length;
-    var bearSigs = sigs2.filter(function(s){ return s.c==='sig-bear'; }).length;
-    if(bullSigs >= 6 && isBull){
-      brainAddThought('opportunity', bullSigs + '重多头共振',
-        '检测到' + bullSigs + '个看多信号同时触发。历史回测此类情景胜率提升约15-20%。建议按计划入场。',
-        Math.min(88, 60+bullSigs*3));
-    } else if(bearSigs >= 6 && !isBull){
-      brainAddThought('opportunity', bearSigs + '重空头共振',
-        '检测到' + bearSigs + '个看空信号同时触发，空头共振强烈。建议在反弹至阻力位时做空。',
-        Math.min(85, 58+bearSigs*3));
-    }
-
-    // Chan divergence
-    if(signal.chan){
-      if(signal.chan.bullDivStrong && isBull){
-        brainAddThought('opportunity', '缠论强底背驰', '缠论检测到强底背驰，空头力量衰竭。结合多头方向，反转概率较高。', 75);
-      } else if(signal.chan.bearDivStrong && !isBull){
-        brainAddThought('risk', '缠论强顶背驰', '缠论检测到强顶背驰，多头力量递减。结合空头方向，建议减仓或考虑做空。', 72);
-      }
-    }
-
-    // Funding rate
-    var fr = signal.fundingRate;
-    if(fr && fr > 0.08){
-      brainAddThought('alert', '资金费率过高 ' + fr.toFixed(3) + '%',
-        '资金费率' + fr.toFixed(3) + '%，多头过热。平台对多头收取高额费用，不利于持仓。', 60);
-    } else if(fr && fr < -0.03){
-      brainAddThought('opportunity', '资金费率负值 ' + fr.toFixed(3) + '%',
-        '资金费率负值，空头拥挤，轧空风险高。配合多头信号势能较好。', 65);
-    }
-
-    brainLearn(signal, price);
-  } catch(e){ console.warn('brainInfer:', e.message); }
-  BRAIN.inferring = false;
-}
-
-function brainLearn(signal, currentPrice){
-  if(!signal) return;
-  var now = Date.now();
-  BRAIN.memory.forEach(function(m){
-    if(m.open && m.entryPrice && (now - m.ts) > 3600000){
-      var hitTP = m.isBull ? (currentPrice >= m.tp1) : (currentPrice <= m.tp1);
-      var hitSL = m.isBull ? (currentPrice <= m.sl1) : (currentPrice >= m.sl1);
-      var pctDiff = (currentPrice - m.entryPrice) / m.entryPrice * 100;
-      if(hitTP || hitSL || Math.abs(pctDiff) > 2){
-        m.open = false;
-        m.outcome = hitTP ? 'win' : (hitSL ? 'loss' : 'partial');
-        m.resultPct = pctDiff;
-        m.closedAt = now;
-        brainSaveMemory();
-      }
-    }
-  });
-  var tps3 = signal.tps || [], sls3 = signal.sls || [];
-  BRAIN.memory.push({ ts:now, sym:S.sym, tf:signal.tf, isBull:signal.isBull, conf:signal.conf, rsi:signal.rsi, rr:signal.rr, entryPrice:currentPrice, tp1:tps3[0]?tps3[0].p:0, sl1:sls3[0]?sls3[0].p:0, open:true, outcome:null });
-  if(BRAIN.memory.length % 10 === 0){
-    var closed = BRAIN.memory.filter(function(m){ return !m.open && m.outcome; });
-    var wins = closed.filter(function(m){ return m.outcome==='win'; }).length;
-    var total = closed.length;
-    if(total >= 5){
-      var wr = Math.round(wins/total*100);
-      var vrd = wr>=60 ? '策略表现优秀，继续执行。' : wr>=50 ? '策略中等，可优化参数。' : '建议审查当前市场条件。';
-      brainAddThought('learning', '自我学习更新',
-        '已从' + total + '笔历史信号学习。实测胜率：' + wr + '%（' + wins + '/' + total + '）。' + vrd, wr);
-    }
-  }
-  if(BRAIN.memory.length > 110) BRAIN.memory = BRAIN.memory.slice(-100);
-  brainSaveMemory();
-}
-
-async function askBrain(){
-  var input = document.getElementById('brainInput');
-  if(!input) return;
-  var q = input.value.trim();
-  if(!q) return;
-  input.value = '';
-  var feed2 = document.getElementById('brainFeed');
-  var thinkDiv = document.createElement('div');
-  thinkDiv.id = 'brainThinking';
-  thinkDiv.className = 'thought-card';
-  thinkDiv.innerHTML = '<div class="brain-thinking"><div class="brain-dots"><span></span><span></span><span></span></div><span style="color:var(--indigo);font-size:11px"> 正在思考...</span></div>';
-  if(feed2) feed2.insertBefore(thinkDiv, feed2.firstChild);
-  var signal2 = S.lastSignal, price2 = S.lastPx;
-  var sym3 = (S.sym||'BTCUSDT').replace('USDT','');
-  var fg3 = S.fg ? parseInt(S.fg.value) : null;
-  var ctx3 = '你是FINCH，专业加密货币交易AI。\n'
-    + '当前：' + S.sym + ' 价格 ' + (price2?fmtP(price2):'—') + '\n'
-    + (signal2 ? ('信号：' + (signal2.isBull?'多头':'空头') + ' ' + signal2.conf + '%，RSI ' + signal2.rsi.toFixed(0) + '，R:R ' + signal2.rr.toFixed(2) + '\n') : '')
-    + (signal2 && signal2.tps[0] ? ('TP1: ' + fmtP(signal2.tps[0].p) + '，SL1: ' + fmtP(signal2.sls[0].p) + '\n') : '')
-    + (fg3 ? ('F&G: ' + fg3 + '\n') : '')
-    + '\n用户问：' + q + '\n\n100字内中文直接回答，专业精炼，说重点。';
-  try {
-    var resp2 = await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:300,tools:[{type:'web_search_20250305',name:'web_search'}],messages:[{role:'user',content:ctx3}]})});
-    if(!resp2.ok){ throw new Error('HTTP '+resp2.status); }
-    var data2 = await resp2.json();
-    var text2 = (data2.content||[]).filter(function(b){return b.type==='text';}).map(function(b){return b.text;}).join('').trim();
-    var tk5 = document.getElementById('brainThinking');
-    if(tk5 && tk5.parentNode) tk5.parentNode.removeChild(tk5);
-    brainAddThought('question', '\u201C' + q.slice(0,38) + (q.length>38?'\u2026\u201D':'\u201D'), text2||'暂无回答，请重试。', null);
-  } catch(e3){
-    var tk6 = document.getElementById('brainThinking');
-    if(tk6 && tk6.parentNode) tk6.parentNode.removeChild(tk6);
-    var fb2 = '网络受限。';
-    if(signal2){ fb2 = sym3 + (signal2.isBull?'看多':'看空') + ' 置信度' + signal2.conf + '%。'; }
-    brainAddThought('question', '\u201C' + q.slice(0,38) + '\u201D', fb2, null);
-  }
-}
-
-function startBrainEngine(){
-  brainLoadMemory();
-  setTimeout(function(){
-    brainAddThought('inference', 'FINCH 思维引擎启动',
-      '正在初始化市场分析模块。持续监控价格走势、信号变化和市场情绪，主动推送关键判断。可在下方直接提问。', null);
-  }, 1500);
-  var lastInferTime2 = 0, lastConfLevel2 = null;
-  setInterval(function(){
-    var now2 = Date.now(), sig3 = S.lastSignal, px3 = S.lastPx;
-    if(!sig3 || !px3) return;
-    var confChg = (lastConfLevel2 !== null) && (Math.abs(sig3.conf - lastConfLevel2) >= 5);
-    if(confChg || ((now2 - lastInferTime2) > 90000)){
-      lastInferTime2 = now2; lastConfLevel2 = sig3.conf;
-      brainInfer(sig3, px3, BRAIN.lastPrice);
-      BRAIN.lastPrice = px3;
-    }
-  }, 5000);
-}
-
-(function(){
-  var _origRS3 = window.renderStrategy;
-  if(typeof _origRS3 === 'function'){
-    window.renderStrategy = function(){
-      _origRS3.apply(this, arguments);
-      setTimeout(function(){
-        if(S.lastSignal && S.lastPx){ brainInfer(S.lastSignal, S.lastPx, BRAIN.lastPrice); }
-      }, 1500);
-    };
-  }
-})();
-
 </script>
-
-
-
-
 <!-- ══ FINCH SMART ASSISTANT ══ -->
 <div id="finchAiOverlay" class="finch-ai-overlay">
   <div class="finch-ai-panel">
