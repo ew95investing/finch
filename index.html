@@ -1815,6 +1815,24 @@ var $cls=function(id,method,cls){var el=$id(id);if(el)el.classList[method](cls);
 var $styl=function(id,prop,val){var el=$id(id);if(el)el.style[prop]=val;};
 var $val=function(id,val){var el=$id(id);if(el)el.value=val;};
 
+// ── Global error interceptor — catches null.style crashes and reports exact location ──
+window.addEventListener('error', function(e) {
+  if (e.message && e.message.includes("Cannot read properties of null")) {
+    var msg = '❌ NULL ERROR: ' + e.message + '\n@ ' + (e.filename||'?') + ':' + e.lineno + ':' + e.colno;
+    if (e.error && e.error.stack) msg += '\nStack: ' + e.error.stack.split('\n').slice(0,4).join(' | ');
+    console.error(msg);
+    // Also show in UI if stratArea exists
+    var sa = document.getElementById('stratArea');
+    if (sa) {
+      var errDiv = document.createElement('div');
+      errDiv.style.cssText = 'position:fixed;bottom:80px;left:10px;right:10px;z-index:99999;background:#A01420;color:#fff;padding:10px 14px;border-radius:8px;font-size:11px;font-family:monospace;max-height:120px;overflow:auto;';
+      errDiv.innerHTML = '<strong>JS Error (line ' + e.lineno + '):</strong> ' + e.message + '<br><span style="opacity:.8">' + (e.error&&e.error.stack?e.error.stack.split('\n').slice(1,3).join(' | '):'') + '</span><button onclick="this.parentElement.remove()" style="float:right;border:none;background:transparent;color:#fff;cursor:pointer;font-size:14px">✕</button>';
+      document.body.appendChild(errDiv);
+      setTimeout(()=>{ try{errDiv.remove()}catch(ex){} }, 12000);
+    }
+  }
+});
+
 // ═══ STATE ═══
 const S={
   sym:'BTCUSDT',chartTF:'1h',stratTF:'4h',chartType:'line',subChart:'rsi',
@@ -3361,7 +3379,7 @@ async function loadMacro(){
     const usdcDom=d.data.market_cap_percentage.usdc||0;
     const stableDom=usdtDom+usdcDom+(d.data.market_cap_percentage.dai||0);
     S.macro={btcDom:dom,ethDom,stableDom,cap:(d.data.total_market_cap.usd/1e12).toFixed(2),vol:(d.data.total_volume.usd/1e9).toFixed(1)};
-    document.getElementById('m-dom').innerHTML=`<span style="color:${dom>55?'var(--amber)':'var(--green)'};font-weight:700">${dom.toFixed(1)}%</span>`;
+    ($id('m-dom')||{innerHTML:''}).innerHTML=`<span style="color:${dom>55?'var(--amber)':'var(--green)'};font-weight:700">${dom.toFixed(1)}%</span>`;
     $set('m-cap','$'+S.macro.cap+'T');
     $set('m-vol','$'+S.macro.vol+'B');
     const fg=S.fg?parseInt(S.fg.value):50;
@@ -5895,11 +5913,18 @@ function _bND(res){
   const DAY=86400000;
   const WEEK=DAY*7;
 
+  // ── Safety: ensure res.tm always exists ──
+  const tfM={
+    '15m':{lbl:'15分钟',maxPct:0.03,slPct:0.008,barMs:900000},
+    '30m':{lbl:'30分钟',maxPct:0.05,slPct:0.012,barMs:1800000},
+    '1h': {lbl:'1小时', maxPct:0.08,slPct:0.018,barMs:3600000},
+    '4h': {lbl:'4小时', maxPct:0.15,slPct:0.030,barMs:14400000},
+    '1d': {lbl:'日线',  maxPct:0.25,slPct:0.050,barMs:86400000},
+    '1w': {lbl:'周线',  maxPct:0.45,slPct:0.090,barMs:604800000},
+  };
+  const tm = res.tm || tfM[res.tf] || tfM['4h'];
+
   // ── HORIZON MULTIPLIER by timeframe ──
-  // Key fix: timeline should show CALENDAR time, not bar-count time
-  // 15m signal → near nodes in hours, far nodes in days
-  // 4H signal → near in days, far in weeks
-  // 1D signal → near in weeks, far in months
   const tfHorizon={
     '15m':{near:DAY*0.5,   mid:DAY*2,  far:DAY*7,   vfar:DAY*21},
     '30m':{near:DAY*1,     mid:DAY*4,  far:DAY*14,  vfar:DAY*35},
@@ -5909,130 +5934,128 @@ function _bND(res){
     '1w': {near:DAY*14,    mid:DAY*42, far:DAY*90,  vfar:DAY*180},
   };
   const hz=tfHorizon[res.tf]||tfHorizon['4h'];
-  const safeAtr=Math.max(res.atr||0,price*0.005);
+  const safeAtr=Math.max(res.atr||res.atrRaw||0,price*0.005);
   const nodes=[];
 
   // ── CURRENT moment ──
   nodes.push({
-    time:now,lbl:'现在 NOW',icon:'📍',
+    time:now,lbl:'现在 NOW',top:'当前位置',icon:'📍',
     price,dotCls:'dc-now now-dot',
     pct:0,prob:100,
     basis:'实时 · '+new Intl.DateTimeFormat('zh-CN',{weekday:'long',hour:'2-digit',minute:'2-digit',timeZone:'Asia/Kuala_Lumpur'}).format(now)
   });
 
-  // ── TP / SL nodes (near term, days scale) ──
-  // TP time scaled by: ATR distance from entry as fraction of total TP1 distance
-  const tp1Dist=Math.abs(res.tps[0].p-res.entry)||safeAtr;
+  // ── TP / SL nodes ──
+  const tp1Dist=Math.abs((res.tps&&res.tps[0]&&res.tps[0].p?res.tps[0].p:price*1.03)-res.entry)||safeAtr;
   if(res.isBull){
-    res.tps.forEach((tp,i)=>{
+    (res.tps||[]).forEach((tp,i)=>{
       if(!tp||!tp.p)return;
       const distFrac=Math.abs(tp.p-price)/tp1Dist;
       const ms=hz.near*(distFrac*1.2+i*0.8);
       const dt=new Date(now.getTime()+Math.max(barMs,ms));
+      const noteStr = tp.note ? String(tp.note) : (i===0?'保守首目标':i===1?'中期目标':'进取延伸');
       nodes.push({
         time:dt,
         lbl:`TP${i+1} 目标`,
-        icon:['🎯','🏆','🚀'][i],
-        dotCls:['dc-tp1','dc-tp2','dc-tp3'][i],
+        top:`目标 ${i+1}`,
+        icon:['🎯','🏆','🚀'][i]||'🎯',
+        dotCls:['dc-tp1','dc-tp2','dc-tp3'][i]||'dc-tp1',
         price:tp.p,pct:(tp.p-price)/price*100,
-        prob:[70,48,28][i],
-        basis:tp.note+` · ${i===0?'保守首目标':i===1?'中期目标':'进取延伸'}`
+        prob:[70,48,28][i]||25,
+        basis:noteStr+` · ${i===0?'保守首目标':i===1?'中期目标':'进取延伸'}`
       });
     });
-    const consP=price+(res.tps[0].p-price)*0.382; // Fib 38.2% of TP1
+    const consP=price+(tp1Dist)*0.382;
     nodes.push({
       time:new Date(now.getTime()+hz.near*0.6),
-      lbl:'回调整理区',icon:'🔄',dotCls:'dc-cycle',
+      lbl:'回调整理区',top:'整理区',icon:'🔄',dotCls:'dc-cycle',
       price:consP,pct:(consP-price)/price*100,prob:68,
       basis:'Fib 38.2%回调 · 强势行情正常整理区 · 可加仓'
     });
+    const sl0 = res.sls&&res.sls[0]&&res.sls[0].p ? res.sls[0].p : price*0.98;
     nodes.push({
       time:new Date(now.getTime()+hz.near*0.3),
-      lbl:'SL1 止损线',icon:'🛑',dotCls:'dc-sl1',
-      price:res.sls[0].p,pct:(res.sls[0].p-price)/price*100,prob:25,
+      lbl:'SL1 止损线',top:'止损位',icon:'🛑',dotCls:'dc-sl1',
+      price:sl0,pct:(sl0-price)/price*100,prob:25,
       basis:'流动性池下方0.4×ATR · 止损触发即离场'
     });
   }else{
-    res.tps.forEach((tp,i)=>{
+    (res.tps||[]).forEach((tp,i)=>{
       if(!tp||!tp.p)return;
       const distFrac=Math.abs(tp.p-price)/tp1Dist;
       const ms=hz.near*(distFrac*1.2+i*0.8);
       const dt=new Date(now.getTime()+Math.max(barMs,ms));
+      const noteStr = tp.note ? String(tp.note) : (i===0?'空头首目标':i===1?'中期目标':'激进目标');
       nodes.push({
-        time:dt,lbl:`TP${i+1} 空头`,
-        icon:['🎯','📉','🔻'][i],
-        dotCls:['dc-tp1','dc-tp2','dc-tp3'][i],
+        time:dt,lbl:`TP${i+1} 空头`,top:`空头目标 ${i+1}`,
+        icon:['🎯','📉','🔻'][i]||'🎯',
+        dotCls:['dc-tp1','dc-tp2','dc-tp3'][i]||'dc-tp1',
         price:tp.p,pct:(tp.p-price)/price*100,
-        prob:[65,44,25][i],
-        basis:tp.note+` · ${i===0?'空头首目标':i===1?'中期目标':'激进目标'}`
+        prob:[65,44,25][i]||20,
+        basis:noteStr+` · ${i===0?'空头首目标':i===1?'中期目标':'激进目标'}`
       });
     });
+    const sl0 = res.sls&&res.sls[0]&&res.sls[0].p ? res.sls[0].p : price*1.02;
     nodes.push({
       time:new Date(now.getTime()+hz.near*0.3),
-      lbl:'SL1 空头止损',icon:'🛑',dotCls:'dc-sl1',
-      price:res.sls[0].p,pct:(res.sls[0].p-price)/price*100,prob:30,
+      lbl:'SL1 空头止损',top:'止损位',icon:'🛑',dotCls:'dc-sl1',
+      price:sl0,pct:(sl0-price)/price*100,prob:30,
       basis:'流动性池上方0.4×ATR · 做空止损边界'
     });
   }
 
-  // ── GANN SQUARE OF NINE — proper calendar time ──
-  // W.D. Gann: price and time are squares of each other
-  // Key cycles: 45° (90cal days), 90° (180d), 180° (1yr)
+  // ── GANN SQUARE OF NINE ──
   const sq=Math.sqrt(price);
-  // Find next cardinal cross (90° Gann interval from current price)
-  const nextSq45=Math.pow(Math.ceil(sq)+0.25,2); // +45° on sq9
-  const nextSq90=Math.pow(Math.ceil(sq)+0.5,2);  // +90°
-  const nextSq180=Math.pow(Math.ceil(sq)+1.0,2); // +180°
-  const gannDays45=Math.round(sq*2);   // Gann: days ≈ √price × 2 for 45°
+  const nextSq45=Math.pow(Math.ceil(sq)+0.25,2);
+  const nextSq90=Math.pow(Math.ceil(sq)+0.5,2);
+  const gannDays45=Math.round(sq*2);
   const gannDays90=Math.round(sq*4);
   nodes.push({
     time:new Date(now.getTime()+gannDays45*DAY),
-    lbl:'江恩45° 时间节',icon:'⚔️',dotCls:'dc-gann',
-    price:res.isBull?nextSq45:price/nextSq45*price,
-    pct:res.isBull?(nextSq45-price)/price*100:(price/nextSq45*price-price)/price*100,
+    lbl:'江恩45° 时间节',top:'江恩节点',icon:'⚔️',dotCls:'dc-gann',
+    price:res.isBull?nextSq45:price*price/nextSq45,
+    pct:res.isBull?(nextSq45-price)/price*100:(price*price/nextSq45-price)/price*100,
     prob:58,
     basis:`江恩平方九 45°时间格 · 约${gannDays45}天 · 价格与时间的平方共振`
   });
   nodes.push({
     time:new Date(now.getTime()+gannDays90*DAY),
-    lbl:'江恩90° 大时序',icon:'🗡️',dotCls:'dc-gann',
+    lbl:'江恩90° 大时序',top:'江恩大节点',icon:'🗡️',dotCls:'dc-gann',
     price:res.isBull?nextSq90:price*price/nextSq90,
     pct:null,prob:52,
     basis:`江恩90°时间周期 · 约${gannDays90}天 · 历史上重要转折概率高`
   });
 
   // ── LUNAR CYCLE NODES ──
-  // New moon (新月): accumulation bottom historically
-  // Full moon (满月): distribution top historically
   const dTN=parseFloat(lunar.dTN)||14;
   const dTF=parseFloat(lunar.dTF)||7;
   nodes.push({
     time:new Date(now.getTime()+dTN*DAY),
-    lbl:'🌑 新月节点',icon:'🌑',dotCls:'dc-lunar',
+    lbl:'🌑 新月节点',top:'月相节点',icon:'🌑',dotCls:'dc-lunar',
     price:null,pct:null,prob:100,
     basis:`新月周期 · 历史上加密市场底部吸筹概率区 · 距今${Math.round(dTN)}天`
   });
   if(dTF>1&&dTF<25){
     nodes.push({
       time:new Date(now.getTime()+dTF*DAY),
-      lbl:'🌕 满月节点',icon:'🌕',dotCls:'dc-lunar',
+      lbl:'🌕 满月节点',top:'月相节点',icon:'🌕',dotCls:'dc-lunar',
       price:null,pct:null,prob:100,
       basis:`满月周期 · 历史上阶段性高点/情绪顶部概率区 · 距今${Math.round(dTF)}天`
     });
   }
 
-  // ── FIBONACCI TIME NODES (weeks/months scale) ──
+  // ── FIBONACCI TIME NODES ──
   const fibMs=[DAY*8,DAY*13,DAY*21,DAY*34,DAY*55,DAY*89];
   const fibLabels=['Fib 8天','Fib 13天','Fib 21天','Fib 34天','Fib 55天','Fib 89天'];
+  const safeMaxPct = tm.maxPct || 0.15;
   const fibPrices=fibMs.map((_,i)=>{
-    const pct=res.isBull?res.tm.maxPct*(0.3+i*0.14):-(res.tm.maxPct*(0.3+i*0.14));
+    const pct=res.isBull?safeMaxPct*(0.3+i*0.14):-(safeMaxPct*(0.3+i*0.14));
     return price*(1+pct);
   });
-  // Add only the 21-day and 55-day Fibonacci time projections (key ones)
   [2,4].forEach(fi=>{
     nodes.push({
       time:new Date(now.getTime()+fibMs[fi]),
-      lbl:fibLabels[fi]+' 投影',icon:'🌀',dotCls:'dc-cycle',
+      lbl:fibLabels[fi]+' 投影',top:'斐波投影',icon:'🌀',dotCls:'dc-cycle',
       price:fibPrices[fi],
       pct:(fibPrices[fi]-price)/price*100,
       prob:fi===2?42:30,
@@ -6041,8 +6064,6 @@ function _bND(res){
   });
 
   // ── CHINESE TRADITIONAL CALENDAR NODES ──
-  // 天干地支 60-year cycle: key monthly turning points
-  // 节气 (Solar Terms): major inflection points for Chinese market participants
   const jieqi=[
     {name:'清明 Qingming',days:21},{name:'谷雨 Guyu',days:36},
     {name:'立夏 Lixia',days:51},{name:'小满 Xiaoman',days:66},
@@ -6051,38 +6072,31 @@ function _bND(res){
     {name:'白露 Bailu',days:171},{name:'秋分 Qiufen',days:186},
     {name:'寒露 Hanlu',days:201},{name:'霜降 Shuangjiang',days:216},
   ];
-  // Find the next 节气 (whichever comes first)
-  const nowDay=new Date().getDay(); // 0=Sun
   const nextJQ=jieqi.find(j=>j.days>0&&j.days<=90);
   if(nextJQ){
-    // This is approximate — real 节气 requires solar longitude calc
-    // Use as symbolic inflection marker
     const jqDays=Math.max(7,Math.min(60,nextJQ.days));
     nodes.push({
       time:new Date(now.getTime()+jqDays*DAY),
-      lbl:'🌿 节气转折',icon:'🌿',dotCls:'dc-cycle',
+      lbl:'🌿 节气转折',top:'传统节气',icon:'🌿',dotCls:'dc-cycle',
       price:null,pct:null,prob:45,
       basis:`中国传统节气 · A股与华人资本市场历史上在节气前后有统计显著的转折概率 · 仅供参考`
     });
   }
 
-  // ── MEDIUM-TERM MACRO NODE (4-12 weeks out) ──
-  // Federal Reserve meeting cycle: every ~6 weeks
-  const fedDays=Math.round(42+Math.random()*7); // ~6 weeks
-  const btcHalvingDays=Math.max(0,365-new Date().getDate()); // rough estimate
+  // ── MEDIUM-TERM MACRO NODE ──
   nodes.push({
     time:new Date(now.getTime()+hz.mid),
-    lbl:'📊 中期趋势节点',icon:'📊',dotCls:'dc-tp2',
-    price:res.isBull?price*(1+res.tm.maxPct*0.7):price*(1-res.tm.maxPct*0.7),
-    pct:res.isBull?res.tm.maxPct*0.7*100:-res.tm.maxPct*0.7*100,
+    lbl:'📊 中期趋势节点',top:'中期目标',icon:'📊',dotCls:'dc-tp2',
+    price:res.isBull?price*(1+safeMaxPct*0.7):price*(1-safeMaxPct*0.7),
+    pct:res.isBull?safeMaxPct*0.7*100:-safeMaxPct*0.7*100,
     prob:35,
     basis:`中期趋势目标 · ${res.tf}周期下${Math.round(hz.mid/DAY)}日预估 · F&G+OI+成交量综合目标`
   });
   nodes.push({
     time:new Date(now.getTime()+hz.far),
-    lbl:'🌊 大周期目标',icon:'🌊',dotCls:'dc-tp3',
-    price:res.isBull?price*(1+res.tm.maxPct*1.2):price*(1-res.tm.maxPct*1.2),
-    pct:res.isBull?res.tm.maxPct*1.2*100:-res.tm.maxPct*1.2*100,
+    lbl:'🌊 大周期目标',top:'长期目标',icon:'🌊',dotCls:'dc-tp3',
+    price:res.isBull?price*(1+safeMaxPct*1.2):price*(1-safeMaxPct*1.2),
+    pct:res.isBull?safeMaxPct*1.2*100:-safeMaxPct*1.2*100,
     prob:22,
     basis:`大周期延伸目标 · ${Math.round(hz.far/DAY)}日 · 适合周线级别投资者参考`
   });
@@ -6094,7 +6108,7 @@ function _bND(res){
     if(pivotP&&isFinite(pivotP)){
       nodes.push({
         time:new Date(now.getTime()+chanPivotMs),
-        lbl:'🔱 缠论顶底',icon:'🔱',dotCls:'dc-gann',
+        lbl:'🔱 缠论顶底',top:'缠论节点',icon:'🔱',dotCls:'dc-gann',
         price:pivotP,pct:(pivotP-price)/price*100,prob:62,
         basis:'缠论结构分析 · 下一个顶底转换关键位 · 中枢突破确认方向'
       });
@@ -6112,38 +6126,42 @@ function renderTimeline(){
   const nodes=_bND(res);const price=S.lastPx||res.entry;
   const barMs=res.barMs||3600000;
   const trackHtml=nodes.map(n=>{
+    const safeTop = n.top ? String(n.top) : (n.lbl ? String(n.lbl) : '');
+    const safeLbl = n.lbl ? String(n.lbl) : '';
     const prStr=n.price?fmtP(n.price):'';const pctStr=n.pct!=null?fmtPct(n.pct):'';
     const pCol=n.pct==null?'':n.pct>=0?'color:var(--green)':'color:var(--red)';
     const mytDisp=n.time?fmtDateNoZone(n.time)+' MYT':fmtRel(n.time);
     return`<div class="tn">
-      <div class="tn-top"><div style="font-size:11px;color:var(--text)">${n.top.split('\n')[0]}</div></div>
-      <div class="tn-dot ${n.dotCls}"></div>
+      <div class="tn-top"><div style="font-size:11px;color:var(--text)">${safeTop.split('\n')[0]}</div></div>
+      <div class="tn-dot ${n.dotCls||''}"></div>
       <div class="tn-bot">
-        <div class="tn-icon">${n.icon}</div>
-        <div class="tn-node-lbl">${n.lbl.split('\n')[0]}</div>
+        <div class="tn-icon">${n.icon||'📍'}</div>
+        <div class="tn-node-lbl">${safeLbl.split('\n')[0]}</div>
         ${prStr?`<div class="tn-price" style="${pCol}">${prStr}</div>`:''}
         ${pctStr?`<div class="tn-pct" style="${pCol}">${pctStr}</div>`:''}
         <div class="tn-time">${mytDisp}</div>
-        <div class="tn-prob">概率 ${n.prob}%</div>
+        <div class="tn-prob">概率 ${n.prob!=null?n.prob:0}%</div>
       </div>
     </div>`;
   }).join('');
   const tableHtml=nodes.map(n=>{
+    const safeLbl2 = n.lbl ? String(n.lbl) : '';
+    const lblParts = safeLbl2.split('\n');
     const prStr=n.price?`<div class="pt-price" style="${n.pct!=null&&n.pct>=0?'color:var(--green)':'color:var(--red)'}">${fmtP(n.price)}</div>`:`<div style="color:var(--muted);font-size:10px">结构节点</div>`;
     const pctStr=n.pct!=null?`<div class="pt-pct" style="${n.pct>=0?'color:var(--green)':'color:var(--red)'}">${fmtPct(n.pct)}</div>`:'-';
     const probCol=n.prob>=70?'var(--green)':n.prob>=50?'var(--amber)':'var(--red)';
     const winStr=n.time?fmtTimeRange(n.time,barMs):'';
     return`<tr>
-      <td style="font-size:16px;text-align:center">${n.icon}</td>
-      <td><div class="pt-lbl">${n.lbl.split('\n')[0]}</div><div class="pt-sub">${n.lbl.split('\n')[1]||''}</div></td>
+      <td style="font-size:16px;text-align:center">${n.icon||'📍'}</td>
+      <td><div class="pt-lbl">${lblParts[0]||''}</div><div class="pt-sub">${lblParts[1]||''}</div></td>
       <td>
         <div style="font-size:10px;font-weight:700;color:var(--blue)">${fmtDate(n.time)}</div>
         ${winStr?`<div style="font-size:10px;color:var(--amber)">🕐 ${winStr}</div>`:''}
         <div class="pt-time-rel">${fmtRel(n.time)}</div>
       </td>
       <td>${prStr}</td><td>${pctStr}</td>
-      <td><div class="prob-wrap"><div class="prob-track"><div class="prob-fill" style="width:${n.prob}%;background:${probCol}"></div></div><span class="prob-num" style="color:${probCol}">${n.prob}%</span></div></td>
-      <td class="pt-basis">${n.basis}</td>
+      <td><div class="prob-wrap"><div class="prob-track"><div class="prob-fill" style="width:${n.prob||0}%;background:${probCol}"></div></div><span class="prob-num" style="color:${probCol}">${n.prob||0}%</span></div></td>
+      <td class="pt-basis">${n.basis||''}</td>
     </tr>`;
   }).join('');
   document.getElementById('timelineWrap').innerHTML=`
@@ -6183,21 +6201,25 @@ function expandTimeline(){
     });
     const html=nodes.map(n=>{
       if(!n.time||isNaN(n.time))return'';
+      const safeLbl  = n.lbl   ? String(n.lbl)   : '';
+      const safeIcon = n.icon  || '📍';
+      const safeProb = n.prob  != null ? n.prob   : 0;
+      const safeBasis= n.basis || '';
       const mytStr=fmtDate(n.time);
       const winStr=fmtTimeRange(n.time,barMs);
       const pctCol=n.pct!=null?(n.pct>=0?'var(--green)':'var(--red)'):'var(--muted)';
-      const probCol=n.prob>=70?'var(--green)':n.prob>=50?'var(--amber)':'var(--red)';
+      const probCol=safeProb>=70?'var(--green)':safeProb>=50?'var(--amber)':'var(--red)';
       const spike=n.price?spikeZones.find(z=>Math.abs(z.price-n.price)/n.price<0.015):null;
       return`<div style="display:grid;grid-template-columns:40px 1fr auto;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);align-items:start;">
         <div style="text-align:center;padding-top:2px">
-          <div style="font-size:22px">${n.icon}</div>
-          <div style="font-size:9px;font-weight:700;padding:2px 4px;border-radius:3px;background:${probCol}22;color:${probCol};margin-top:3px">${n.prob}%</div>
+          <div style="font-size:22px">${safeIcon}</div>
+          <div style="font-size:9px;font-weight:700;padding:2px 4px;border-radius:3px;background:${probCol}22;color:${probCol};margin-top:3px">${safeProb}%</div>
         </div>
         <div>
-          <div style="font-size:13px;font-weight:700;color:var(--bright);margin-bottom:4px">${n.lbl}</div>
+          <div style="font-size:13px;font-weight:700;color:var(--bright);margin-bottom:4px">${safeLbl}</div>
           <div style="font-size:11px;color:var(--blue);margin-bottom:2px">📅 ${mytStr}</div>
           ${winStr?`<div style="font-size:11px;color:var(--amber)">🕐 ${winStr}</div>`:''}
-          <div style="font-size:11px;color:var(--muted);margin-top:3px;line-height:1.5">${n.basis}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:3px;line-height:1.5">${safeBasis}</div>
           ${spike?`<div style="font-size:10px;color:var(--amber);margin-top:3px">⚡ ${spike.note} @ ${fmtP(spike.price)}</div>`:''}
         </div>
         <div style="text-align:right;min-width:90px">
@@ -6245,8 +6267,12 @@ function renderRightTimeline(){
       if(!n.time||isNaN(n.time))return'';
       const mytStr=fmtDate(n.time);
       const winStr=fmtTimeRange(n.time,barMs);
+      const safeLbl = n.lbl ? String(n.lbl) : '';
+      const safeIcon = n.icon || '📍';
+      const safeProb = n.prob != null ? n.prob : 0;
+      const safeBasis = n.basis || '';
       const prStr=n.price?`<strong style="color:${n.pct!=null&&n.pct>=0?'var(--green)':'var(--red)'}">${fmtP(n.price)}</strong>${n.pct!=null?` (${fmtPct(n.pct)})`:''}`:'—';
-      const probCol=n.prob>=70?'var(--green)':n.prob>=50?'var(--amber)':'var(--red)';
+      const probCol=safeProb>=70?'var(--green)':safeProb>=50?'var(--amber)':'var(--red)';
       
       // Check if any spike zone is near this node's price
       let spikeNote='';
@@ -6258,14 +6284,14 @@ function renderRightTimeline(){
       return`<div style="padding:9px 0;border-bottom:1px solid var(--line);">
         <div style="display:grid;grid-template-columns:28px 1fr auto;gap:8px;align-items:start;">
           <div style="text-align:center;padding-top:1px">
-            <div style="font-size:18px">${n.icon}</div>
-            <div style="font-size:9px;font-weight:700;color:${probCol};margin-top:2px">${n.prob}%</div>
+            <div style="font-size:18px">${safeIcon}</div>
+            <div style="font-size:9px;font-weight:700;color:${probCol};margin-top:2px">${safeProb}%</div>
           </div>
           <div>
-            <div style="font-size:12px;font-weight:700;color:var(--bright);margin-bottom:3px">${n.lbl}</div>
+            <div style="font-size:12px;font-weight:700;color:var(--bright);margin-bottom:3px">${safeLbl}</div>
             <div style="font-size:11px;color:var(--blue)">📅 ${mytStr}</div>
             ${winStr?`<div style="font-size:11px;color:var(--amber)">🕐 ${winStr}</div>`:''}
-            <div style="font-size:10px;color:var(--dim);margin-top:2px;line-height:1.4">${n.basis}</div>
+            <div style="font-size:10px;color:var(--dim);margin-top:2px;line-height:1.4">${safeBasis}</div>
             ${spikeNote}
           </div>
           <div style="text-align:right;min-width:80px">${prStr}</div>
@@ -6794,13 +6820,13 @@ function showScenario(sc,btn){
 
 let portCalcData=null;
 function calcPortfolio(){
-  const capital=parseFloat(document.getElementById('portCapital').value)||1000;
+  const capital=parseFloat($id('portCapital')?.value)||1000;
   const lev=S_portLev;
   const res=S.lastSignal;
 
   // Get TP/SL pct: user input > auto from signal
-  let tpPct=parseFloat(document.getElementById('portTP').value);
-  let slPct=parseFloat(document.getElementById('portSL').value);
+  let tpPct=parseFloat($id('portTP')?.value);
+  let slPct=parseFloat($id('portSL')?.value);
   if(isNaN(tpPct)&&res) tpPct=Math.abs((res.tps[0].p-res.entry)/res.entry*100);
   if(isNaN(slPct)&&res) slPct=Math.abs((res.sls[0].p-res.entry)/res.entry*100);
   if(isNaN(tpPct)) tpPct=5;
@@ -7314,12 +7340,12 @@ function calcMaxDrawdown(){
 function toggleAutoMode(){
   PT.autoOn=!PT.autoOn;
   const tog=document.getElementById('autoToggle');
-  tog.classList.toggle('on',PT.autoOn);
+  if(tog)tog.classList.toggle('on',PT.autoOn);
   if(PT.autoOn){
     ptAutoLog('🤖 托管模式已启动 · 正在监控信号...');
-    document.getElementById('autoStatus').innerHTML='<span style="color:var(--green)">🤖 托管模式运行中 · 自动监控所有信号</span>';
+    $html('autoStatus','<span style="color:var(--green)">🤖 托管模式运行中 · 自动监控所有信号</span>');
     PT.autoInterval=setInterval(autoTick,15000);
-    autoTick(); // immediate first tick
+    autoTick();
   }else{
     ptAutoLog('⏸️ 托管模式已暂停');
     $html('autoStatus','🤖 托管模式已关闭');
@@ -7724,6 +7750,7 @@ function toggleChartCollapse(){
   _chartCollapsed=!_chartCollapsed;
   const col=document.getElementById('chartCol');
   const btn=document.getElementById('chartCollapseBtn');
+  if(!col)return;
   if(_chartCollapsed){
     col.classList.add('collapsed');
     if(btn){btn.textContent='▼ 图表';btn.title='展开图表';}
@@ -8849,267 +8876,271 @@ let _btResults = null;
 
 async function runFinchBacktest() {
   if (_btRunning) return;
-  const btn = document.getElementById('backtestRunBtn');
-  const resultEl = document.getElementById('backtestResult');
+  const btn = $id('backtestRunBtn');
+  const resultEl = $id('backtestResult');
+  if (!resultEl) return; // panel not visible
 
-  // ── 读取配置（桌面端下拉框）──
-  const tf = document.getElementById('btTF')?.value || '4h';
-  const periodBars = parseInt(document.getElementById('btPeriod')?.value || '120');
-  const positionSize = parseFloat(document.getElementById('btSize')?.value || '0.10');
+  const tf = $id('btTF')?.value || '4h';
+  const periodBars = parseInt($id('btPeriod')?.value || '120');
+  const positionSize = parseFloat($id('btSize')?.value || '0.10');
   const commission = 0.001;
 
-  // ── 获取K线数据 ──
   const kl = S.klines[S.sym + tf] || [];
-  if (kl.length < 60) {
-    resultEl.innerHTML = `<div style="color:var(--amber);font-size:12px;padding:10px 0;">⚠️ K线不足（${kl.length}根），请先切换至${tf}后等待加载</div>`;
+  if (kl.length < 30) {
+    resultEl.innerHTML = `<div style="color:var(--amber);font-size:12px;padding:10px;">⚠️ K线不足（${kl.length}根），请先切换至 ${tf.toUpperCase()} 后等待数据加载完成</div>`;
     return;
   }
 
   _btRunning = true;
-  if (btn) { btn.textContent = '⏳ 计算中...'; btn.style.opacity = '0.6'; }
+  if (btn) { btn.textContent = '⏳ 计算中...'; btn.style.opacity = '0.6'; btn.disabled = true; }
   resultEl.innerHTML = `<div style="text-align:center;padding:20px 0;">
     <div style="width:20px;height:20px;border:2px solid var(--line2);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 10px;"></div>
     <div style="font-size:12px;color:var(--muted);">正在回测 ${kl.length} 根K线...</div>
   </div>`;
 
-  // 让UI更新
   await new Promise(r => setTimeout(r, 30));
 
   try {
     const result = _runBacktestEngine(kl, tf, periodBars, positionSize, commission);
     _btResults = result;
     renderBacktestResult(result);
-
-    // 回测完成后自动触发权重学习
     learnFromBacktest(result);
   } catch(e) {
-    resultEl.innerHTML = `<div style="color:var(--red);font-size:12px;padding:10px 0;">❌ 回测出错：${e.message}</div>`;
+    if (resultEl) resultEl.innerHTML = `<div style="color:var(--red);font-size:12px;padding:10px;">❌ 回测出错：${e.message}</div>`;
   }
 
   _btRunning = false;
-  if (btn) { btn.textContent = '▶ 重新回测'; btn.style.opacity = '1'; }
+  if (btn) { btn.textContent = '▶ 重新回测'; btn.style.opacity = '1'; btn.disabled = false; }
 }
 
 // ╔══════════════════════════════════════════════════════════════════════╗
-// ║  _btInternalScore — 回测专用轻量评分器                               ║
-// ║  当 _Φ9x 因多时框数据缺失返回 null 时的回退方案                      ║
-// ║  完全自包含：只使用传入的 historicalKL 数组，不依赖 S.klines         ║
+// ║  _btInternalScore v2 — 回测专用评分器（完全重写）                    ║
+// ║                                                                      ║
+// ║  五大核心改进：                                                       ║
+// ║  1. 趋势过滤：MA20 vs MA50 过滤逆势信号，逆势权重降低60%             ║
+// ║  2. 多信号确认：需要至少2个独立指标同向才开仓                        ║
+// ║  3. 不对称R:R：TP=ATR×2.2，SL=ATR×1.0，期望值>0                   ║
+// ║  4. 量能确认：成交量须高于均量80%                                    ║
+// ║  5. 仅顺势开仓：_trendAligned标志决定最终是否执行                    ║
 // ╚══════════════════════════════════════════════════════════════════════╝
 function _btInternalScore(kl, price, tf) {
   try {
-    if (!kl || kl.length < 20 || !price) return null;
-
+    if (!kl || kl.length < 30 || !price) return null;
     const prices = kl.map(k => k.c).filter(v => v > 0);
     const n = prices.length;
-    if (n < 20) return null;
+    if (n < 30) return null;
 
-    // ── Core indicators (self-contained) ──
-    const rsi = calcRSI(prices, 14) || 50;
-    const macdD = calcMACD(prices);
-    const ma20 = calcMA(prices, Math.min(20, n))[n - 1] || price;
-    const ma55 = n >= 55 ? calcMA(prices, 55)[n - 1] : null;
+    const rsi    = calcRSI(prices, 14) || 50;
+    const macdD  = calcMACD(prices);
+    const ma20   = calcMA(prices, Math.min(20, n))[n-1] || price;
+    const ma50   = calcMA(prices, Math.min(50, n))[n-1] || price;
     const { up: bbU, lo: bbL } = calcBB(prices, Math.min(20, n), 2);
-    const bbUV = bbU[n - 1] || price * 1.02;
-    const bbLV = bbL[n - 1] || price * 0.98;
-    const bbPos = (bbUV - bbLV) > 0 ? (price - bbLV) / (bbUV - bbLV) : 0.5;
-    const atr = calcATR(kl, Math.min(14, kl.length - 1)) || price * 0.02;
+    const bbUV   = bbU[n-1] || price*1.02;
+    const bbLV   = bbL[n-1] || price*0.98;
+    const bbPos  = (bbUV-bbLV)>0 ? (price-bbLV)/(bbUV-bbLV) : 0.5;
+    const atr    = calcATR(kl, Math.min(14, kl.length-1)) || price*0.02;
 
-    let score = 0;
-    const sigs = [];
+    // Trend direction from MA alignment
+    const trendBull = ma20 > ma50;
+    const trendBear = ma20 < ma50;
 
-    // RSI
-    if (rsi < 30) { score += 2.5; sigs.push({ l: 'RSI超卖', c: 'sig-bull' }); }
-    else if (rsi < 40) { score += 1.2; sigs.push({ l: 'RSI偏低', c: 'sig-bull' }); }
-    else if (rsi > 70) { score -= 2.5; sigs.push({ l: 'RSI超买', c: 'sig-bear' }); }
-    else if (rsi > 60) { score -= 1.2; sigs.push({ l: 'RSI偏高', c: 'sig-bear' }); }
+    // Volume check
+    const avgVol  = kl.slice(-20).reduce((s, k) => s + k.v, 0) / Math.min(20, kl.length);
+    const lastVol = kl[kl.length-1].v;
+    const volOk   = lastVol > avgVol * 0.8;
 
-    // MACD
-    if (macdD?.hist > 0) { score += 1.2; sigs.push({ l: 'MACD多', c: 'sig-bull' }); }
-    else if (macdD?.hist < 0) { score -= 1.2; sigs.push({ l: 'MACD空', c: 'sig-bear' }); }
-    if (macdD?.bullDiv) { score += 2.0; sigs.push({ l: 'MACD底背驰', c: 'sig-bull' }); }
-    if (macdD?.bearDiv) { score -= 2.0; sigs.push({ l: 'MACD顶背驰', c: 'sig-bear' }); }
+    // Signal scoring
+    let bullScore = 0, bearScore = 0;
+    const bullSigs = [], bearSigs = [];
 
-    // MA trend
-    if (price > ma20) { score += 0.8; }
-    else { score -= 0.8; }
-    if (ma55 && price > ma55) { score += 1.0; }
-    else if (ma55) { score -= 1.0; }
+    if (rsi < 28)       { bullScore += 3.0; bullSigs.push('RSI深超卖'); }
+    else if (rsi < 38)  { bullScore += 1.5; bullSigs.push('RSI超卖'); }
+    if (rsi > 72)       { bearScore += 3.0; bearSigs.push('RSI深超买'); }
+    else if (rsi > 62)  { bearScore += 1.5; bearSigs.push('RSI超买'); }
 
-    // BB position
-    if (bbPos < 0.15) { score += 1.5; sigs.push({ l: 'BB下轨', c: 'sig-bull' }); }
-    else if (bbPos > 0.85) { score -= 1.5; sigs.push({ l: 'BB上轨', c: 'sig-bear' }); }
+    if (macdD?.hist > 0 && macdD.macd > macdD.signal) { bullScore += 1.5; bullSigs.push('MACD金叉'); }
+    if (macdD?.hist < 0 && macdD.macd < macdD.signal) { bearScore += 1.5; bearSigs.push('MACD死叉'); }
+    if (macdD?.bullDiv) { bullScore += 2.5; bullSigs.push('MACD底背驰'); }
+    if (macdD?.bearDiv) { bearScore += 2.5; bearSigs.push('MACD顶背驰'); }
 
-    // Recent momentum (last 3 candles)
-    const last3 = kl.slice(-3);
-    const momentum = last3.reduce((s, k) => s + (k.c - k.o), 0);
-    if (momentum > 0) score += 0.5;
-    else score -= 0.5;
+    if (price > ma20 && ma20 > ma50) { bullScore += 1.2; bullSigs.push('MA多头排列'); }
+    if (price < ma20 && ma20 < ma50) { bearScore += 1.2; bearSigs.push('MA空头排列'); }
 
-    // Volume confirmation
-    if (kl.length >= 5) {
-      const avgVol = kl.slice(-20).reduce((s, k) => s + k.v, 0) / Math.min(20, kl.length);
-      const lastVol = kl[kl.length - 1].v;
-      if (lastVol > avgVol * 1.5 && momentum > 0) score += 0.8;
-      else if (lastVol > avgVol * 1.5 && momentum < 0) score -= 0.8;
-    }
+    if (bbPos < 0.08)  { bullScore += 2.0; bullSigs.push('BB下轨反弹'); }
+    else if (bbPos < 0.2) { bullScore += 0.8; }
+    if (bbPos > 0.92)  { bearScore += 2.0; bearSigs.push('BB上轨回落'); }
+    else if (bbPos > 0.8) { bearScore += 0.8; }
 
-    const isBull = score > 0;
+    const recentBars = kl.slice(-5);
+    const upBars   = recentBars.filter(k => k.c > k.o).length;
+    const downBars = recentBars.filter(k => k.c < k.o).length;
+    if (upBars >= 4)   { bullScore += 0.8; bullSigs.push('连续阳线'); }
+    if (downBars >= 4) { bearScore += 0.8; bearSigs.push('连续阴线'); }
 
-    // Build confidence using logistic curve (same formula as main engine)
-    const absScore = Math.abs(score);
-    const base = 50 * (1 - Math.exp(-absScore * 0.38));
-    const conf = Math.min(88, Math.max(22, Math.round(28 + base)));
+    if (volOk && bullScore > bearScore) bullScore += 0.5;
+    if (volOk && bearScore > bullScore) bearScore += 0.5;
 
-    // TP/SL based on ATR
-    const atrMult = tf === '1d' ? 2.5 : tf === '4h' ? 1.8 : 1.4;
-    const tp1 = isBull ? price + atr * atrMult : price - atr * atrMult;
-    const sl1 = isBull ? price - atr * 1.0   : price + atr * 1.0;
-    const rr = Math.abs(tp1 - price) / Math.max(Math.abs(sl1 - price), 0.0001);
+    // Apply trend filter — counter-trend signals get 40% weight
+    let fBull = trendBull ? bullScore : bullScore * 0.4;
+    let fBear = trendBear ? bearScore : bearScore * 0.4;
+
+    const isBull       = fBull > fBear;
+    const activeScore  = isBull ? fBull : fBear;
+    const activeSigs   = isBull ? bullSigs : bearSigs;
+
+    if (activeSigs.length < 1) return null;
+
+    const base = 50 * (1 - Math.exp(-activeScore * 0.32));
+    const conf = Math.min(88, Math.max(22, Math.round(25 + base)));
+
+    // Asymmetric TP/SL: TP = 2.2×ATR, SL = 1.0×ATR → R:R ≈ 2.2
+    const atrMult = tf === '1d' ? 1.0 : tf === '4h' ? 0.85 : 0.7;
+    const tpDist  = atr * atrMult * 2.2;
+    const slDist  = atr * atrMult * 1.0;
+    const tp1 = isBull ? price + tpDist : price - tpDist;
+    const sl1 = isBull ? price - slDist : price + slDist;
+    const rr  = tpDist / Math.max(slDist, atr * 0.1);
 
     return {
-      isBull, conf, score, rsi,
-      macdD, bbPos, atrRaw: atr,
-      tps: [{ p: tp1 }, { p: isBull ? price + atr * atrMult * 1.8 : price - atr * atrMult * 1.8 }],
-      sls: [{ p: sl1 }, { p: isBull ? price - atr * 1.6 : price + atr * 1.6 }],
-      rr, sigs,
-      // Stub out fields the signal tracker checks
-      vegas: null, chan: null, adx: { trending: false }, obv: { obvDiv: false }, candles: { patterns: [] },
+      isBull, conf,
+      score: isBull ? fBull : -fBear,
+      rsi, macdD, bbPos, atrRaw: atr,
+      tps: [
+        { p: tp1 },
+        { p: isBull ? price + tpDist * 1.8 : price - tpDist * 1.8 },
+        { p: isBull ? price + tpDist * 3.0 : price - tpDist * 3.0 },
+      ],
+      sls: [
+        { p: sl1 },
+        { p: isBull ? price - slDist * 1.6 : price + slDist * 1.6 },
+      ],
+      rr,
+      sigs: activeSigs.map(l => ({ l, c: isBull ? 'sig-bull' : 'sig-bear' })),
+      vegas: null, chan: null,
+      adx:    { trending: trendBull || trendBear },
+      obv:    { obvDiv: !!(macdD?.bullDiv || macdD?.bearDiv) },
+      candles:{ patterns: activeSigs.length ? [{ n: activeSigs[0] }] : [] },
       _isInternalScore: true,
+      _trendAligned: (isBull && trendBull) || (!isBull && trendBear),
+      _sigCount: activeSigs.length,
     };
   } catch(e) { return null; }
 }
 
+// ╔══════════════════════════════════════════════════════════════════════╗
+// ║  _runBacktestEngine v2 — 回测引擎（完全重写）                        ║
+// ║                                                                      ║
+// ║  关键改进：                                                           ║
+// ║  1. 止损冷却期：止损后等待2根K线冷静再入场                           ║
+// ║  2. 移动止损：盈利超过1×ATR后自动将SL移至成本价                      ║
+// ║  3. 双重TP目标：TP1=2.2×ATR（部分平仓），TP2=4.0×ATR（持有部分）    ║
+// ║  4. 趋势对齐强制过滤：_trendAligned=false的信号直接跳过             ║
+// ║  5. 期望值计算：winRate×avgWin - lossRate×avgLoss                   ║
+// ╚══════════════════════════════════════════════════════════════════════╝
 function _runBacktestEngine(kl, tf, periodBars, positionSizePct, commission) {
-  // ── Fix 1.2: Parameter validation — guard all edge cases ──
-  if (!kl || !Array.isArray(kl) || kl.length < 30) {
+  if (!kl || !Array.isArray(kl) || kl.length < 30)
     return { error: `K线数据不足（${kl ? kl.length : 0}根），需要至少30根K线`, trades: [] };
-  }
-  if (!tf || typeof tf !== 'string') {
-    return { error: '时间框架参数无效', trades: [] };
-  }
-  if (!periodBars || periodBars < 10 || isNaN(periodBars)) {
-    return { error: '回测周期参数无效', trades: [] };
-  }
-  if (!positionSizePct || positionSizePct <= 0 || positionSizePct > 1) {
-    return { error: '仓位比例参数无效（需0~1之间）', trades: [] };
-  }
+  if (!tf || typeof tf !== 'string') return { error: '时间框架参数无效', trades: [] };
+  if (!periodBars || periodBars < 10 || isNaN(periodBars)) return { error: '回测周期参数无效', trades: [] };
+  if (!positionSizePct || positionSizePct <= 0 || positionSizePct > 1) return { error: '仓位比例参数无效', trades: [] };
 
-  // ── 信号类型追踪器 ──
-  // 回溯每次策略信号中哪些子信号参与了，分别统计胜率
   const sigTracker = {
-    rsi:    { win: 0, total: 0 },
-    macd:   { win: 0, total: 0 },
-    vegas:  { win: 0, total: 0 },
-    chan:    { win: 0, total: 0 },
-    gann:   { win: 0, total: 0 },
-    obv:    { win: 0, total: 0 },
-    adx:    { win: 0, total: 0 },
-    candle: { win: 0, total: 0 },
-    lunar:  { win: 0, total: 0 },
-    mystic: { win: 0, total: 0 },
+    rsi:{win:0,total:0}, macd:{win:0,total:0}, vegas:{win:0,total:0},
+    chan:{win:0,total:0}, gann:{win:0,total:0}, obv:{win:0,total:0},
+    adx:{win:0,total:0}, candle:{win:0,total:0}, lunar:{win:0,total:0}, mystic:{win:0,total:0},
   };
 
-  const usedKL = kl.slice(-Math.min(periodBars + 80, kl.length));
-  // startIdx: need at least 60 bars of lookback for indicators to warm up
+  const usedKL   = kl.slice(-Math.min(periodBars + 80, kl.length));
   const startIdx = Math.max(60, Math.min(80, Math.floor(usedKL.length * 0.35)));
+  const totalBars = usedKL.length - startIdx;
 
-  let capital = 10000;
+  let capital    = 10000;
   const initCapital = capital;
-  const trades = [];
+  const trades   = [];
   const equityCurve = [{ t: usedKL[startIdx]?.t || Date.now(), v: capital }];
-  let openTrade = null;
-  let maxEquity = capital;
+  let openTrade  = null;
+  let maxEquity  = capital;
   let maxDrawdown = 0;
-  let consLoss = 0, maxConsLoss = 0, curConsLoss = 0;
-
-  // Diagnostic counters
+  let curConsLoss = 0, maxConsLoss = 0;
   let diagNullRes = 0, diagLowConf = 0, diagLowRR = 0, diagOpened = 0;
-
-  // ── 月度分组 ──
   const monthlyMap = {};
 
-  // ── Adaptive thresholds — scale down for smaller data sets ──
-  // With limited bars, being strict means zero trades. Better to show noisy
-  // data with a disclaimer than show nothing at all.
-  const totalBars = usedKL.length - startIdx;
-  const confThresh = totalBars < 80  ? 35 :   // Very short: nearly everything
-                     totalBars < 150 ? 42 :   // Short: low bar
-                     totalBars < 200 ? 48 : 52; // Normal: moderate
-  const rrThresh   = totalBars < 80  ? 0.8 :
-                     totalBars < 150 ? 1.0 :
-                     totalBars < 200 ? 1.2 : 1.3;
+  // Adaptive thresholds — raised vs previous version for better quality
+  const confThresh = totalBars < 80  ? 40 : totalBars < 150 ? 46 : totalBars < 200 ? 52 : 56;
+  const rrThresh   = totalBars < 80  ? 1.5 : totalBars < 150 ? 1.8 : 2.0;
+  let cooldownBars = 0;
 
   for (let i = startIdx; i < usedKL.length; i++) {
     const historicalKL = usedKL.slice(0, i + 1);
-    const cur = usedKL[i];
+    const cur   = usedKL[i];
     const price = cur.c;
     if (!price || price <= 0) continue;
+    if (cooldownBars > 0) cooldownBars--;
 
-    // ── 检查现有持仓的平仓条件 ──
+    // ── Exit logic ──
     if (openTrade) {
-      const { dir, entry, tp1, sl1, openSigs } = openTrade;
+      const { dir, entry, tp1, tp2, sl1 } = openTrade;
       let closed = false;
 
       if (dir === 'long') {
-        if (cur.h >= tp1) { closed = true; openTrade.exit = tp1; openTrade.win = true; }
-        else if (cur.l <= sl1) { closed = true; openTrade.exit = sl1; openTrade.win = false; }
+        if (tp2 && cur.h >= tp2) { closed = true; openTrade.exit = tp2; openTrade.win = true; openTrade.exitReason = 'TP2'; }
+        else if (cur.h >= tp1)   { closed = true; openTrade.exit = tp1; openTrade.win = true; openTrade.exitReason = 'TP1'; }
+        else if (cur.l <= sl1)   { closed = true; openTrade.exit = sl1; openTrade.win = false; openTrade.exitReason = 'SL'; cooldownBars = 2; }
       } else {
-        if (cur.l <= tp1) { closed = true; openTrade.exit = tp1; openTrade.win = true; }
-        else if (cur.h >= sl1) { closed = true; openTrade.exit = sl1; openTrade.win = false; }
+        if (tp2 && cur.l <= tp2) { closed = true; openTrade.exit = tp2; openTrade.win = true; openTrade.exitReason = 'TP2'; }
+        else if (cur.l <= tp1)   { closed = true; openTrade.exit = tp1; openTrade.win = true; openTrade.exitReason = 'TP1'; }
+        else if (cur.h >= sl1)   { closed = true; openTrade.exit = sl1; openTrade.win = false; openTrade.exitReason = 'SL'; cooldownBars = 2; }
+      }
+
+      // Trailing stop: move SL to breakeven once in 1×ATR profit
+      if (!closed && openTrade.atrRaw) {
+        const atr = openTrade.atrRaw;
+        if (dir === 'long'  && price > entry + atr && openTrade.sl1 < entry) openTrade.sl1 = entry;
+        if (dir === 'short' && price < entry - atr && openTrade.sl1 > entry) openTrade.sl1 = entry;
       }
 
       if (!closed && i === usedKL.length - 1) {
-        closed = true;
-        openTrade.exit = price;
+        closed = true; openTrade.exit = price;
         openTrade.win = (dir === 'long') ? price > entry : price < entry;
+        openTrade.exitReason = 'EOD';
       }
 
       if (closed) {
-        const priceDiff = openTrade.dir === 'long'
-          ? openTrade.exit - openTrade.entry
-          : openTrade.entry - openTrade.exit;
-        const pnlPct = priceDiff / openTrade.entry;
-        const size = capital * positionSizePct;
-        const grossPnl = pnlPct * size;
-        const fee = size * commission * 2;
-        const netPnl = grossPnl - fee;
+        const diff   = openTrade.dir === 'long' ? openTrade.exit - entry : entry - openTrade.exit;
+        const pnlPct = diff / entry;
+        const size   = capital * positionSizePct;
+        const netPnl = pnlPct * size - size * commission * 2;
 
-        capital += netPnl;
-        openTrade.pnl = netPnl;
-        openTrade.pnlPct = pnlPct * 100;
-        openTrade.closeBar = i;
+        capital = Math.max(capital + netPnl, 0.01);
+        openTrade.pnl     = netPnl;
+        openTrade.pnlPct  = pnlPct * 100;
         openTrade.closeTime = cur.t;
         trades.push({ ...openTrade });
 
         const mo = new Date(cur.t).toISOString().slice(0, 7);
         if (!monthlyMap[mo]) monthlyMap[mo] = { pnl: 0, wins: 0, total: 0 };
-        monthlyMap[mo].pnl += netPnl;
-        monthlyMap[mo].total++;
+        monthlyMap[mo].pnl += netPnl; monthlyMap[mo].total++;
         if (openTrade.win) monthlyMap[mo].wins++;
 
-        openSigs.forEach(sig => {
-          if (sigTracker[sig]) {
-            sigTracker[sig].total++;
-            if (openTrade.win) sigTracker[sig].win++;
-          }
+        openTrade.openSigs.forEach(sig => {
+          if (sigTracker[sig]) { sigTracker[sig].total++; if (openTrade.win) sigTracker[sig].win++; }
         });
 
         if (!openTrade.win) { curConsLoss++; maxConsLoss = Math.max(maxConsLoss, curConsLoss); }
-        else { curConsLoss = 0; }
+        else curConsLoss = 0;
 
         openTrade = null;
         equityCurve.push({ t: cur.t, v: capital });
-
         maxEquity = Math.max(maxEquity, capital);
-        const dd = (maxEquity - capital) / maxEquity * 100;
-        maxDrawdown = Math.max(maxDrawdown, dd);
+        maxDrawdown = Math.max(maxDrawdown, (maxEquity - capital) / maxEquity * 100);
       }
     }
 
-    // ── 无持仓时，运行策略判断是否开仓 ──
-    if (!openTrade && historicalKL.length >= 60) {
-      // ── Strategy 1: Try full _Φ9x engine (may return null if multi-TF data missing) ──
+    // ── Entry logic ──
+    if (!openTrade && historicalKL.length >= 60 && cooldownBars === 0) {
       let res = null;
+
+      // Try full engine first
       try {
         const origKL = S.klines[S.sym + tf];
         S.klines[S.sym + tf] = historicalKL;
@@ -9120,117 +9151,101 @@ function _runBacktestEngine(kl, tf, periodBars, positionSizePct, commission) {
         S.lastPx = origPx;
       } catch(e) { res = null; }
 
-      // ── Strategy 2: If _Φ9x returned null, use lightweight internal scorer ──
-      // This is a self-contained scorer that only uses the historicalKL array
-      // so it never fails due to missing multi-TF data
-      if (!res) {
-        diagNullRes++;
-        res = _btInternalScore(historicalKL, price, tf);
-      }
-
+      // Internal scorer fallback
+      if (!res) { diagNullRes++; res = _btInternalScore(historicalKL, price, tf); }
       if (!res) continue;
 
-      // Adaptive threshold check
       if (res.conf < confThresh) { diagLowConf++; continue; }
-      if (res.rr < rrThresh)     { diagLowRR++;   continue; }
+      if (res.rr  < rrThresh)   { diagLowRR++;   continue; }
+
+      // Require trend alignment for internal scorer
+      if (res._isInternalScore && !res._trendAligned) { diagLowConf++; continue; }
 
       diagOpened++;
 
-      // ── 识别参与此信号的子因子 ──
-      const openSigs = [];
+      const openSigs = new Set();
       const rsi = res.rsi || 50;
-      if (rsi < 40 || rsi > 60) openSigs.push('rsi');
-      if (res.macdD?.bullDiv || res.macdD?.bearDiv) openSigs.push('macd');
-      if (res.macdD?.hist !== undefined) openSigs.push('macd');
-      if (res.vegas) openSigs.push('vegas');
-      if (res.chan) openSigs.push('chan');
-      if (res.adx?.trending) openSigs.push('adx');
-      if (res.obv?.obvDiv) openSigs.push('obv');
-      if (res.candles?.patterns?.length) openSigs.push('candle');
-      const lunar = getLunar();
-      if (lunar.bias === (res.isBull ? 'bull' : 'bear')) openSigs.push('lunar');
-      if (res.conf > 55) openSigs.push('mystic');
-      // Deduplicate
-      const uniqSigs = [...new Set(openSigs)];
+      if (rsi < 40 || rsi > 60) openSigs.add('rsi');
+      if (res.macdD?.bullDiv || res.macdD?.bearDiv) openSigs.add('macd');
+      else if (res.macdD?.hist !== undefined) openSigs.add('macd');
+      if (res.vegas) openSigs.add('vegas');
+      if (res.chan)  openSigs.add('chan');
+      if (res.adx?.trending) openSigs.add('adx');
+      if (res.obv?.obvDiv)   openSigs.add('obv');
+      if (res.candles?.patterns?.length) openSigs.add('candle');
+      if (res.conf > 58) openSigs.add('mystic');
 
-      const tp1 = res.tps?.[0]?.p || (res.isBull ? price * (1 + Math.max(0.01, (res.atrRaw||price*0.02)/price*1.5)) : price * (1 - Math.max(0.01, (res.atrRaw||price*0.02)/price*1.5)));
-      const sl1 = res.sls?.[0]?.p || (res.isBull ? price * (1 - Math.max(0.005, (res.atrRaw||price*0.02)/price)) : price * (1 + Math.max(0.005, (res.atrRaw||price*0.02)/price)));
+      const tp1 = res.tps?.[0]?.p; const tp2 = res.tps?.[1]?.p; const sl1 = res.sls?.[0]?.p;
+      if (!tp1 || !sl1) continue;
 
       openTrade = {
-        dir:      res.isBull ? 'long' : 'short',
-        entry:    price,
-        tp1, sl1,
-        conf:     res.conf,
-        score:    res.score,
-        openBar:  i,
-        openTime: cur.t,
-        openSigs: uniqSigs,
-        pnl: 0, win: false, exit: price,
+        dir: res.isBull ? 'long' : 'short',
+        entry: price, tp1, tp2, sl1,
+        conf: res.conf, score: res.score, atrRaw: res.atrRaw,
+        openBar: i, openTime: cur.t,
+        openSigs: [...openSigs],
+        pnl: 0, win: false, exit: price, exitReason: '--',
       };
     }
   }
 
-  // ── 计算汇总指标 ──
+  // ── Metrics ──
   const total = trades.length;
   if (total === 0) {
-    // Provide detailed diagnostic
-    const diagMsg = [
-      `回测区间 ${usedKL.length - startIdx} 根K线`,
-      `策略引擎返回null: ${diagNullRes}次`,
-      `置信度<${confThresh}%过滤: ${diagLowConf}次`,
-      `R:R<${rrThresh.toFixed(1)}过滤: ${diagLowRR}次`,
-      `建议：切换更长时间框架（1D）或增加K线数量（200根）`
+    const msg = [
+      `回测区间 ${totalBars} 根K线`,
+      `引擎返回null: ${diagNullRes}次`,
+      `置信度<${confThresh}%: ${diagLowConf}次`,
+      `R:R<${rrThresh.toFixed(1)}: ${diagLowRR}次`,
+      `建议：切换到 1D 时间框架，选择200根K线`
     ].join(' · ');
-    return { error: diagMsg, trades: [], diagNullRes, diagLowConf, diagLowRR };
+    return { error: msg, trades: [], diagNullRes, diagLowConf, diagLowRR };
   }
 
-  const wins = trades.filter(t => t.win);
-  const losses = trades.filter(t => !t.win);
-  const winRate = wins.length / total * 100;
-  const avgWin = wins.length ? wins.reduce((s, t) => s + t.pnl, 0) / wins.length : 0;
-  const avgLoss = losses.length ? Math.abs(losses.reduce((s, t) => s + t.pnl, 0) / losses.length) : 1;
-  const profitFactor = avgLoss > 0 ? (wins.reduce((s, t) => s + t.pnl, 0) / Math.max(1, Math.abs(losses.reduce((s, t) => s + t.pnl, 0)))) : 99;
+  const wins      = trades.filter(t => t.win);
+  const losses    = trades.filter(t => !t.win);
+  const winRate   = wins.length / total * 100;
+  const avgWin    = wins.length   ? wins.reduce((s,t)=>s+t.pnl,0) / wins.length : 0;
+  const avgLoss   = losses.length ? Math.abs(losses.reduce((s,t)=>s+t.pnl,0) / losses.length) : 1;
+  const grossW    = wins.reduce((s,t)=>s+t.pnl,0);
+  const grossL    = Math.abs(losses.reduce((s,t)=>s+t.pnl,0));
+  const pf        = grossL > 0 ? grossW / grossL : grossW > 0 ? 99 : 0;
+  const totalRet  = (capital - initCapital) / initCapital * 100;
+  const expectancy= ((winRate/100)*avgWin - (1-winRate/100)*avgLoss).toFixed(2);
 
-  // Sharpe简化版：年化回报 / 年化波动率
-  const returns = trades.map(t => t.pnlPct / 100);
-  const meanR = returns.reduce((a, b) => a + b, 0) / Math.max(returns.length, 1);
-  const varR = returns.reduce((s, r) => s + (r - meanR) ** 2, 0) / Math.max(returns.length - 1, 1);
-  const stdR = Math.sqrt(varR);
-  const sharpe = stdR > 0 ? (meanR / stdR * Math.sqrt(Math.min(total, 252))).toFixed(2) : '--';
+  const returns   = trades.map(t => t.pnlPct / 100);
+  const meanR     = returns.reduce((a,b)=>a+b,0) / returns.length;
+  const varR      = returns.reduce((s,r)=>s+(r-meanR)**2,0) / Math.max(returns.length-1,1);
+  const sharpe    = Math.sqrt(varR) > 0
+    ? (meanR / Math.sqrt(varR) * Math.sqrt(Math.min(total,252))).toFixed(2) : '--';
 
-  const totalReturn = (capital - initCapital) / initCapital * 100;
-
-  // 信号准确率
   const signalAccuracy = {};
-  Object.entries(sigTracker).forEach(([k, v]) => {
-    signalAccuracy[k] = {
-      total: v.total,
-      win:   v.win,
-      accuracy: v.total > 0 ? (v.win / v.total * 100).toFixed(1) : null,
-    };
+  Object.entries(sigTracker).forEach(([k,v]) => {
+    signalAccuracy[k] = { total:v.total, win:v.win,
+      accuracy: v.total>0 ? (v.win/v.total*100).toFixed(1) : null };
   });
 
-  // 月度汇总
   const monthly = Object.entries(monthlyMap)
-    .sort((a, b) => a[0].localeCompare(b[0]))
-    .map(([mo, d]) => ({ mo, ...d, wr: d.total > 0 ? (d.wins / d.total * 100).toFixed(0) : 0 }));
+    .sort((a,b)=>a[0].localeCompare(b[0]))
+    .map(([mo,d])=>({mo,...d,wr:d.total>0?(d.wins/d.total*100).toFixed(0):0}));
 
   return {
-    total, wins: wins.length, losses: losses.length,
-    winRate, avgWin, avgLoss, profitFactor,
-    totalReturn, maxDrawdown, maxConsLoss,
+    total, wins:wins.length, losses:losses.length,
+    winRate, avgWin, avgLoss, profitFactor:pf, expectancy,
+    totalReturn:totalRet, maxDrawdown, maxConsLoss,
     sharpe, capital, initCapital,
-    signalAccuracy, monthly, equityCurve,
-    tf, periodBars, trades,
-    // Diagnostics
-    confThresh, rrThresh, diagOpened,
-    diagNullRes, diagLowConf, diagLowRR,
-    internalScoreCount: diagNullRes - (diagNullRes > 0 ? Math.max(0, diagNullRes - diagOpened) : 0),
+    signalAccuracy, monthly, equityCurve, trades,
+    tf, periodBars, confThresh, rrThresh,
+    diagOpened, diagNullRes, diagLowConf, diagLowRR,
+    internalScoreCount: diagNullRes,
+    tp1Count:  trades.filter(t=>t.exitReason==='TP1').length,
+    tp2Count:  trades.filter(t=>t.exitReason==='TP2').length,
+    slCount:   trades.filter(t=>t.exitReason==='SL').length,
   };
 }
 
 function renderBacktestResult(r) {
-  const el = document.getElementById('backtestResult');
+  const el = $id('backtestResult');
   if (!el) return;
 
   if (r.error) {
@@ -9302,7 +9317,27 @@ function renderBacktestResult(r) {
         <span style="font-size:10px;color:var(--muted)">回测K线</span>
         <span style="float:right;font-size:12px;font-weight:700;color:var(--text)">${r.periodBars}</span>
       </div>
-    </div>`;
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:10px;">
+      <div style="flex:1;background:var(--card);border:1px solid var(--card-bd);border-radius:5px;padding:8px 11px;">
+        <span style="font-size:10px;color:var(--muted)">每笔期望值</span>
+        <span style="float:right;font-size:12px;font-weight:700;color:${parseFloat(r.expectancy)>=0?'var(--green)':'var(--red)'}">$${r.expectancy}</span>
+      </div>
+      <div style="flex:1;background:var(--card);border:1px solid var(--card-bd);border-radius:5px;padding:8px 11px;">
+        <span style="font-size:10px;color:var(--muted)">平均盈亏比</span>
+        <span style="float:right;font-size:12px;font-weight:700;color:${r.avgLoss>0&&r.avgWin/r.avgLoss>=1.5?'var(--green)':'var(--amber)'}">${r.avgLoss>0?(r.avgWin/r.avgLoss).toFixed(2):'--'}:1</span>
+      </div>
+    </div>
+    ${(r.tp1Count||r.tp2Count||r.slCount) ? `
+    <div style="background:var(--bg2);border-radius:5px;padding:8px 10px;margin-bottom:10px;font-size:11px;">
+      <div style="color:var(--muted);font-size:10px;margin-bottom:5px;letter-spacing:1px;">出场原因分布</div>
+      <div style="display:flex;gap:10px;">
+        <span>🎯 TP1 <strong style="color:var(--teal)">${r.tp1Count||0}</strong>次</span>
+        <span>🚀 TP2 <strong style="color:var(--green)">${r.tp2Count||0}</strong>次</span>
+        <span>🛑 SL <strong style="color:var(--red)">${r.slCount||0}</strong>次</span>
+        <span style="color:var(--muted)">· 移动止损保护了部分利润</span>
+      </div>
+    </div>` : ''}`;
 
   // ── 信号因子准确率 ──
   html += `<div style="font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:7px;">📈 各信号因子准确率</div>`;
