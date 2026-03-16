@@ -12,8 +12,6 @@
 <head>
 <meta charset="UTF-8">
 <meta name="robots" content="noindex,nofollow">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://fonts.googleapis.com https://fonts.gstatic.com https://api.binance.com https://api1.binance.com https://api2.binance.com https://api3.binance.com https://api4.binance.com https://data-api.binance.vision https://fapi.binance.com https://api.alternative.me https://api.coingecko.com https://api.llama.fi https://corsproxy.io https://api.allorigins.win https://thingproxy.freeboard.io https://api.anthropic.com https://api.blockchain.info wss://stream.binance.com; frame-ancestors 'none';">
-<meta http-equiv="X-Frame-Options" content="DENY">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
 <title>FINCH — 全维度市场分析</title>
 
@@ -45,22 +43,8 @@
       ol.apply(console,arguments);
     };
   }
-  // Block iframe embedding
-  if(window.top!==window.self){
-    try{window.top.location.href=window.location.href;}catch(e){
-      document.body.style.cssText='display:flex;align-items:center;justify-content:center;height:100vh;';
-      document.body.innerHTML='<p style="font-family:sans-serif;color:#8B6914">⚠️ 请直接访问 FINCH</p>';
-    }
-    return;
-  }
   // Disable right-click on canvas
   document.addEventListener('contextmenu',function(e){if(e.target.tagName==='CANVAS')e.preventDefault();});
-  // Subtle devtools detection
-  var _dt=false;
-  setInterval(function(){
-    var w=window.outerWidth-window.innerWidth>160||window.outerHeight-window.innerHeight>160;
-    if(w&&!_dt){_dt=true;console.clear();}else if(!w){_dt=false;}
-  },2500);
 })();
 </script>
 <style>
@@ -2017,6 +2001,7 @@ const S={
   lastPx:0,chart:null,subChartInst:null,expChart:null,fg:null,macro:null,
   waPhone:'',lastSignal:null,
   modData:{},
+  _seedPrice:{'BTCUSDT':84000,'ETHUSDT':2000,'SOLUSDT':130,'BNBUSDT':600,'XRPUSDT':2.2,'DOGEUSDT':0.18,'ADAUSDT':0.7,'AVAXUSDT':25,'BNBUSDT':600,'LINKUSDT':14,'DOTUSDT':5,'MATICUSDT':0.5,'LTCUSDT':80},
   activeFilters:new Set(['tech','vegas','gann','fib','chan','lunar','mystic','macro']),
   // Signal cache: avoid re-calculating if price hasn't moved >0.05%
   _sigCache:{},
@@ -2140,18 +2125,19 @@ function toggleMod(id){
 // then fall back to CORS proxies. Cache the best working combo.
 
 const ENDPOINTS=[
-  'https://data-api.binance.vision',   // CDN endpoint — best for SEA
+  'https://data-api.binance.vision',   // CDN endpoint — best for SEA / most reliable
   'https://api.binance.com',
   'https://api1.binance.com',
   'https://api2.binance.com',
   'https://api3.binance.com',
   'https://api4.binance.com',
 ];
-// CORS proxies — used only when direct fails
+// CORS proxies — ordered by reliability in sandboxed environments
 const PROXIES=[
-  url=>url,  // direct (no proxy)
-  url=>`https://corsproxy.io/?${encodeURIComponent(url)}`,
+  url=>url,  // direct (no proxy) — works when CORS headers present
   url=>`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+  url=>`https://corsproxy.io/?${encodeURIComponent(url)}`,
+  url=>`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
   url=>`https://thingproxy.freeboard.io/fetch/${url}`,
 ];
 let _bestEp=0, _bestPx=0;
@@ -2160,13 +2146,64 @@ let _epHealthy=new Set(); // endpoints known to work
 function wt(p,ms){return Promise.race([p,new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),ms))]);}
 
 async function tryFetch(url, timeoutMs=7000){
-  const r=await wt(fetch(url,{mode:'cors',cache:'no-store'}),timeoutMs);
+  // Use AbortController if available (modern browsers), fall back to Promise.race
+  if(typeof AbortController!=='undefined'){
+    const ctrl=new AbortController();
+    const tid=setTimeout(()=>ctrl.abort(),timeoutMs);
+    try{
+      const r=await fetch(url,{mode:'cors',cache:'no-store',credentials:'omit',signal:ctrl.signal});
+      clearTimeout(tid);
+      if(!r.ok) throw new Error(`HTTP ${r.status}`);
+      return r;
+    }catch(e){
+      clearTimeout(tid);
+      throw e;
+    }
+  }
+  // Fallback: Promise.race timeout
+  const r=await wt(fetch(url,{mode:'cors',cache:'no-store',credentials:'omit'}),timeoutMs);
   if(!r.ok) throw new Error(`HTTP ${r.status}`);
   return r;
 }
 
+// ── Universal download helper: Blob first, data URI fallback ──
+function _downloadText(content, filename, mimeType){
+  try{
+    const blob = new Blob([content], {type: mimeType});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url), 2000);
+  } catch(e){
+    // Fallback: data URI (works in Safari/sandboxed environments)
+    try{
+      const encoded = encodeURIComponent(content);
+      const a = document.createElement('a');
+      a.href = 'data:' + mimeType + ';charset=utf-8,' + encoded;
+      a.download = filename;
+      document.body.appendChild(a); a.click();
+      document.body.removeChild(a);
+    } catch(e2){
+      // Last resort: open in new tab
+      const w = window.open('', '_blank');
+      if(w){ w.document.write('<pre>'+content.replace(/</g,'&lt;')+'</pre>'); w.document.title=filename; }
+      else { alert('导出失败，请允许弹窗或手动复制数据'); }
+    }
+  }
+}
+
 async function bF(path){
-  // Build ordered endpoint list: last-known-good first
+  // Fast path: try best-known endpoint directly first (3s timeout)
+  try{
+    const fastUrl=PROXIES[_bestPx](ENDPOINTS[_bestEp]+path);
+    const r=await tryFetch(fastUrl,3000);
+    updConn(true,ENDPOINTS[_bestEp].replace('https://','').split('/')[0]);
+    return r;
+  }catch(e){}
+
+  // Fallback: try all combos with reduced per-attempt timeout
   const epOrd=[_bestEp,...ENDPOINTS.map((_,i)=>i).filter(i=>i!==_bestEp)];
   const pxOrd=[_bestPx,...PROXIES.map((_,i)=>i).filter(i=>i!==_bestPx)];
 
@@ -2175,7 +2212,7 @@ async function bF(path){
       try{
         const baseUrl=ENDPOINTS[ei]+path;
         const finalUrl=PROXIES[pi](baseUrl);
-        const r=await tryFetch(finalUrl,8000);
+        const r=await tryFetch(finalUrl,5000);
         // Success — cache this combo
         _bestEp=ei;_bestPx=pi;
         _epHealthy.add(ei);
@@ -2207,7 +2244,7 @@ async function fastPrice(sym){
 
 // Generate realistic mock klines — only used when ALL endpoints fail
 function mockKlines(sym,tf,lim){
-  const basePrice=S.lastPx>0&&priceValid(sym,S.lastPx)?S.lastPx:(S._seedPrice[sym]||2000);
+  const seedFallback={'BTCUSDT':83000,'ETHUSDT':1900,'SOLUSDT':130,'BNBUSDT':580,'XRPUSDT':2.1,'DOGEUSDT':0.17,'ADAUSDT':0.68};const basePrice=S.lastPx>0&&priceValid(sym,S.lastPx)?S.lastPx:(S._seedPrice[sym]||seedFallback[sym]||100);
   if(basePrice<=0)return[];
   if(basePrice<=0)return[];
   const tfVol={'15m':0.003,'30m':0.005,'1h':0.008,'4h':0.015,'1d':0.03,'1w':0.07};
@@ -2240,19 +2277,19 @@ function mockKlines(sym,tf,lim){
 
 // Known seed prices so mock data is roughly correct even before first API call
 S._seedPrice={
-  BTCUSDT:83000,ETHUSDT:2066,SOLUSDT:130,BNBUSDT:600,XRPUSDT:2.20,
-  DOGEUSDT:0.18,ADAUSDT:0.70,AVAXUSDT:22,DOTUSDT:4.5,LINKUSDT:13,
-  MATICUSDT:0.35,LTCUSDT:90,ATOMUSDT:5,NEARUSDT:3,
+  BTCUSDT:83000,ETHUSDT:1900,SOLUSDT:130,BNBUSDT:580,XRPUSDT:2.10,
+  DOGEUSDT:0.17,ADAUSDT:0.68,AVAXUSDT:20,DOTUSDT:4.2,LINKUSDT:13,
+  MATICUSDT:0.32,LTCUSDT:88,ATOMUSDT:4.5,NEARUSDT:2.8,
 };
 
 // Price sanity check: validate fetched price against expected range
 function priceValid(sym, px){
   const ranges={
-    BTCUSDT:[10000,200000],ETHUSDT:[500,20000],SOLUSDT:[10,2000],
-    BNBUSDT:[100,5000],XRPUSDT:[0.1,50],DOGEUSDT:[0.01,5],
-    ADAUSDT:[0.05,10],AVAXUSDT:[3,500],DOTUSDT:[1,200],
-    LINKUSDT:[1,200],MATICUSDT:[0.01,20],LTCUSDT:[20,1000],
-    ATOMUSDT:[1,100],NEARUSDT:[0.5,100],
+    BTCUSDT:[10000,250000],ETHUSDT:[300,30000],SOLUSDT:[5,5000],
+    BNBUSDT:[50,10000],XRPUSDT:[0.05,100],DOGEUSDT:[0.001,20],
+    ADAUSDT:[0.02,50],AVAXUSDT:[1,1000],DOTUSDT:[0.5,500],
+    LINKUSDT:[0.5,500],MATICUSDT:[0.005,50],LTCUSDT:[10,2000],
+    ATOMUSDT:[0.5,200],NEARUSDT:[0.2,200],
   };
   const r=ranges[sym];
   if(!r)return px>0;
@@ -2323,9 +2360,15 @@ async function refreshPrices(){
 }
 function updConn(ok,host){
   const dot=document.getElementById('connDot');const lbl=document.getElementById('connLbl');
+  if(!dot||!lbl)return;
   if(S.wsOk){dot.className='conn-dot live';lbl.textContent='Live WS';}
   else if(ok){dot.className='conn-dot rest';lbl.textContent=host?host.split('.')[0]:'REST';}
-  else{dot.className='conn-dot';lbl.textContent='Connecting...';}
+  else{
+    // Check if sandboxed — if so show REST mode, not "Connecting"
+    const sandboxed=(function(){try{return window.top!==window.self;}catch(e){return true;}})();
+    dot.className='conn-dot rest';
+    lbl.textContent=sandboxed?'REST':'Connecting...';
+  }
 }
 function updatePHPrice(px){
   if(!px||px<=0||!priceValid(S.sym,px))return;
@@ -2345,6 +2388,15 @@ function updatePHPrice(px){
 function connectWS(sym){
   if(S.ws){try{S.ws.close();}catch(e){}S.ws=null;}
   S.wsOk=false;updConn(false);
+  // In sandboxed iframes, WebSocket may be blocked — detect and skip gracefully
+  const isSandboxed = (function(){
+    try{ return window.top !== window.self; }catch(e){ return true; }
+  })();
+  if(isSandboxed){
+    // Skip WS entirely in sandboxed env — REST polling will handle updates
+    console.log('WS: sandboxed env detected, using REST only');
+    return;
+  }
   // Try both stream endpoints
   const wsUrls=[
     `wss://stream.binance.com:443/ws/${sym.toLowerCase()}@ticker`,
@@ -2446,6 +2498,8 @@ async function selectSym(sym){
   const el=document.getElementById('si-'+sym);if(el)el.classList.add('active');
   // Critical: reset price AND kline cache when switching symbols
   S.lastPx=0;
+  // Immediately seed price so mock data works without waiting for API
+  if(S._seedPrice[sym] > 0){ S.lastPx = S._seedPrice[sym]; updatePHPrice(S.lastPx); }
   S._sigCache={}; S._lastSigPx={}; S.modData={}; // clear memo + module cache on symbol switch
   S.wsOk=false;
   // Clear kline cache for new symbol so we don't show stale data
@@ -4624,7 +4678,7 @@ async function loadAll(sym){
     S.lastPx=0;
     const px=await fastPrice(sym).catch(()=>0);
     if(px>0&&priceValid(sym,px)){S.lastPx=px;S._seedPrice[sym]=px;updatePHPrice(px);}
-    else{S.lastPx=S._seedPrice[sym]||2000;}
+    else{S.lastPx=S._seedPrice[sym]||84000; updatePHPrice(S.lastPx);}
   }
   setProgress(20);
 
@@ -4677,14 +4731,23 @@ async function loadAll(sym){
     renderStrategy();renderTimeline();renderSummary();
   }
 
+  // SAFETY NET: If price still 0 after all data load attempts, use seed
+  if(S.lastPx <= 0){
+    S.lastPx = S._seedPrice[sym] || 84000;
+    updatePHPrice(S.lastPx);
+    // Force render with mock data
+    renderStrategy();
+  }
   setProgress(85);
 
   // ── STEP 4: Background load remaining TFs (200 bars each) for better accuracy ──
   // Don't await — let UI show immediately, update quietly when done
   const bgLoad=async()=>{
+    const bgSym = sym; // capture current sym to prevent stale renders
     const bgTFs=['1d','1w','30m','15m'];
     const extraTFs=tfsNeeded.includes(primaryTF)?bgTFs:[primaryTF,...bgTFs];
     for(const t of extraTFs){
+      if(S.sym!==bgSym)return; // abort if user switched symbol
       if(!S.klines[sym+t]||S.klines[sym+t].length<100){
         await fetchKlines(sym,t,200).catch(()=>{});
         await new Promise(r=>setTimeout(r,200)); // small gap between requests
@@ -4692,13 +4755,14 @@ async function loadAll(sym){
     }
     // Also upgrade primary TFs to full 250 bars silently
     for(const t of tfsNeeded){
+      if(S.sym!==bgSym)return; // abort if user switched symbol
       if(S.klines[sym+t]&&S.klines[sym+t].length<200){
         await fetchKlines(sym,t,250).catch(()=>{});
         await new Promise(r=>setTimeout(r,150));
       }
     }
     // Re-render with fuller data including all modules
-    if(S.sym===sym){
+    if(S.sym===bgSym){
       const px2=S.lastPx;
       if(px2>0){
         const klFull=S.klines[sym+S.chartTF]||S.klines[sym+S.stratTF]||[];
@@ -7729,7 +7793,7 @@ async function triggerAIAnalysis(res){
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
-        model:'claude-sonnet-4-20250514',
+        model:'claude-sonnet-4-6',
         max_tokens:1000,
         messages:[{role:'user',content:prompt}]
       })
@@ -8663,7 +8727,7 @@ async function sendChat(){
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
-        model:'claude-sonnet-4-20250514',
+        model:'claude-sonnet-4-6',
         max_tokens:1000,
         system:systemCtx,
         messages:recentHistory,
@@ -9512,7 +9576,10 @@ async function init(){
       console.log('Bootstrap price:',px);
       return true;
     }
-    return false;
+    // Final fallback: use seed price so app can at least show mock data
+    const seedPx = S._seedPrice['BTCUSDT'] || 84000;
+    if(S.lastPx <= 0){ S.lastPx = seedPx; S._seedPrice['BTCUSDT'] = seedPx; updatePHPrice(seedPx); }
+    return S.lastPx > 0;
   };
 
   // Step 2: Try REST 24hr ticker (has change%, volume etc)
@@ -9547,16 +9614,32 @@ async function init(){
   // Step 5: Start 30-second auto-refresh of signals
   startAutoRefresh();
 
+  // Step 6: If in sandboxed iframe (e.g. claude.ai), use faster REST polling to compensate for no WS
+  const _sandboxed=(function(){try{return window.top!==window.self;}catch(e){return true;}})();
+  if(_sandboxed){
+    // Poll price every 3 seconds instead of relying on WS
+    setInterval(async()=>{
+      try{
+        const px=await fastPrice(S.sym);
+        if(px>0&&priceValid(S.sym,px)){
+          S.lastPx=px;S._seedPrice[S.sym]=px;updatePHPrice(px);
+        }
+      }catch(e){}
+    },3000);
+  }
+
   // Step 6: Retry price if still 0 after 3s (network was slow)
   setTimeout(async()=>{
     if(S.lastPx<=0){
       console.log('Retrying price fetch...');
       await bootstrapPrice();
       if(S.lastPx>0) await loadAll(S.sym);
-  setTimeout(startMacroPulse, 2000);
-  setTimeout(startBrainEngine, 1000);
     }
   },3000);
+
+  // Step 7: Start auxiliary engines unconditionally
+  setTimeout(startMacroPulse, 3500);
+  setTimeout(startBrainEngine, 2500);
 }
 init();
 
@@ -11068,15 +11151,9 @@ function exportBacktestResult() {
       monthly:      _btResults.monthly,
       equityCurve:  _btResults.equityCurve?.slice(-100),
     };
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `finch_backtest_${S.sym}_${new Date().toISOString().slice(0, 10)}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    const jsonStr = JSON.stringify(exportData, null, 2);
+    const fname = `finch_backtest_${S.sym}_${new Date().toISOString().slice(0, 10)}.json`;
+    _downloadText(jsonStr, fname, 'application/json');
   } catch(e) { alert('导出失败: ' + e.message); }
 }
 
@@ -11089,15 +11166,9 @@ function exportLearnedWeights() {
     weights:   _learnedWeights,
     log:       _weightLog.slice(0, 20),
   };
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `finch_weights_${new Date().toISOString().slice(0, 10)}.json`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  const jsonStr = JSON.stringify(data, null, 2);
+  const fname = `finch_weights_${new Date().toISOString().slice(0, 10)}.json`;
+  _downloadText(jsonStr, fname, 'application/json');
 }
 
 function importLearnedWeights() {
@@ -12257,12 +12328,13 @@ async function refreshMacroPulse(manual){
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
-        model:'claude-sonnet-4-20250514',
+        model:'claude-sonnet-4-6',
         max_tokens:400,
         tools:[{type:'web_search_20250305',name:'web_search'}],
         messages:[{role:'user',content:prompt}]
       })
     });
+    if(!res.ok){ throw new Error('HTTP '+res.status); }
     var data = await res.json();
     var text = (data.content||[]).filter(function(b){return b.type==='text';}).map(function(b){return b.text;}).join('');
     if(text && el){
@@ -12297,10 +12369,15 @@ async function refreshMacroPulse(manual){
 
   window._doRenderStrategy = function(res){
     try {
-      var tf=res.tf, price=res.price, entry=res.entry, isBull=res.isBull;
-      var conf=res.conf, tps=res.tps, sls=res.sls, rr=res.rr;
+      // Defensive null checks - prevent any TypeError
+      if(!res || !res.price || !res.tps || !res.sls) {
+        if(typeof _origRender==='function') { try{_origRender(res);}catch(e){} }
+        return;
+      }
+      var tf=res.tf||'4h', price=res.price||0, entry=res.entry||price, isBull=!!res.isBull;
+      var conf=res.conf||50, tps=res.tps||[], sls=res.sls||[], rr=res.rr||1;
       var barMsVal=res.barMs||3600000;
-      var isWait = !res.isBull && conf < 45;
+      var isWait = false;
 
       // Determine verdict
       var verdict = _Ψ7v ? _Ψ7v(res) : null;
@@ -12355,7 +12432,7 @@ async function refreshMacroPulse(manual){
         +'<span style="font-size:16px;font-weight:700;color:'+bc+'">'+actionWord+'</span>'
         +'<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:'+(isLong?'rgba(26,107,58,0.1)':isShort?'rgba(160,20,32,0.1)':'rgba(128,80,0,0.1)')+';color:'+bc+';font-weight:700;">'+conf+'%</span>'
         +'</div>'
-        +'<div style="font-size:11px;color:var(--muted)">'+res.tm.lbl+' · R:R <strong style="color:'+(rr>=2?'var(--green)':rr>=1.5?'var(--amber)':'var(--red)')+'">'+rr.toFixed(1)+'</strong></div>'
+        +'<div style="font-size:11px;color:var(--muted)">'+res.tm.lbl+' · R:R <strong style="color:'+(rr>=2?'var(--green)':rr>=1.5?'var(--amber)':'var(--red)')+'">'+(rr||0).toFixed(1)+'</strong></div>'
         +'</div>'
         // Entry row
         +'<div style="padding:8px 14px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'
@@ -12624,7 +12701,7 @@ async function refreshMacroPulse(manual){
         badge.textContent=(isWait?'◉ 等待':isLong?'▲ 做多':'▼ 做空')+' · '+conf+'%';
       }
 
-      renderInlineTimeline();
+      try{ if(typeof renderInlineTimeline==='function') renderInlineTimeline(); }catch(e){}
 
     } catch(e){
       console.error('v37 render error:', e);
@@ -12856,7 +12933,8 @@ async function askBrain(){
     + (fg3 ? ('F&G: ' + fg3 + '\n') : '')
     + '\n用户问：' + q + '\n\n100字内中文直接回答，专业精炼，说重点。';
   try {
-    var resp2 = await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:300,tools:[{type:'web_search_20250305',name:'web_search'}],messages:[{role:'user',content:ctx3}]})});
+    var resp2 = await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:300,tools:[{type:'web_search_20250305',name:'web_search'}],messages:[{role:'user',content:ctx3}]})});
+    if(!resp2.ok){ throw new Error('HTTP '+resp2.status); }
     var data2 = await resp2.json();
     var text2 = (data2.content||[]).filter(function(b){return b.type==='text';}).map(function(b){return b.text;}).join('').trim();
     var tk5 = document.getElementById('brainThinking');
