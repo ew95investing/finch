@@ -264,7 +264,7 @@ button,input,select{touch-action:manipulation;}
 /* ══ SHELL — new layout ══ */
 .shell{
   display:grid;
-  grid-template-columns:200px 1fr 340px;
+  grid-template-columns:200px minmax(0,1fr) 380px;
   grid-template-rows:44px 1fr;
   height:calc(100vh - 50px);
   overflow:hidden;
@@ -716,8 +716,10 @@ canvas.main-c{width:100%!important;}
 .disclaimer{font-size:11px;color:var(--dim);padding:10px 14px;border-top:1px solid var(--line);line-height:1.7;}
 
 /* ══ RESPONSIVE — FULL MOBILE REDESIGN ══ */
-@media(max-width:1400px){.shell{grid-template-columns:180px 1fr 300px;}}
-@media(max-width:1000px){.shell{grid-template-columns:1fr 260px;}.left-panel{display:none;}}
+@media(max-width:1600px){.shell{grid-template-columns:200px minmax(0,1fr) 360px;}}
+@media(max-width:1400px){.shell{grid-template-columns:180px minmax(0,1fr) 320px;}}
+@media(max-width:1200px){.shell{grid-template-columns:170px minmax(0,1fr) 290px;}}
+@media(max-width:1000px){.shell{grid-template-columns:minmax(0,1fr) 260px;}.left-panel{display:none;}}
 
 /* Tablet portrait + large phones landscape */
 @media(max-width:768px){
@@ -9065,9 +9067,12 @@ function _runBacktestEngine(kl, tf, periodBars, positionSizePct, commission) {
   let diagNullRes = 0, diagLowConf = 0, diagLowRR = 0, diagOpened = 0;
   const monthlyMap = {};
 
-  // Adaptive thresholds — raised vs previous version for better quality
-  const confThresh = totalBars < 80  ? 40 : totalBars < 150 ? 46 : totalBars < 200 ? 52 : 56;
-  const rrThresh   = totalBars < 80  ? 1.5 : totalBars < 150 ? 1.8 : 2.0;
+  // ── Adaptive thresholds ──
+  // Key insight: _Φ9x full engine produces R:R of 1.2-2.5 depending on ATR
+  // _btInternalScore produces R:R ~2.2 by design
+  // We keep conf threshold meaningful but relax R:R to capture more real signals
+  const confThresh = totalBars < 80  ? 38 : totalBars < 150 ? 44 : totalBars < 200 ? 48 : 52;
+  const rrThresh   = totalBars < 80  ? 1.0 : totalBars < 150 ? 1.2 : 1.4;
   let cooldownBars = 0;
 
   for (let i = startIdx; i < usedKL.length; i++) {
