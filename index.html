@@ -935,6 +935,7 @@ canvas.main-c{width:100%!important;}
   </div>
 
   <div class="topbar-right">
+    <span style="font-size:9px;color:var(--dim);padding:2px 6px;border:1px solid var(--line2);border-radius:3px;letter-spacing:.5px;">v2.1</span>
     <span class="clock-el" id="clockEl">--:--:-- UTC</span>
     <div class="conn-pill"><div class="conn-dot" id="connDot"></div><span id="connLbl" style="font-size:10px">Connecting</span></div>
   </div>
@@ -1191,7 +1192,15 @@ canvas.main-c{width:100%!important;}
     </div>
     <div class="mod-card-body" id="mbody-gann">
       <div id="sq9Panel"><span style="color:var(--muted);font-size:11px">--</span></div>
-      <div class="mod-explain" id="explain-gann">威廉·戴尔·江恩（W.D. Gann）发现价格与时间的几何关系。Sq9（平方九）通过价格的平方根运算推导关键支撑/阻力位。1×1（45°线）是最重要的角度——价格与时间完全平衡。接近这些级别往往产生强烈反应。</div>
+      <!-- ═══ GANN TIME NODES — Precise time-based cycle predictions ═══ -->
+      <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--line);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <div style="font-size:10px;letter-spacing:2px;color:var(--violet);text-transform:uppercase;font-weight:700;">⏰ 江恩时间节点</div>
+          <button onclick="renderGannTimeNodes(S.lastPx)" style="padding:3px 8px;border:1px solid var(--violet);border-radius:3px;background:rgba(88,24,144,0.06);color:var(--violet);font-family:inherit;font-size:10px;cursor:pointer;letter-spacing:.5px;">刷新</button>
+        </div>
+        <div id="gannTimeNodes"><span style="color:var(--muted);font-size:11px">加载价格后自动计算...</span></div>
+      </div>
+      <div class="mod-explain" id="explain-gann">威廉·戴尔·江恩（W.D. Gann）发现价格与时间的几何关系。Sq9（平方九）通过价格的平方根运算推导关键支撑/阻力位。1×1（45°线）是最重要的角度——价格与时间完全平衡。<strong>时间节点</strong>：30/60/90/120/180/360自然日周期及价格平方根周期，这些时间窗口历史上是关键转折集中区。</div>
     </div>
   </div>
 
@@ -1331,6 +1340,82 @@ canvas.main-c{width:100%!important;}
 
   <!-- Summary / Verdict -->
   <div class="summary-section">
+    <!-- ═══════════════════════════════════════════════════════════
+         MASTER FRAMEWORK — Ray Dalio + Naval Ravikant
+         ══════════════════════════════════════════════════════════= -->
+    <div id="masterFrameworkSection" style="margin-bottom:16px;padding-bottom:14px;border-bottom:2px solid var(--line2);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div>
+          <div style="font-size:13px;font-weight:700;letter-spacing:1px;color:var(--gold)">🧭 大师框架分析</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:2px;">Ray Dalio 全天候象限 × Naval Ravikant 杠杆论</div>
+        </div>
+        <button onclick="renderMasterFramework()" style="padding:5px 10px;border:1px solid var(--gold);border-radius:4px;background:rgba(139,105,20,0.08);color:var(--gold);font-family:inherit;font-size:10px;cursor:pointer;letter-spacing:.5px;">刷新</button>
+      </div>
+      <div id="masterFrameworkPanel">
+        <div style="color:var(--muted);font-size:12px;padding:8px 0;text-align:center;">等待信号加载后自动分析...</div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         BACKTEST PANEL — Historical accuracy evaluation
+         ══════════════════════════════════════════════════════════= -->
+    <div id="backtestSection" style="margin-bottom:16px;padding-bottom:14px;border-bottom:2px solid var(--line2);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div style="font-size:13px;font-weight:700;letter-spacing:1px;color:var(--gold)">📊 策略回测报告</div>
+        <div style="display:flex;gap:6px;">
+          <button onclick="runFinchBacktest()" id="backtestRunBtn" style="padding:5px 12px;border:1px solid var(--gold);border-radius:4px;background:rgba(139,105,20,0.1);color:var(--gold);font-family:inherit;font-size:11px;cursor:pointer;font-weight:700;transition:all .15s;">
+            ▶ 运行回测
+          </button>
+          <button onclick="document.getElementById('backtestBody').style.display=document.getElementById('backtestBody').style.display==='none'?'block':'none'" style="padding:5px 10px;border:1px solid var(--line2);border-radius:4px;background:transparent;color:var(--muted);font-family:inherit;font-size:11px;cursor:pointer;">
+            折叠
+          </button>
+        </div>
+      </div>
+      <div id="backtestBody">
+        <!-- Config row -->
+        <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;">
+          <select id="btTF" style="padding:5px 8px;border:1px solid var(--line2);border-radius:4px;background:var(--bg);color:var(--text);font-family:inherit;font-size:11px;flex:1;min-width:60px;">
+            <option value="1h">1H</option>
+            <option value="4h" selected>4H</option>
+            <option value="1d">1D</option>
+          </select>
+          <select id="btPeriod" style="padding:5px 8px;border:1px solid var(--line2);border-radius:4px;background:var(--bg);color:var(--text);font-family:inherit;font-size:11px;flex:1;min-width:80px;">
+            <option value="60">近60根K</option>
+            <option value="120" selected>近120根K</option>
+            <option value="200">近200根K</option>
+          </select>
+          <select id="btSize" style="padding:5px 8px;border:1px solid var(--line2);border-radius:4px;background:var(--bg);color:var(--text);font-family:inherit;font-size:11px;flex:1;min-width:70px;">
+            <option value="0.05">5% 仓位</option>
+            <option value="0.10" selected>10% 仓位</option>
+            <option value="0.20">20% 仓位</option>
+          </select>
+        </div>
+        <div id="backtestResult">
+          <div style="color:var(--muted);font-size:12px;padding:10px 0;text-align:center;">点击「运行回测」分析历史信号准确度</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         LEARNING PANEL — Self-optimizing signal weights
+         ══════════════════════════════════════════════════════════= -->
+    <div id="learningSection" style="margin-bottom:16px;padding-bottom:14px;border-bottom:2px solid var(--line2);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div style="font-size:13px;font-weight:700;letter-spacing:1px;color:var(--gold)">🧠 自学习权重优化</div>
+        <div style="display:flex;gap:6px;">
+          <button onclick="optimizeWeightsNow()" style="padding:5px 12px;border:1px solid rgba(88,24,144,0.4);border-radius:4px;background:rgba(88,24,144,0.06);color:var(--violet);font-family:inherit;font-size:11px;cursor:pointer;font-weight:700;">
+            ⚡ 立即优化
+          </button>
+          <button onclick="resetLearnedWeights()" style="padding:5px 10px;border:1px solid var(--line2);border-radius:4px;background:transparent;color:var(--muted);font-family:inherit;font-size:11px;cursor:pointer;">
+            重置
+          </button>
+        </div>
+      </div>
+      <div id="learningBody">
+        <div style="color:var(--muted);font-size:12px;padding:8px 0;text-align:center;">运行回测后将自动学习最优权重</div>
+      </div>
+    </div>
+
     <div class="ss-title">🔮 综合研判 · FINCH VERDICT</div>
     <div class="ss-sub">点击模块筛选 — 只用您信任的指标计算方向</div>
 
@@ -8053,6 +8138,1410 @@ async function init(){
   },3000);
 }
 init();
+
+// ╔══════════════════════════════════════════════════════════════════════╗
+// ║  FINCH MODULE 1 — 精确江恩时间节点 (Precise Gann Time Nodes)        ║
+// ║  算法原理：                                                           ║
+// ║  1. 自然日周期：30/45/60/90/120/135/180/270/360天从当前日期推算      ║
+// ║  2. 价格平方根周期：√price × 倍数，再²还原成价格，预测价格目标        ║
+// ║  3. 历史摆动周年：重大高低点的1年/2年纪念日重现               ║
+// ║  4. 置信度：多周期共振 > 单周期，结合当前信号方向加权                 ║
+// ╚══════════════════════════════════════════════════════════════════════╝
+
+function preciseGannTimeNodes(price, kl) {
+  // ── 安全检查 ──
+  if (!price || price <= 0) return { nodes: [], summary: null };
+  if (!kl || kl.length < 20) return { nodes: [], summary: null };
+
+  const now = Date.now();
+  const DAY_MS = 86400000;
+  const nodes = [];
+
+  // ── 辅助：格式化精确到小时的MYT时间 ──
+  function fmtNodeDate(ms) {
+    const d = new Date(ms);
+    const myt = toMYT(d);
+    const mo = String(myt.getUTCMonth() + 1).padStart(2, '0');
+    const dy = String(myt.getUTCDate()).padStart(2, '0');
+    const hr = String(myt.getUTCHours()).padStart(2, '0');
+    const mi = String(myt.getUTCMinutes()).padStart(2, '0');
+    return `${myt.getUTCFullYear()}-${mo}-${dy} ${hr}:${mi} MYT`;
+  }
+
+  // ── 辅助：距今天数 ──
+  function daysFromNow(ms) {
+    return ((ms - now) / DAY_MS).toFixed(1);
+  }
+
+  // ── 辅助：紧急程度 ──
+  function urgencyLevel(ms) {
+    const d = (ms - now) / DAY_MS;
+    if (d < 0) return 'past';
+    if (d <= 7)  return 'high';
+    if (d <= 21) return 'medium';
+    return 'low';
+  }
+
+  // ── 查找历史重大摆动点 ──
+  const recentKL = kl.slice(-200);
+  let swings = [];
+  try {
+    const sv = _Δ1p(recentKL, 5);
+    const peaks   = sv.peaks.map(p => ({ type: 'high', price: p.price, t: p.t }));
+    const troughs = sv.troughs.map(p => ({ type: 'low',  price: p.price, t: p.t }));
+    swings = [...peaks, ...troughs]
+      .filter(s => s.t && s.t > 0)
+      .sort((a, b) => a.t - b.t)
+      .slice(-12); // 最近12个重大摆动点
+  } catch(e) {}
+
+  // ── 1. 自然日周期节点 (Gann Natural Day Cycles) ──
+  // 原理：江恩认为30、60、90、120、180、360天是宇宙时间节点，
+  // 市场在这些时间窗口更容易发生方向性转变
+  const gannDayCycles = [
+    { days: 30,  label: 'Gann 30°', weight: 0.55 },
+    { days: 45,  label: 'Gann 45°', weight: 0.60 },
+    { days: 60,  label: 'Gann 60°', weight: 0.65 },
+    { days: 90,  label: 'Gann 90°', weight: 0.75 }, // 最重要的四分之一周期
+    { days: 120, label: 'Gann 120°', weight: 0.65 },
+    { days: 135, label: 'Gann 135°', weight: 0.58 },
+    { days: 180, label: 'Gann 180°', weight: 0.80 }, // 半年周期
+    { days: 270, label: 'Gann 270°', weight: 0.70 },
+    { days: 360, label: 'Gann 360°', weight: 0.85 }, // 整年周期
+  ];
+
+  // 从最近的重大摆动点出发计算各时间节点
+  const refPoints = swings.length > 0
+    ? swings.slice(-4) // 使用最近4个摆动点作为起算点
+    : [{ t: now - 30 * DAY_MS, price, type: 'low' }];
+
+  const seenDates = new Set(); // 去重：避免同一天出现多个节点
+
+  refPoints.forEach(ref => {
+    gannDayCycles.forEach(cycle => {
+      const targetMs = ref.t + cycle.days * DAY_MS;
+      if (targetMs <= now) return; // 只显示未来节点
+      if (targetMs > now + 400 * DAY_MS) return; // 只显示1年内
+
+      // 去重：同一天的节点只保留最高权重的
+      const dateKey = new Date(targetMs).toISOString().slice(0, 10);
+      if (seenDates.has(dateKey)) return;
+      seenDates.add(dateKey);
+
+      // 计算预测价格：江恩箱体理论 — 价格应与时间成正比
+      // 若来自低点，预测上方目标；来自高点，预测下方目标
+      const timeRatio = cycle.days / 365;
+      const priceTarget = ref.type === 'low'
+        ? ref.price * (1 + timeRatio * 0.618)   // 从低点预测上涨目标
+        : ref.price * (1 - timeRatio * 0.382);  // 从高点预测下跌目标
+
+      // 置信度：周期权重 × 是否有当前信号共振
+      const currentBull = S.lastSignal ? S.lastSignal.isBull : null;
+      const dirAligned = currentBull === null ? 0.0
+        : (ref.type === 'low' && currentBull) || (ref.type === 'high' && !currentBull) ? 0.15 : -0.05;
+      const confidence = Math.min(88, Math.max(40, Math.round((cycle.weight + dirAligned) * 100)));
+
+      nodes.push({
+        type:     'gann_day_' + cycle.days,
+        label:    cycle.label,
+        date:     fmtNodeDate(targetMs),
+        dateMs:   targetMs,
+        daysLeft: daysFromNow(targetMs),
+        price:    Math.round(priceTarget),
+        probability: confidence,
+        basis:    `自然日${cycle.days}°周期，从${ref.type === 'low' ? '低' : '高'}点 ${fmtP(ref.price)} 起算`,
+        confidence: urgencyLevel(targetMs),
+        refType:  ref.type,
+        resonance: dirAligned > 0 ? '✅ 与当前信号共振' : dirAligned < 0 ? '⚡ 方向相反' : '—',
+        subtype:  'natural',
+      });
+    });
+  });
+
+  // ── 2. 价格平方根周期节点 (Price Square Root Cycles) ──
+  // 原理：江恩发现价格的平方根 + N 再平方，得到自然价格目标
+  // 时间：价格每"平方单位"对应一段时间，当前价×0.25天/单位
+  const sqrtPrice = Math.sqrt(price);
+  const sqCycles = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
+  const pricePerDay = price * 0.001; // 假设每天价格变动约0.1%
+
+  sqCycles.forEach(mult => {
+    // 预测价格目标：(√price + mult)² 和 (√price - mult)²
+    const priceUp   = Math.round(Math.pow(sqrtPrice + mult, 2));
+    const priceDn   = Math.round(Math.pow(sqrtPrice - mult, 2));
+    // 对应时间估算：基于ATR
+    const atr = S.lastSignal ? (S.lastSignal.atrRaw || price * 0.02) : price * 0.02;
+    const daysEst = Math.round(Math.abs(priceUp - price) / Math.max(atr, price * 0.005));
+    const targetMs = now + daysEst * DAY_MS;
+
+    if (targetMs <= now || targetMs > now + 400 * DAY_MS) return;
+
+    const dateKey = new Date(targetMs).toISOString().slice(0, 10);
+    if (seenDates.has(dateKey + '_sq')) return;
+    seenDates.add(dateKey + '_sq');
+
+    const isBull = S.lastSignal ? S.lastSignal.isBull : true;
+    const targetPrice = isBull ? priceUp : priceDn;
+    const conf = Math.min(82, Math.max(38, Math.round(60 + (mult >= 1.0 ? 8 : -5))));
+
+    nodes.push({
+      type:     'price_sq_' + mult,
+      label:    `Sq.Root ×${mult}`,
+      date:     fmtNodeDate(targetMs),
+      dateMs:   targetMs,
+      daysLeft: daysFromNow(targetMs),
+      price:    targetPrice,
+      probability: conf,
+      basis:    `价格平方根周期 (√${Math.round(price)} ${mult > 0 ? '+' : ''}${mult})² = ${targetPrice}，江恩箱体理论`,
+      confidence: urgencyLevel(targetMs),
+      resonance: '📐 价格几何',
+      subtype:  'squareroot',
+    });
+  });
+
+  // ── 3. 历史摆动周年节点 (Swing Anniversary Nodes) ──
+  // 原理：江恩周年纪念日 — 历史关键转折点的1年/2年纪念日
+  // 往往是新的转折点，因为市场有"时间记忆"
+  swings.slice(-6).forEach(sw => {
+    if (!sw.t || sw.t <= 0) return;
+    [1, 2].forEach(years => {
+      const targetMs = sw.t + years * 365.25 * DAY_MS;
+      if (targetMs <= now || targetMs > now + 400 * DAY_MS) return;
+
+      const dateKey = new Date(targetMs).toISOString().slice(0, 10) + '_ann' + years;
+      if (seenDates.has(dateKey)) return;
+      seenDates.add(dateKey);
+
+      // 周年节点：预测价格区间基于摆动点价格
+      const priceDist = Math.abs(price - sw.price) / price;
+      const priceTarget = sw.type === 'low'
+        ? sw.price * (1 + priceDist * 0.5 * years)
+        : sw.price * (1 - priceDist * 0.3 * years);
+      const conf = Math.min(80, Math.max(45, Math.round(65 - years * 8)));
+
+      nodes.push({
+        type:     'anniversary_' + years + 'y',
+        label:    years === 1 ? '周年纪念' : '两周年',
+        date:     fmtNodeDate(targetMs),
+        dateMs:   targetMs,
+        daysLeft: daysFromNow(targetMs),
+        price:    Math.round(priceTarget),
+        probability: conf,
+        basis:    `${sw.type === 'low' ? '低点' : '高点'} ${fmtP(sw.price)} 的第${years}周年 — 时间记忆效应`,
+        confidence: urgencyLevel(targetMs),
+        resonance: '🗓️ 历史纪念日',
+        subtype:  'anniversary',
+      });
+    });
+  });
+
+  // ── 排序：按时间升序，同时过滤掉已过期 ──
+  const futureNodes = nodes
+    .filter(n => n.dateMs > now)
+    .sort((a, b) => a.dateMs - b.dateMs)
+    .slice(0, 12); // 最多显示12个节点
+
+  // ── 汇总：找最近的主要节点 ──
+  const nextMajor = futureNodes.find(n => n.probability >= 65) || futureNodes[0];
+  const summary = nextMajor ? {
+    nextMajorDate: nextMajor.date,
+    nextMajorPrice: nextMajor.price,
+    nextMajorDays: nextMajor.daysLeft,
+    cycleStrength: (nextMajor.probability / 100).toFixed(2),
+  } : null;
+
+  return { nodes: futureNodes, summary };
+}
+
+// ── 渲染江恩时间节点面板 ──
+function renderGannTimeNodes(price) {
+  const el = document.getElementById('gannTimeNodes');
+  if (!el) return;
+
+  if (!price || price <= 0) {
+    el.innerHTML = '<span style="color:var(--muted);font-size:11px">等待价格数据...</span>';
+    return;
+  }
+
+  const kl = S.klines[S.sym + (S.chartTF || '4h')]
+    || S.klines[S.sym + '1h']
+    || S.klines[S.sym + '4h']
+    || [];
+
+  let result;
+  try { result = preciseGannTimeNodes(price, kl); }
+  catch(e) { el.innerHTML = '<span style="color:var(--muted);font-size:11px">计算中...</span>'; return; }
+
+  if (!result.nodes.length) {
+    el.innerHTML = '<span style="color:var(--muted);font-size:11px">K线数据不足（需要20根以上）</span>';
+    return;
+  }
+
+  // 置信度颜色
+  const confColor = p => p >= 70 ? 'var(--green)' : p >= 55 ? 'var(--amber)' : 'var(--muted)';
+  // 紧急程度徽章
+  const urgBadge = u => u === 'high'
+    ? '<span style="background:rgba(160,20,32,0.12);color:var(--red);font-size:9px;padding:1px 5px;border-radius:3px;font-weight:700;">⚡ 近期</span>'
+    : u === 'medium'
+    ? '<span style="background:rgba(128,80,0,0.10);color:var(--amber);font-size:9px;padding:1px 5px;border-radius:3px;font-weight:700;">△ 中期</span>'
+    : '<span style="background:rgba(0,0,0,0.05);color:var(--muted);font-size:9px;padding:1px 5px;border-radius:3px;">远期</span>';
+  // 子类型颜色
+  const subtypeCol = s => s === 'squareroot' ? 'var(--violet)' : s === 'anniversary' ? 'var(--rose)' : 'var(--cyan)';
+
+  // 汇总行
+  let html = '';
+  if (result.summary) {
+    const s = result.summary;
+    html += `<div style="background:rgba(88,24,144,0.06);border:1px solid rgba(88,24,144,0.2);border-radius:5px;padding:9px 12px;margin-bottom:8px;">
+      <div style="font-size:10px;color:var(--violet);letter-spacing:1px;margin-bottom:5px;">🎯 最近主要节点</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
+        <div style="font-size:13px;font-weight:700;color:var(--bright)">${s.nextMajorDate.split(' ')[0]}</div>
+        <div style="font-size:13px;font-weight:700;color:var(--violet)">${fmtP(s.nextMajorPrice)}</div>
+        <div style="font-size:11px;color:var(--muted)">约${s.nextMajorDays}天后</div>
+        <div style="font-size:11px;font-weight:700;color:${confColor(Math.round(parseFloat(s.cycleStrength)*100))}">周期强度 ${Math.round(parseFloat(s.cycleStrength)*100)}%</div>
+      </div>
+    </div>`;
+  }
+
+  // 节点列表
+  result.nodes.forEach(n => {
+    const priceDir = n.price > price
+      ? `<span style="color:var(--green)">▲ ${fmtP(n.price)}</span>`
+      : `<span style="color:var(--red)">▼ ${fmtP(n.price)}</span>`;
+
+    html += `<div style="border:1px solid var(--line2);border-left:3px solid ${subtypeCol(n.subtype)};border-radius:4px;padding:8px 10px;margin-bottom:6px;background:var(--card);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;flex-wrap:wrap;gap:4px;">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span style="font-size:11px;font-weight:700;color:${subtypeCol(n.subtype)}">${n.label}</span>
+          ${urgBadge(n.confidence)}
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          ${priceDir}
+          <span style="font-size:12px;font-weight:700;color:${confColor(n.probability)}">${n.probability}%</span>
+        </div>
+      </div>
+      <div style="font-size:10px;color:var(--muted);margin-bottom:2px;">📅 ${n.date} <span style="color:var(--dim)">(${n.daysLeft}天)</span></div>
+      <div style="font-size:10px;color:var(--dim);line-height:1.5;">${n.basis}</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:2px;">${n.resonance}</div>
+    </div>`;
+  });
+
+  el.innerHTML = html;
+}
+
+// ── 在renderGann中自动触发时间节点渲染 ──
+// Fix 1.1: bind correctly so original function retains its scope
+const _origRenderGann = renderGann.bind(window);
+renderGann = function(price) {
+  _origRenderGann(price);
+  // Delayed render ensures klines are populated before node calc
+  setTimeout(() => {
+    try {
+      if (price && price > 0) renderGannTimeNodes(price);
+    } catch(e) { console.warn('Gann time nodes render failed:', e); }
+  }, 500);
+};
+
+
+// ╔══════════════════════════════════════════════════════════════════════╗
+// ║  FINCH MODULE 2 — 完整回测系统 (Full Backtest Engine)               ║
+// ║  算法原理：                                                           ║
+// ║  1. 在每根K线收盘时运行 _Φ9x() 策略引擎                             ║
+// ║  2. 有信号时模拟开仓，跟踪持仓直至TP1/SL1触发                       ║
+// ║  3. 按信号类型分拆胜率：哪个指标历史最准                             ║
+// ║  4. 月度收益热力图、资金曲线、最大回撤                               ║
+// ║  安全保护：全部在本地计算，不发送任何API请求                          ║
+// ╚══════════════════════════════════════════════════════════════════════╝
+
+// ── 回测状态 ──
+let _btRunning = false;
+let _btResults = null;
+
+async function runFinchBacktest() {
+  if (_btRunning) return;
+  const btn = document.getElementById('backtestRunBtn');
+  const resultEl = document.getElementById('backtestResult');
+
+  // ── 读取配置 ──
+  const tf = document.getElementById('btTF')?.value || '4h';
+  const periodBars = parseInt(document.getElementById('btPeriod')?.value || '120');
+  const positionSize = parseFloat(document.getElementById('btSize')?.value || '0.10');
+  const commission = 0.001; // 0.1% 双边手续费
+
+  // ── 获取K线数据 ──
+  const kl = S.klines[S.sym + tf] || [];
+  if (kl.length < 60) {
+    resultEl.innerHTML = `<div style="color:var(--amber);font-size:12px;padding:10px 0;">⚠️ K线不足（${kl.length}根），请先切换至${tf}后等待加载</div>`;
+    return;
+  }
+
+  _btRunning = true;
+  if (btn) { btn.textContent = '⏳ 计算中...'; btn.style.opacity = '0.6'; }
+  resultEl.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:10px 0;text-align:center;">⏳ 正在回测 ' + kl.length + ' 根K线...</div>';
+
+  // 让UI更新
+  await new Promise(r => setTimeout(r, 30));
+
+  try {
+    const result = _runBacktestEngine(kl, tf, periodBars, positionSize, commission);
+    _btResults = result;
+    renderBacktestResult(result);
+
+    // 回测完成后自动触发权重学习
+    learnFromBacktest(result);
+  } catch(e) {
+    resultEl.innerHTML = `<div style="color:var(--red);font-size:12px;padding:10px 0;">❌ 回测出错：${e.message}</div>`;
+  }
+
+  _btRunning = false;
+  if (btn) { btn.textContent = '▶ 重新回测'; btn.style.opacity = '1'; }
+}
+
+function _runBacktestEngine(kl, tf, periodBars, positionSizePct, commission) {
+  // ── Fix 1.2: Parameter validation — guard all edge cases ──
+  if (!kl || !Array.isArray(kl) || kl.length < 30) {
+    return { error: `K线数据不足（${kl ? kl.length : 0}根），需要至少30根K线`, trades: [] };
+  }
+  if (!tf || typeof tf !== 'string') {
+    return { error: '时间框架参数无效', trades: [] };
+  }
+  if (!periodBars || periodBars < 10 || isNaN(periodBars)) {
+    return { error: '回测周期参数无效', trades: [] };
+  }
+  if (!positionSizePct || positionSizePct <= 0 || positionSizePct > 1) {
+    return { error: '仓位比例参数无效（需0~1之间）', trades: [] };
+  }
+
+  // ── 信号类型追踪器 ──
+  // 回溯每次策略信号中哪些子信号参与了，分别统计胜率
+  const sigTracker = {
+    rsi:    { win: 0, total: 0 },
+    macd:   { win: 0, total: 0 },
+    vegas:  { win: 0, total: 0 },
+    chan:    { win: 0, total: 0 },
+    gann:   { win: 0, total: 0 },
+    obv:    { win: 0, total: 0 },
+    adx:    { win: 0, total: 0 },
+    candle: { win: 0, total: 0 },
+    lunar:  { win: 0, total: 0 },
+    mystic: { win: 0, total: 0 },
+  };
+
+  const usedKL = kl.slice(-Math.min(periodBars + 60, kl.length));
+  const startIdx = Math.min(60, Math.floor(usedKL.length * 0.3));
+
+  let capital = 10000;
+  const initCapital = capital;
+  const trades = [];
+  const equityCurve = [{ t: usedKL[startIdx]?.t || Date.now(), v: capital }];
+  let openTrade = null;
+  let maxEquity = capital;
+  let maxDrawdown = 0;
+  let consLoss = 0, maxConsLoss = 0, curConsLoss = 0;
+
+  // ── 月度分组 ──
+  const monthlyMap = {};
+
+  for (let i = startIdx; i < usedKL.length; i++) {
+    const historicalKL = usedKL.slice(0, i + 1);
+    const cur = usedKL[i];
+    const price = cur.c;
+    if (!price || price <= 0) continue;
+
+    // ── 检查现有持仓的平仓条件 ──
+    if (openTrade) {
+      const { dir, entry, tp1, sl1, openSigs } = openTrade;
+      let closed = false;
+
+      if (dir === 'long') {
+        if (cur.h >= tp1) { closed = true; openTrade.exit = tp1; openTrade.win = true; }
+        else if (cur.l <= sl1) { closed = true; openTrade.exit = sl1; openTrade.win = false; }
+      } else {
+        if (cur.l <= tp1) { closed = true; openTrade.exit = tp1; openTrade.win = true; }
+        else if (cur.h >= sl1) { closed = true; openTrade.exit = sl1; openTrade.win = false; }
+      }
+
+      if (!closed && i === usedKL.length - 1) {
+        // 最后一根K线强制平仓
+        closed = true;
+        openTrade.exit = price;
+        openTrade.win = (dir === 'long') ? price > entry : price < entry;
+      }
+
+      if (closed) {
+        const priceDiff = openTrade.dir === 'long'
+          ? openTrade.exit - openTrade.entry
+          : openTrade.entry - openTrade.exit;
+        const pnlPct = priceDiff / openTrade.entry;
+        const size = capital * positionSizePct;
+        const grossPnl = pnlPct * size;
+        const fee = size * commission * 2;
+        const netPnl = grossPnl - fee;
+
+        capital += netPnl;
+        openTrade.pnl = netPnl;
+        openTrade.pnlPct = pnlPct * 100;
+        openTrade.closeBar = i;
+        openTrade.closeTime = cur.t;
+        trades.push({ ...openTrade });
+
+        // 月度记录
+        const mo = new Date(cur.t).toISOString().slice(0, 7);
+        if (!monthlyMap[mo]) monthlyMap[mo] = { pnl: 0, wins: 0, total: 0 };
+        monthlyMap[mo].pnl += netPnl;
+        monthlyMap[mo].total++;
+        if (openTrade.win) monthlyMap[mo].wins++;
+
+        // 信号因子追踪
+        openSigs.forEach(sig => {
+          if (sigTracker[sig]) {
+            sigTracker[sig].total++;
+            if (openTrade.win) sigTracker[sig].win++;
+          }
+        });
+
+        // 连续亏损追踪
+        if (!openTrade.win) { curConsLoss++; maxConsLoss = Math.max(maxConsLoss, curConsLoss); }
+        else { curConsLoss = 0; }
+
+        openTrade = null;
+        equityCurve.push({ t: cur.t, v: capital });
+
+        // 最大回撤
+        maxEquity = Math.max(maxEquity, capital);
+        const dd = (maxEquity - capital) / maxEquity * 100;
+        maxDrawdown = Math.max(maxDrawdown, dd);
+      }
+    }
+
+    // ── 无持仓时，运行策略判断是否开仓 ──
+    if (!openTrade && historicalKL.length >= 60) {
+      let res = null;
+      try {
+        // 临时替换S.klines数据来模拟历史信号
+        const origKL = S.klines[S.sym + tf];
+        S.klines[S.sym + tf] = historicalKL;
+        const origPx = S.lastPx;
+        S.lastPx = price;
+        res = _Φ9x(tf);
+        S.klines[S.sym + tf] = origKL;
+        S.lastPx = origPx;
+      } catch(e) { continue; }
+
+      if (!res) continue;
+
+      // 只在高置信度信号下开仓（防止过拟合）
+      if (res.conf < 55) continue;
+      // 需要至少2:1的R:R
+      if (res.rr < 1.5) continue;
+
+      // ── 识别参与此信号的子因子 ──
+      const openSigs = [];
+      if (res.rsi !== undefined) {
+        const rsi = res.rsi;
+        if (rsi < 38 || rsi > 62) openSigs.push('rsi');
+      }
+      if (res.macdD?.bullDiv || res.macdD?.bearDiv || res.macdD?.hist !== undefined) openSigs.push('macd');
+      if (res.vegas) openSigs.push('vegas');
+      if (res.chan) openSigs.push('chan');
+      if (res.adx?.trending) openSigs.push('adx');
+      if (res.obv?.obvDiv) openSigs.push('obv');
+      if (res.candles?.patterns?.length) openSigs.push('candle');
+      // 月相信号（根据置信度判断）
+      const lunar = getLunar();
+      if (lunar.bias === (res.isBull ? 'bull' : 'bear')) openSigs.push('lunar');
+      // 玄学：若置信度 > 60 且有方向
+      if (res.conf > 60) openSigs.push('mystic');
+
+      openTrade = {
+        dir:      res.isBull ? 'long' : 'short',
+        entry:    price,
+        tp1:      res.tps[0]?.p || (res.isBull ? price * 1.03 : price * 0.97),
+        sl1:      res.sls[0]?.p || (res.isBull ? price * 0.98 : price * 1.02),
+        conf:     res.conf,
+        score:    res.score,
+        openBar:  i,
+        openTime: cur.t,
+        openSigs,
+        pnl: 0, win: false, exit: price,
+      };
+    }
+  }
+
+  // ── 计算汇总指标 ──
+  const total = trades.length;
+  if (total === 0) return { error: '回测期间无有效信号（置信度≥55%，R:R≥1.5）', trades: [] };
+
+  const wins = trades.filter(t => t.win);
+  const losses = trades.filter(t => !t.win);
+  const winRate = wins.length / total * 100;
+  const avgWin = wins.length ? wins.reduce((s, t) => s + t.pnl, 0) / wins.length : 0;
+  const avgLoss = losses.length ? Math.abs(losses.reduce((s, t) => s + t.pnl, 0) / losses.length) : 1;
+  const profitFactor = avgLoss > 0 ? (wins.reduce((s, t) => s + t.pnl, 0) / Math.max(1, Math.abs(losses.reduce((s, t) => s + t.pnl, 0)))) : 99;
+
+  // Sharpe简化版：年化回报 / 年化波动率
+  const returns = trades.map(t => t.pnlPct / 100);
+  const meanR = returns.reduce((a, b) => a + b, 0) / Math.max(returns.length, 1);
+  const varR = returns.reduce((s, r) => s + (r - meanR) ** 2, 0) / Math.max(returns.length - 1, 1);
+  const stdR = Math.sqrt(varR);
+  const sharpe = stdR > 0 ? (meanR / stdR * Math.sqrt(Math.min(total, 252))).toFixed(2) : '--';
+
+  const totalReturn = (capital - initCapital) / initCapital * 100;
+
+  // 信号准确率
+  const signalAccuracy = {};
+  Object.entries(sigTracker).forEach(([k, v]) => {
+    signalAccuracy[k] = {
+      total: v.total,
+      win:   v.win,
+      accuracy: v.total > 0 ? (v.win / v.total * 100).toFixed(1) : null,
+    };
+  });
+
+  // 月度汇总
+  const monthly = Object.entries(monthlyMap)
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([mo, d]) => ({ mo, ...d, wr: d.total > 0 ? (d.wins / d.total * 100).toFixed(0) : 0 }));
+
+  return {
+    total, wins: wins.length, losses: losses.length,
+    winRate, avgWin, avgLoss, profitFactor,
+    totalReturn, maxDrawdown, maxConsLoss,
+    sharpe, capital, initCapital,
+    signalAccuracy, monthly, equityCurve,
+    tf, periodBars, trades,
+  };
+}
+
+function renderBacktestResult(r) {
+  const el = document.getElementById('backtestResult');
+  if (!el) return;
+
+  if (r.error) {
+    el.innerHTML = `<div style="color:var(--amber);font-size:12px;padding:10px 0;">${r.error}</div>`;
+    return;
+  }
+
+  const wrColor = r.winRate >= 60 ? 'var(--green)' : r.winRate >= 50 ? 'var(--amber)' : 'var(--red)';
+  const pfColor = r.profitFactor >= 1.5 ? 'var(--green)' : r.profitFactor >= 1 ? 'var(--amber)' : 'var(--red)';
+  const retColor = r.totalReturn >= 0 ? 'var(--green)' : 'var(--red)';
+
+  // ── 总体统计卡片 ──
+  let html = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px;">
+      <div style="background:var(--card);border:1px solid var(--card-bd);border-radius:5px;padding:9px 11px;box-shadow:var(--shadow);">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:3px">胜率</div>
+        <div style="font-size:18px;font-weight:700;color:${wrColor}">${r.winRate.toFixed(1)}%</div>
+        <div style="font-size:10px;color:var(--muted)">${r.wins}W / ${r.losses}L / ${r.total}次</div>
+      </div>
+      <div style="background:var(--card);border:1px solid var(--card-bd);border-radius:5px;padding:9px 11px;box-shadow:var(--shadow);">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:3px">盈亏因子</div>
+        <div style="font-size:18px;font-weight:700;color:${pfColor}">${parseFloat(r.profitFactor).toFixed(2)}</div>
+        <div style="font-size:10px;color:var(--muted)">赢/亏 平均比</div>
+      </div>
+      <div style="background:var(--card);border:1px solid var(--card-bd);border-radius:5px;padding:9px 11px;box-shadow:var(--shadow);">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:3px">总回报率</div>
+        <div style="font-size:18px;font-weight:700;color:${retColor}">${r.totalReturn >= 0 ? '+' : ''}${r.totalReturn.toFixed(1)}%</div>
+        <div style="font-size:10px;color:var(--muted)">$${r.initCapital.toFixed(0)} → $${r.capital.toFixed(0)}</div>
+      </div>
+      <div style="background:var(--card);border:1px solid var(--card-bd);border-radius:5px;padding:9px 11px;box-shadow:var(--shadow);">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:3px">最大回撤</div>
+        <div style="font-size:18px;font-weight:700;color:var(--red)">-${r.maxDrawdown.toFixed(1)}%</div>
+        <div style="font-size:10px;color:var(--muted)">连续亏损最多${r.maxConsLoss}次</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:10px;">
+      <div style="flex:1;background:var(--card);border:1px solid var(--card-bd);border-radius:5px;padding:8px 11px;">
+        <span style="font-size:10px;color:var(--muted)">夏普比率</span>
+        <span style="float:right;font-size:12px;font-weight:700;color:${parseFloat(r.sharpe) >= 1 ? 'var(--green)' : 'var(--amber)'}">${r.sharpe}</span>
+      </div>
+      <div style="flex:1;background:var(--card);border:1px solid var(--card-bd);border-radius:5px;padding:8px 11px;">
+        <span style="font-size:10px;color:var(--muted)">时间框架</span>
+        <span style="float:right;font-size:12px;font-weight:700;color:var(--text)">${r.tf.toUpperCase()}</span>
+      </div>
+      <div style="flex:1;background:var(--card);border:1px solid var(--card-bd);border-radius:5px;padding:8px 11px;">
+        <span style="font-size:10px;color:var(--muted)">回测K线</span>
+        <span style="float:right;font-size:12px;font-weight:700;color:var(--text)">${r.periodBars}</span>
+      </div>
+    </div>`;
+
+  // ── 信号因子准确率 ──
+  html += `<div style="font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:7px;">📈 各信号因子准确率</div>`;
+  const sigLabels = { rsi:'RSI', macd:'MACD', vegas:'Vegas通道', chan:'缠论', gann:'江恩', obv:'OBV量能', adx:'ADX趋势', candle:'K线形态', lunar:'月相', mystic:'玄学' };
+  const sortedSigs = Object.entries(r.signalAccuracy)
+    .filter(([, d]) => d.total >= 3) // 至少3次才算
+    .sort((a, b) => parseFloat(b[1].accuracy) - parseFloat(a[1].accuracy));
+
+  if (sortedSigs.length) {
+    html += `<div style="margin-bottom:10px;">`;
+    sortedSigs.forEach(([key, d]) => {
+      const acc = parseFloat(d.accuracy);
+      const barW = Math.round(acc);
+      const barCol = acc >= 60 ? 'var(--green)' : acc >= 50 ? 'var(--amber)' : 'var(--red)';
+      html += `<div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--line);">
+        <span style="font-size:11px;color:var(--muted);width:70px;flex-shrink:0;">${sigLabels[key] || key}</span>
+        <div style="flex:1;height:6px;background:var(--bg2);border-radius:3px;overflow:hidden;">
+          <div style="width:${barW}%;height:100%;background:${barCol};border-radius:3px;transition:width .4s;"></div>
+        </div>
+        <span style="font-size:11px;font-weight:700;color:${barCol};width:38px;text-align:right;">${d.accuracy}%</span>
+        <span style="font-size:10px;color:var(--muted)">(${d.win}/${d.total})</span>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+
+  // ── 简易资金曲线 (迷你折线) ──
+  if (r.equityCurve.length >= 3) {
+    const vals = r.equityCurve.map(e => e.v);
+    const mn = Math.min(...vals), mx = Math.max(...vals), rng = mx - mn || 1;
+    const W = 280, H = 48;
+    const pts = vals.map((v, i) => {
+      const x = i / (vals.length - 1) * W;
+      const y = H - (v - mn) / rng * H;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(' ');
+    const lastV = vals[vals.length - 1];
+    const lineCol = lastV >= r.initCapital ? '#1A6B3A' : '#A01420';
+    html += `<div style="font-size:10px;color:var(--muted);margin-bottom:5px;letter-spacing:2px;text-transform:uppercase;">资金曲线</div>
+      <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:48px;display:block;margin-bottom:10px;">
+        <polyline points="${pts}" fill="none" stroke="${lineCol}" stroke-width="1.5"/>
+        <line x1="0" y1="${H}" x2="${W}" y2="${H}" stroke="rgba(0,0,0,0.08)" stroke-width="1"/>
+      </svg>`;
+  }
+
+  // ── 月度表现热力图 ──
+  if (r.monthly.length >= 2) {
+    html += `<div style="font-size:10px;color:var(--muted);margin-bottom:5px;letter-spacing:2px;text-transform:uppercase;">月度收益</div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;">`;
+    r.monthly.forEach(m => {
+      const pnlPct = (m.pnl / r.initCapital * 100);
+      const intensity = Math.min(1, Math.abs(pnlPct) / 10);
+      const bg = m.pnl >= 0
+        ? `rgba(26,107,58,${0.1 + intensity * 0.5})`
+        : `rgba(160,20,32,${0.1 + intensity * 0.5})`;
+      const tc = m.pnl >= 0 ? 'var(--green)' : 'var(--red)';
+      html += `<div style="background:${bg};border:1px solid ${m.pnl >= 0 ? 'var(--green-bd)' : 'var(--red-bd)'};border-radius:4px;padding:5px 7px;min-width:54px;text-align:center;">
+        <div style="font-size:9px;color:var(--muted)">${m.mo.slice(5)}</div>
+        <div style="font-size:11px;font-weight:700;color:${tc}">${m.pnl >= 0 ? '+' : ''}${pnlPct.toFixed(1)}%</div>
+        <div style="font-size:9px;color:var(--muted)">${m.wr}%胜</div>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+
+  // ── 结论 ──
+  const verdict = r.winRate >= 60 && r.profitFactor >= 1.5
+    ? '✅ 策略表现优秀，胜率与盈亏比均达标'
+    : r.winRate >= 50 && r.profitFactor >= 1
+    ? '⚠️ 策略表现中等，可进一步优化参数'
+    : '❌ 策略表现不佳，建议调整时间框架或信号阈值';
+
+  html += `<div style="background:var(--bg2);border:1px solid var(--line2);border-radius:5px;padding:9px 12px;font-size:12px;color:var(--text);line-height:1.7;">
+    ${verdict}<br>
+    <span style="font-size:11px;color:var(--muted)">最优信号：${sortedSigs[0] ? (sigLabels[sortedSigs[0][0]] + ' ' + sortedSigs[0][1].accuracy + '%') : '--'}</span>
+  </div>`;
+
+  el.innerHTML = html;
+}
+
+
+// ╔══════════════════════════════════════════════════════════════════════╗
+// ║  FINCH MODULE 3 — 自学习权重优化 (Self-Learning Weight System)       ║
+// ║  算法原理：                                                           ║
+// ║  1. 从回测结果中提取每个信号因子的历史准确率                          ║
+// ║  2. 新权重 = 旧权重 × (0.8 + 0.4 × accuracy) × 学习率               ║
+// ║  3. 权重上下限保护防止过度优化：min 0.3×，max 2.0×                   ║
+// ║  4. 回滚机制：若新权重导致综合得分下降超5%则自动恢复                  ║
+// ║  5. 市场状态自适应：趋势/震荡市下各指标权重不同                       ║
+// ╚══════════════════════════════════════════════════════════════════════╝
+
+// ── 权重存储（localStorage持久化） ──
+const WEIGHT_KEY = 'finch_learned_weights_v1';
+const WEIGHT_LOG_KEY = 'finch_weight_log_v1';
+
+// ── 安全保护常量 ──
+const SAFETY = {
+  maxWeight:      2.0,   // 权重上限
+  minWeight:      0.3,   // 权重下限
+  learningRate:   0.25,  // 每次调整最多影响25%（防止过激）
+  minSamples:     5,     // 至少5次信号才更新权重
+  rollbackThresh: 0.05,  // 综合得分下降>5%则回滚
+};
+
+// ── 默认权重（与原引擎中的隐式权重对应） ──
+const DEFAULT_WEIGHTS = {
+  rsi:    1.0,
+  macd:   1.0,
+  vegas:  1.5,
+  chan:    1.5,
+  gann:   0.7,
+  obv:    1.0,
+  adx:    1.0,
+  candle: 0.8,
+  lunar:  0.5,
+  mystic: 0.4,
+};
+
+// ── 全局权重状态 ──
+let _learnedWeights = null;
+let _weightLog = [];
+
+function loadLearnedWeights() {
+  try {
+    const stored = localStorage.getItem(WEIGHT_KEY);
+    if (stored) _learnedWeights = JSON.parse(stored);
+    const logStored = localStorage.getItem(WEIGHT_LOG_KEY);
+    if (logStored) _weightLog = JSON.parse(logStored);
+  } catch(e) {}
+  if (!_learnedWeights) _learnedWeights = { ...DEFAULT_WEIGHTS };
+}
+
+function saveLearnedWeights() {
+  try {
+    localStorage.setItem(WEIGHT_KEY, JSON.stringify(_learnedWeights));
+    localStorage.setItem(WEIGHT_LOG_KEY, JSON.stringify(_weightLog.slice(-50))); // 保留最近50条记录
+  } catch(e) {}
+}
+
+// ── 从回测结果学习权重 ──
+function learnFromBacktest(btResult) {
+  if (!btResult || btResult.error || !btResult.signalAccuracy) return;
+  loadLearnedWeights();
+
+  const oldWeights = { ..._learnedWeights };
+  const newWeights = { ..._learnedWeights };
+
+  let updated = false;
+  const logEntry = {
+    ts: Date.now(),
+    tf: btResult.tf,
+    sym: S.sym,
+    winRate: btResult.winRate.toFixed(1),
+    changes: [],
+  };
+
+  Object.entries(btResult.signalAccuracy).forEach(([key, data]) => {
+    if (!data.total || data.total < SAFETY.minSamples) return;
+    if (!(key in DEFAULT_WEIGHTS)) return;
+
+    const accuracy = parseFloat(data.accuracy) / 100; // 0~1
+    const currentW = newWeights[key] || DEFAULT_WEIGHTS[key];
+
+    // ── 核心公式：新权重 = 旧权重 × (0.8 + 0.4 × accuracy) ──
+    // accuracy=1.0 → ×1.2 (优秀信号权重上升)
+    // accuracy=0.5 → ×1.0 (中等信号保持不变)
+    // accuracy=0.0 → ×0.8 (差信号权重下降)
+    const rawFactor = 0.8 + 0.4 * accuracy;
+
+    // 学习率控制：每次调整不超过learningRate比例
+    const blendedFactor = 1 + (rawFactor - 1) * SAFETY.learningRate;
+    let candidateW = currentW * blendedFactor;
+
+    // ── 安全保护：权重边界 ──
+    candidateW = Math.max(SAFETY.minWeight, Math.min(SAFETY.maxWeight, candidateW));
+
+    // ── 过拟合检测：若单一权重超过默认的2倍则限速 ──
+    const defaultW = DEFAULT_WEIGHTS[key];
+    if (candidateW > defaultW * 1.8) {
+      candidateW = defaultW * 1.8; // 软上限：不超过默认值1.8倍
+    }
+
+    if (Math.abs(candidateW - currentW) > 0.01) {
+      logEntry.changes.push({
+        key,
+        old: currentW.toFixed(3),
+        new: candidateW.toFixed(3),
+        accuracy: data.accuracy + '%',
+        direction: candidateW > currentW ? '↑' : '↓',
+      });
+      newWeights[key] = candidateW;
+      updated = true;
+    }
+  });
+
+  if (!updated) {
+    renderLearningPanel();
+    return;
+  }
+
+  // ── 回滚机制：计算权重综合得分，若显著下降则回滚 ──
+  const scoreOld = _computeWeightScore(oldWeights, btResult);
+  const scoreNew = _computeWeightScore(newWeights, btResult);
+  if (scoreNew < scoreOld * (1 - SAFETY.rollbackThresh)) {
+    // 新权重让综合得分下降超过5% — 回滚
+    logEntry.changes.push({ key: 'ROLLBACK', direction: '⚠️', accuracy: '回滚触发', old: scoreOld.toFixed(2), new: scoreNew.toFixed(2) });
+    _weightLog.unshift(logEntry);
+    saveLearnedWeights();
+    renderLearningPanel();
+    return;
+  }
+
+  _learnedWeights = newWeights;
+  _weightLog.unshift(logEntry);
+  saveLearnedWeights();
+  renderLearningPanel();
+}
+
+// ── 权重综合得分（用于回滚判断）：加权准确率 ──
+function _computeWeightScore(weights, btResult) {
+  let score = 0, total = 0;
+  Object.entries(btResult.signalAccuracy).forEach(([key, data]) => {
+    if (!data.total || data.total < 3) return;
+    const w = weights[key] || 1;
+    score += parseFloat(data.accuracy) * w * data.total;
+    total += w * data.total;
+  });
+  return total > 0 ? score / total : 50;
+}
+
+// ── 手动触发优化 ──
+function optimizeWeightsNow() {
+  if (!_btResults) {
+    // 没有回测结果，先运行回测
+    runFinchBacktest().then(() => {
+      if (_btResults) learnFromBacktest(_btResults);
+    });
+    return;
+  }
+  loadLearnedWeights();
+  learnFromBacktest(_btResults);
+}
+
+// ── 重置权重 ──
+function resetLearnedWeights() {
+  if (!confirm('确定重置所有学习权重到默认值？')) return;
+  _learnedWeights = { ...DEFAULT_WEIGHTS };
+  _weightLog = [];
+  saveLearnedWeights();
+  renderLearningPanel();
+}
+
+// ── 渲染学习面板 ──
+function renderLearningPanel() {
+  const el = document.getElementById('learningBody');
+  if (!el) return;
+  loadLearnedWeights();
+
+  const sigLabels = { rsi:'RSI', macd:'MACD', vegas:'Vegas通道', chan:'缠论', gann:'江恩', obv:'OBV量能', adx:'ADX趋势', candle:'K线形态', lunar:'月相', mystic:'玄学' };
+  const totalTrades = _btResults ? _btResults.total : 0;
+  const nextOptIn = SAFETY.minSamples - (totalTrades % SAFETY.minSamples);
+
+  let html = `
+    <div style="font-size:10px;color:var(--muted);margin-bottom:8px;padding:6px 8px;background:var(--bg2);border-radius:4px;line-height:1.6;">
+      已学习 <strong style="color:var(--text)">${totalTrades}</strong> 笔交易 · 
+      优化记录 <strong style="color:var(--text)">${_weightLog.length}</strong> 次<br>
+      <span style="color:var(--muted);font-size:9px;">权重上限${SAFETY.maxWeight}× · 下限${SAFETY.minWeight}× · 学习率${(SAFETY.learningRate*100).toFixed(0)}%</span>
+    </div>
+    <div style="font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">当前权重</div>`;
+
+  // 权重可视化
+  Object.entries(_learnedWeights).forEach(([key, w]) => {
+    const defW = DEFAULT_WEIGHTS[key] || 1;
+    const pct = Math.min(100, (w / SAFETY.maxWeight) * 100);
+    const isUp = w > defW + 0.05;
+    const isDn = w < defW - 0.05;
+    const barCol = isUp ? 'var(--green)' : isDn ? 'var(--red)' : 'var(--gold)';
+    const changeIcon = isUp ? '↑' : isDn ? '↓' : '=';
+    const changeCol = isUp ? 'var(--green)' : isDn ? 'var(--red)' : 'var(--muted)';
+
+    html += `<div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--line);">
+      <span style="font-size:11px;color:var(--muted);width:68px;flex-shrink:0;">${sigLabels[key] || key}</span>
+      <div style="flex:1;height:5px;background:var(--bg2);border-radius:3px;overflow:hidden;">
+        <div style="width:${pct.toFixed(1)}%;height:100%;background:${barCol};border-radius:3px;"></div>
+      </div>
+      <span style="font-size:11px;font-weight:700;color:${barCol};width:36px;text-align:right;">${w.toFixed(2)}×</span>
+      <span style="font-size:10px;color:${changeCol};width:14px">${changeIcon}</span>
+    </div>`;
+  });
+
+  // 最近优化记录
+  if (_weightLog.length > 0) {
+    html += `<div style="font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin:10px 0 6px;">最近优化记录</div>`;
+    _weightLog.slice(0, 4).forEach(log => {
+      const dt = new Date(log.ts);
+      const timeStr = `${dt.getMonth()+1}/${dt.getDate()} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
+      html += `<div style="padding:5px 7px;background:var(--bg2);border-radius:4px;margin-bottom:4px;font-size:11px;">
+        <span style="color:var(--muted)">${timeStr}</span>
+        <span style="color:var(--text);margin-left:6px">${log.sym || S.sym} ${log.tf} · 胜率${log.winRate}%</span>
+        <div style="margin-top:3px;display:flex;flex-wrap:wrap;gap:3px;">
+          ${(log.changes || []).slice(0, 5).map(c =>
+            `<span style="font-size:10px;background:var(--bg);border:1px solid var(--line2);border-radius:3px;padding:1px 5px;color:${c.direction==='↑'?'var(--green)':c.direction==='↓'?'var(--red)':'var(--amber)'}">${sigLabels[c.key]||c.key} ${c.direction} ${c.new}×</span>`
+          ).join('')}
+        </div>
+      </div>`;
+    });
+  } else {
+    html += `<div style="font-size:11px;color:var(--muted);padding:6px 0;">尚无优化记录 · 运行回测后自动学习</div>`;
+  }
+
+  el.innerHTML = html;
+}
+
+// ── Fix 1.3: Defer learning panel init until DOM is ready ──
+// Moved out of immediate execution into a safe delayed init
+setTimeout(() => {
+  try { loadLearnedWeights(); renderLearningPanel(); } catch(e) { console.warn('Learning panel init failed:', e); }
+}, 1000);
+
+// ╔══════════════════════════════════════════════════════════════════════╗
+// ║  FINCH MODULE 4 — 大师级思维框架                                     ║
+// ║  RAY DALIO "全天候" 原则 × NAVAL RAVIKANT 财富杠杆论                 ║
+// ║                                                                      ║
+// ║  Ray Dalio 核心：                                                     ║
+// ║  · 不相关资产组合 → 最优风险调整后收益（全天候策略）                   ║
+// ║  · 经济机器运转：增长↑/↓ × 通胀↑/↓ = 4个市场象限                    ║
+// ║  · 永远对冲尾部风险；"我可能是错的" 的激进开放心态                    ║
+// ║  · 痛苦 + 反思 = 进步（Principles 第1定律）                           ║
+// ║                                                                      ║
+// ║  Naval Ravikant 核心：                                               ║
+// ║  · 财富 = 睡觉时仍在赚钱的资产                                       ║
+// ║  · 杠杆 = 代码 / 媒体 / 资本（无需许可的放大器）                     ║
+// ║  · 投资判断力而非时间；做价值最大化，非努力最大化                     ║
+// ║  · 耐心 + 机会主义 = 复利的护城河                                    ║
+// ╚══════════════════════════════════════════════════════════════════════╝
+
+// ── 大师框架：市场象限分析 ──
+// 基于 Ray Dalio 全天候策略的四象限模型
+// 输入：增长预期 + 通胀预期 → 输出：资产配置建议
+function dalioPrinciples(price, btcDom, fg, intelScore) {
+  // ── 象限判断 ──
+  // 增长信号：链上情报得分 > 0 = 增长，< 0 = 衰退
+  // 通胀信号：BTC主导率 > 55% 通常伴随风险厌恶（避险 = 通缩预期）
+  //           BTC主导率 < 45% 资金扩散山寨 = 风险偏好（通胀预期下加密扩张）
+  const growth     = (intelScore || 0) >= 0 ? 'rising' : 'falling';
+  const inflation  = (btcDom || 50) > 52 ? 'falling' : 'rising'; // BTC主导高 = 避险 = 通缩
+
+  // Dalio 四象限
+  const quadrant = {
+    'rising-rising':   { name: '繁荣象限 · Goldilocks',   color: 'var(--green)',  alloc: '加密多头为主，BTC+成长山寨均可，减少现金', risk: 'medium' },
+    'rising-falling':  { name: '复苏象限 · Reflation',    color: 'var(--teal)',   alloc: 'BTC为核心锚，谨慎山寨，等待通胀确认',     risk: 'medium-low' },
+    'falling-rising':  { name: '滞胀象限 · Stagflation',  color: 'var(--amber)',  alloc: '降低杠杆，减仓50%，持有稳定币对冲',        risk: 'high' },
+    'falling-falling': { name: '衰退象限 · Deflation',    color: 'var(--red)',    alloc: '防御模式，稳定币为主，BTC轻仓作避险',       risk: 'very-high' },
+  };
+
+  const q = quadrant[`${growth}-${inflation}`] || quadrant['rising-rising'];
+
+  // ── Dalio 风险评级 ──
+  // "Never risk more than 1% of portfolio on a single bet" — Dalio
+  const fgFear = (fg || 50) < 30;
+  const fgGreed = (fg || 50) > 75;
+
+  const dalioPainPoint = fgFear
+    ? '📉 极度恐惧期 → Dalio原则：恐惧即机会，但先验证基本面'
+    : fgGreed
+    ? '📈 极度贪婪期 → Dalio原则：大众最乐观时正是最危险时刻'
+    : '⚖️ 情绪中性 → Dalio原则：此时信号最可靠，机械执行策略';
+
+  return { quadrant: q, growth, inflation, dalioPainPoint };
+}
+
+// ── Naval 杠杆分析 ──
+// "Code and media are permissionless leverage" — Naval
+// 应用到加密交易：识别你拥有的杠杆类型
+function navalLeverageAnalysis(conf, rr, adxTrending, hvExpanding) {
+  // Naval 三种无需许可的杠杆：
+  // 1. 知识杠杆：你对市场的独特理解（信息优势）
+  // 2. 时间杠杆：等待高质量机会（选择性 > 频率）
+  // 3. 资本杠杆：让资本本身工作（复利 > 线性收益）
+
+  const knowledgeEdge = conf >= 70
+    ? { level: 'high',   label: '✅ 信息优势强', note: 'Naval: 此时拥有显著知识杠杆，机会成本低，值得行动' }
+    : conf >= 55
+    ? { level: 'medium', label: '⚡ 信息优势中等', note: 'Naval: 信号模糊期缩小仓位，等待更清晰的机会' }
+    : { level: 'low',    label: '⚠️ 无信息优势', note: 'Naval: 在无优势时交易等于赌博，等待不是失败' };
+
+  const timeEdge = adxTrending
+    ? { label: '趋势明确', note: 'Naval: 趋势是时间杠杆的朋友，让市场替你工作' }
+    : { label: '震荡整理', note: 'Naval: 震荡市无法「躺平」获利，主动交易耗时耗力' };
+
+  const capitalEdge = rr >= 2.0
+    ? { label: `R:R=${rr.toFixed(1)}`, note: 'Naval: 高R:R意味着资本杠杆有效，少次高质量交易碾压高频微利' }
+    : { label: `R:R=${rr?.toFixed(1)||'--'}`, note: 'Naval: R:R<2说明赔率不在你这边，跳过此机会' };
+
+  // Naval 核心原则：判断力 > 努力
+  // 「做出一个决定胜过做出100个决定」
+  const overallVerdict = conf >= 70 && rr >= 2 && adxTrending
+    ? { action: '⚡ 高质量机会窗口', color: 'var(--green)',  note: '三重杠杆共振 — Naval称此为"特权时刻"，值得重仓' }
+    : conf >= 55 && rr >= 1.5
+    ? { action: '⚖️ 合格机会，轻仓', color: 'var(--amber)', note: '知识+资本杠杆存在但不完整 — 减半仓位以保留选择权' }
+    : { action: '🕐 等待更优机会',  color: 'var(--muted)',  note: 'Naval: 不行动本身就是一种高杠杆行动 — 保存子弹' };
+
+  return { knowledgeEdge, timeEdge, capitalEdge, overallVerdict };
+}
+
+// ── Dalio 痛苦反思日志 ──
+// "Pain + Reflection = Progress" — Principles
+// 记录每次回测亏损交易，强制反思
+function dalioReflectionLog(btResult) {
+  if (!btResult || btResult.error || !btResult.trades) return '';
+  const losses = btResult.trades.filter(t => !t.win);
+  if (!losses.length) return '';
+
+  // 分析亏损模式
+  const lossPatterns = {};
+  losses.forEach(t => {
+    t.openSigs.forEach(sig => {
+      lossPatterns[sig] = (lossPatterns[sig] || 0) + 1;
+    });
+  });
+  const worstSig = Object.entries(lossPatterns).sort((a,b) => b[1]-a[1])[0];
+
+  return worstSig
+    ? `Dalio反思：亏损交易中 <strong>${worstSig[0]}</strong> 信号出现${worstSig[1]}次 → 该因子在此市场环境下噪音过多，建议降权`
+    : '';
+}
+
+// ── 大师框架渲染 ──
+function renderMasterFramework() {
+  const el = document.getElementById('masterFrameworkPanel');
+  if (!el) return;
+
+  const res = S.lastSignal;
+  if (!res) { el.innerHTML = '<span style="color:var(--muted);font-size:11px">等待信号计算...</span>'; return; }
+
+  const btcDom = S.macro?.btcDom || 50;
+  const fg = S.fg ? parseInt(S.fg.value) : 50;
+  const intel = S.intelScore || 0;
+
+  let html = '';
+
+  try {
+    // ── Ray Dalio 象限分析 ──
+    const dalio = dalioPrinciples(res.entry, btcDom, fg, intel);
+    const q = dalio.quadrant;
+
+    html += `
+    <div style="background:var(--card);border:1px solid var(--card-bd);border-left:3px solid ${q.color};border-radius:5px;padding:10px 13px;margin-bottom:8px;box-shadow:var(--shadow);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;">
+        <div style="font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;">⚖️ RAY DALIO · 全天候象限</div>
+        <span style="font-size:10px;padding:2px 7px;border-radius:10px;background:${q.color};color:#fff;font-weight:700;opacity:0.85;">${q.risk.toUpperCase()}</span>
+      </div>
+      <div style="font-size:13px;font-weight:700;color:${q.color};margin-bottom:5px;">${q.name}</div>
+      <div style="display:flex;gap:8px;margin-bottom:6px;">
+        <div style="flex:1;background:var(--bg2);border-radius:4px;padding:5px 8px;font-size:11px;">
+          <div style="color:var(--muted);font-size:10px;margin-bottom:2px">经济增长</div>
+          <div style="font-weight:700;color:${dalio.growth==='rising'?'var(--green)':'var(--red)'}">${dalio.growth==='rising'?'↑ 扩张':'↓ 收缩'}</div>
+        </div>
+        <div style="flex:1;background:var(--bg2);border-radius:4px;padding:5px 8px;font-size:11px;">
+          <div style="color:var(--muted);font-size:10px;margin-bottom:2px">通胀预期</div>
+          <div style="font-weight:700;color:${dalio.inflation==='rising'?'var(--amber)':'var(--cyan)'}">${dalio.inflation==='rising'?'↑ 通胀':'↓ 通缩'}</div>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--muted);line-height:1.6;margin-bottom:5px;">配置建议：${q.alloc}</div>
+      <div style="font-size:11px;color:var(--amber);line-height:1.5;padding:5px 7px;background:rgba(128,80,0,0.07);border-radius:3px;">${dalio.dalioPainPoint}</div>
+    </div>`;
+
+    // ── Naval Ravikant 杠杆分析 ──
+    const naval = navalLeverageAnalysis(
+      res.conf, res.rr,
+      res.adx?.trending || false,
+      res.hv?.expanding || false
+    );
+
+    html += `
+    <div style="background:var(--card);border:1px solid var(--card-bd);border-left:3px solid var(--indigo);border-radius:5px;padding:10px 13px;margin-bottom:8px;box-shadow:var(--shadow);">
+      <div style="font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:7px;">🚀 NAVAL RAVIKANT · 杠杆分析</div>
+      <div style="font-size:13px;font-weight:700;color:${naval.overallVerdict.color};margin-bottom:8px;">${naval.overallVerdict.action}</div>
+      <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:8px;">
+        <div style="display:flex;align-items:flex-start;gap:8px;">
+          <span style="font-size:10px;color:var(--muted);width:60px;flex-shrink:0;padding-top:1px">知识杠杆</span>
+          <div>
+            <div style="font-size:11px;font-weight:700;color:${naval.knowledgeEdge.level==='high'?'var(--green)':naval.knowledgeEdge.level==='medium'?'var(--amber)':'var(--red)'}">${naval.knowledgeEdge.label}</div>
+            <div style="font-size:10px;color:var(--muted);line-height:1.5;">${naval.knowledgeEdge.note}</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:8px;">
+          <span style="font-size:10px;color:var(--muted);width:60px;flex-shrink:0;padding-top:1px">时间杠杆</span>
+          <div>
+            <div style="font-size:11px;font-weight:700;color:var(--text)">${naval.timeEdge.label}</div>
+            <div style="font-size:10px;color:var(--muted);line-height:1.5;">${naval.timeEdge.note}</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:8px;">
+          <span style="font-size:10px;color:var(--muted);width:60px;flex-shrink:0;padding-top:1px">资本杠杆</span>
+          <div>
+            <div style="font-size:11px;font-weight:700;color:${parseFloat(res.rr)>=2?'var(--green)':'var(--amber)'}">${naval.capitalEdge.label}</div>
+            <div style="font-size:10px;color:var(--muted);line-height:1.5;">${naval.capitalEdge.note}</div>
+          </div>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--indigo);padding:6px 9px;background:rgba(40,48,160,0.06);border-radius:4px;line-height:1.6;font-style:italic;">"${naval.overallVerdict.note}"</div>
+    </div>`;
+
+    // ── Dalio 反思日志（如果有回测结果）──
+    if (_btResults && !_btResults.error) {
+      const reflection = dalioReflectionLog(_btResults);
+      if (reflection) {
+        html += `
+        <div style="background:rgba(160,20,32,0.04);border:1px solid rgba(160,20,32,0.15);border-radius:5px;padding:9px 12px;font-size:11px;color:var(--text);line-height:1.7;">
+          <div style="font-size:10px;letter-spacing:1.5px;color:var(--red);margin-bottom:5px;text-transform:uppercase;">📉 DALIO 痛苦反思 · Pain + Reflection</div>
+          ${reflection}
+        </div>`;
+      }
+    }
+
+    // ── 综合大师建议 ──
+    const masterConf = (
+      (naval.overallVerdict.action.includes('⚡') ? 30 : naval.overallVerdict.action.includes('⚖️') ? 15 : 0) +
+      (dalio.quadrant.risk === 'medium' || dalio.quadrant.risk === 'medium-low' ? 20 : dalio.quadrant.risk === 'high' ? 5 : 0) +
+      res.conf * 0.5
+    );
+    const masterColor = masterConf >= 70 ? 'var(--green)' : masterConf >= 50 ? 'var(--amber)' : 'var(--red)';
+
+    html += `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--bg2);border-radius:5px;margin-top:4px;">
+      <div style="font-size:11px;color:var(--muted);">大师综合评分</div>
+      <div style="font-size:15px;font-weight:700;color:${masterColor}">${Math.min(99, Math.round(masterConf))}%</div>
+    </div>`;
+
+  } catch(e) {
+    html = `<div style="color:var(--muted);font-size:11px;">等待信号数据...</div>`;
+  }
+
+  el.innerHTML = html;
+}
+
+// ── 2.1 Enhanced renderLearningPanel with learning progress bar ──
+// Patch: prepend progress bar to existing renderLearningPanel output
+const _origRenderLearningPanel = renderLearningPanel;
+renderLearningPanel = function() {
+  _origRenderLearningPanel();
+  const el = document.getElementById('learningBody');
+  if (!el) return;
+  // Calculate learning progress: how much weights have diverged from defaults
+  loadLearnedWeights();
+  const totalAdjustment = Object.entries(_learnedWeights).reduce((sum, [key, w]) => {
+    const defW = DEFAULT_WEIGHTS[key] || 1;
+    return sum + Math.abs(w - defW) / defW;
+  }, 0);
+  const learningProgress = Math.min(100, Math.round(totalAdjustment * 50));
+  const progressBar = `
+    <div style="margin-bottom:8px;">
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:3px;">
+        <span>学习进度 Learning Progress</span>
+        <span style="font-weight:700;color:var(--violet)">${learningProgress}%</span>
+      </div>
+      <div style="height:4px;background:var(--bg3);border-radius:2px;overflow:hidden;">
+        <div style="width:${learningProgress}%;height:100%;background:var(--violet);border-radius:2px;transition:width .5s;"></div>
+      </div>
+    </div>`;
+  el.innerHTML = progressBar + el.innerHTML;
+};
+
+// ── 2.2 Export backtest result as JSON ──
+function exportBacktestResult() {
+  if (!_btResults || _btResults.error) { alert('请先运行回测'); return; }
+  try {
+    const exportData = {
+      timestamp:    new Date().toISOString(),
+      symbol:       S.sym,
+      tf:           _btResults.tf,
+      periodBars:   _btResults.periodBars,
+      winRate:      _btResults.winRate,
+      profitFactor: _btResults.profitFactor,
+      totalReturn:  _btResults.totalReturn,
+      maxDrawdown:  _btResults.maxDrawdown,
+      sharpe:       _btResults.sharpe,
+      wins:         _btResults.wins,
+      losses:       _btResults.losses,
+      total:        _btResults.total,
+      signalAccuracy: _btResults.signalAccuracy,
+      monthly:      _btResults.monthly,
+      equityCurve:  _btResults.equityCurve?.slice(-100),
+    };
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `finch_backtest_${S.sym}_${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch(e) { alert('导出失败: ' + e.message); }
+}
+
+// ── 2.2 Export / Import learned weights ──
+function exportLearnedWeights() {
+  loadLearnedWeights();
+  const data = {
+    version:   FINCH_VERSION,
+    timestamp: Date.now(),
+    weights:   _learnedWeights,
+    log:       _weightLog.slice(0, 20),
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `finch_weights_${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function importLearnedWeights() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  input.onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        if (data.weights && typeof data.weights === 'object') {
+          _learnedWeights = data.weights;
+          if (data.log) _weightLog = data.log;
+          saveLearnedWeights();
+          renderLearningPanel();
+          _showToast('✅ 权重导入成功');
+        } else {
+          alert('❌ 无效的权重文件格式');
+        }
+      } catch(err) { alert('❌ 文件解析失败: ' + err.message); }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+// ── 2.3 Gann Calendar View ──
+let _gannViewMode = 'list'; // 'list' | 'calendar'
+let _gannNodesCache = null;
+
+function toggleGannView(mode) {
+  _gannViewMode = mode;
+  renderGannTimeNodes(S.lastPx);
+}
+
+function _renderGannCalendar(nodes) {
+  if (!nodes || !nodes.length) return '';
+  // Group by YYYY-MM
+  const byMonth = {};
+  nodes.forEach(n => {
+    // date format: "YYYY-MM-DD HH:MM MYT"
+    const mo = n.date.slice(0, 7);
+    if (!byMonth[mo]) byMonth[mo] = [];
+    byMonth[mo].push(n);
+  });
+  let cal = '';
+  Object.entries(byMonth).sort().forEach(([mo, mNodes]) => {
+    cal += `<div style="margin-bottom:10px;">
+      <div style="font-size:10px;font-weight:700;color:var(--violet);letter-spacing:1px;margin-bottom:5px;">${mo}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px;">`;
+    mNodes.forEach(n => {
+      const day = n.date.slice(8, 10);
+      const cc = n.probability >= 70 ? 'var(--green)' : n.probability >= 55 ? 'var(--amber)' : 'var(--muted)';
+      const subtypeEmoji = n.subtype === 'squareroot' ? '√' : n.subtype === 'anniversary' ? '🗓' : '⚡';
+      cal += `<div style="width:36px;height:36px;border-radius:5px;background:rgba(88,24,144,0.08);border:1px solid ${cc};display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;"
+               title="${n.label}\n${n.date}\n目标价: ${fmtP(n.price)}\n置信度: ${n.probability}%\n${n.basis}">
+        <span style="font-size:11px;font-weight:700;color:${cc};">${day}</span>
+        <span style="font-size:8px;color:var(--muted);">${subtypeEmoji}</span>
+      </div>`;
+    });
+    cal += `</div></div>`;
+  });
+  return cal;
+}
+
+// Patch renderGannTimeNodes to add view switcher + calendar support
+const _origRenderGannTimeNodes = renderGannTimeNodes;
+renderGannTimeNodes = function(price) {
+  // Run original list render first
+  _origRenderGannTimeNodes(price);
+
+  const el = document.getElementById('gannTimeNodes');
+  if (!el) return;
+
+  // Cache nodes for calendar reuse
+  if (price && price > 0) {
+    const kl = S.klines[S.sym + (S.chartTF || '4h')]
+      || S.klines[S.sym + '1h']
+      || S.klines[S.sym + '4h'] || [];
+    try {
+      const result = preciseGannTimeNodes(price, kl);
+      _gannNodesCache = result.nodes || [];
+    } catch(e) {}
+  }
+
+  if (!_gannNodesCache || !_gannNodesCache.length) return;
+
+  // Inject view switcher above existing content
+  const switcher = `<div style="display:flex;justify-content:flex-end;gap:4px;margin-bottom:7px;">
+    <button onclick="toggleGannView('list')" style="padding:2px 9px;border:1px solid ${_gannViewMode==='list'?'var(--violet)':'var(--line2)'};border-radius:3px;background:${_gannViewMode==='list'?'rgba(88,24,144,0.1)':'var(--bg)'};color:${_gannViewMode==='list'?'var(--violet)':'var(--muted)'};font-size:10px;cursor:pointer;font-family:inherit;">📋 列表</button>
+    <button onclick="toggleGannView('calendar')" style="padding:2px 9px;border:1px solid ${_gannViewMode==='calendar'?'var(--violet)':'var(--line2)'};border-radius:3px;background:${_gannViewMode==='calendar'?'rgba(88,24,144,0.1)':'var(--bg)'};color:${_gannViewMode==='calendar'?'var(--violet)':'var(--muted)'};font-size:10px;cursor:pointer;font-family:inherit;">📅 日历</button>
+  </div>`;
+
+  if (_gannViewMode === 'calendar') {
+    el.innerHTML = switcher + _renderGannCalendar(_gannNodesCache);
+  } else {
+    el.innerHTML = switcher + el.innerHTML;
+  }
+};
+
+// ── 3.2 Enhanced resetLearnedWeights with toast ──
+function _showToast(msg, duration) {
+  const toast = document.createElement('div');
+  toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--bright);color:var(--bg1);padding:9px 20px;border-radius:20px;font-size:12px;font-weight:700;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.25);pointer-events:none;';
+  toast.textContent = msg;
+  document.body.appendChild(toast);
+  setTimeout(() => { try { document.body.removeChild(toast); } catch(e) {} }, duration || 2200);
+}
+
+// Override resetLearnedWeights with confirm + toast
+const _origResetWeights = resetLearnedWeights;
+resetLearnedWeights = function() {
+  if (!confirm('⚠️ 确定重置所有学习权重到默认值？\n\n此操作将清空所有学习记录，不可恢复。')) return;
+  _learnedWeights = { ...DEFAULT_WEIGHTS };
+  _weightLog = [];
+  saveLearnedWeights();
+  renderLearningPanel();
+  _showToast('✅ 权重已重置为默认值');
+};
+
+// ── 3.3 Version constants + console branding ──
+const FINCH_VERSION = '2.1.0';
+const FINCH_BUILD   = '2026-03-16';
+
+// Console welcome banner
+setTimeout(() => {
+  try {
+    console.log('%c🐦 FINCH v' + FINCH_VERSION + ' (Build: ' + FINCH_BUILD + ')', 'color:#8B6914;font-size:16px;font-weight:bold;');
+    console.log('%c📊 全维度加密货币分析系统 · 增强版', 'color:#5C5040;font-size:12px;');
+    console.log('%c⚖️ Ray Dalio全天候象限 · 🚀 Naval杠杆分析 · 🔮 江恩时间节点 · 📊 回测系统 · 🧠 自学习权重', 'color:#581890;font-size:12px;');
+  } catch(e) {}
+}, 500);
+
+// ── Patch renderBacktestResult to add export + rerun buttons ──
+const _origRenderBacktestResult = renderBacktestResult;
+renderBacktestResult = function(r) {
+  _origRenderBacktestResult(r);
+  if (!r || r.error) return;
+  const el = document.getElementById('backtestResult');
+  if (!el) return;
+  // Append action buttons after result
+  const btnRow = document.createElement('div');
+  btnRow.style.cssText = 'display:flex;gap:6px;margin-top:8px;';
+  btnRow.innerHTML = `
+    <button onclick="exportBacktestResult()" style="flex:1;padding:6px;border:1px solid var(--gold);border-radius:4px;background:transparent;color:var(--gold);font-size:11px;cursor:pointer;font-family:inherit;font-weight:700;">📥 导出结果</button>
+    <button onclick="exportLearnedWeights()" style="flex:1;padding:6px;border:1px solid var(--violet);border-radius:4px;background:transparent;color:var(--violet);font-size:11px;cursor:pointer;font-family:inherit;font-weight:700;">📤 导出权重</button>
+    <button onclick="importLearnedWeights()" style="flex:1;padding:6px;border:1px solid var(--line2);border-radius:4px;background:var(--bg2);color:var(--muted);font-size:11px;cursor:pointer;font-family:inherit;">📂 导入权重</button>`;
+  el.appendChild(btnRow);
+  // Also refresh master framework panel after backtest
+  try { renderMasterFramework(); } catch(e) {}
+};
+
+// ── Hook master framework into renderStrategy so it updates with signals ──
+const _origRenderSummary = typeof renderSummary === 'function' ? renderSummary : null;
+if (_origRenderSummary) {
+  renderSummary = function() {
+    _origRenderSummary();
+    setTimeout(() => { try { renderMasterFramework(); } catch(e) {} }, 200);
+  };
+}
 </script>
 <!-- ══ FINCH SMART ASSISTANT ══ -->
 <div id="finchAiOverlay" class="finch-ai-overlay">
