@@ -15,7 +15,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://fonts.googleapis.com https://fonts.gstatic.com https://api.binance.com https://api1.binance.com https://api2.binance.com https://api3.binance.com https://api4.binance.com https://data-api.binance.vision https://fapi.binance.com https://api.alternative.me https://api.coingecko.com https://api.llama.fi https://corsproxy.io https://api.allorigins.win https://thingproxy.freeboard.io https://api.anthropic.com https://api.blockchain.info wss://stream.binance.com; frame-ancestors 'none';">
 <meta http-equiv="X-Frame-Options" content="DENY">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
-<title>FINCH — 全维度市场分析</title>
+<title>FINCH v37 — 全维度市场分析</title>
 
 <!-- ═══ PWA / iOS APP META ═══ -->
 <meta name="mobile-web-app-capable" content="yes">
@@ -86,7 +86,41 @@
   --fs-base:16px;--fs-sm:14px;--fs-xs:13px;--fs-xxs:12px;--fs-label:12px;
   --radius:6px;--radius-lg:10px;
 }
-/* ══ I-CHING MODULE ══ */
+/* ══ INSTITUTIONAL RESEARCH MODULE ══ */
+.inst-badge{
+  font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px;cursor:pointer;
+  background:rgba(10,88,112,0.08);border:1px solid rgba(10,88,112,0.25);
+  color:var(--cyan);letter-spacing:0.5px;transition:all .15s;user-select:none;
+}
+.inst-badge:hover{background:rgba(10,88,112,0.18);border-color:var(--cyan);}
+.inst-badge.active{background:var(--cyan);color:#fff;border-color:var(--cyan);}
+.inst-badge.updated{border-color:var(--green);color:var(--teal);}
+.inst-badge.loading{opacity:.5;cursor:wait;}
+.inst-source-card{
+  background:var(--card);border:1px solid var(--card-bd);border-radius:5px;
+  padding:10px 12px;margin-bottom:7px;box-shadow:var(--shadow);
+}
+.inst-source-name{
+  font-size:11px;font-weight:700;color:var(--cyan);letter-spacing:1px;
+  text-transform:uppercase;margin-bottom:4px;
+}
+.inst-source-body{font-size:11px;color:var(--text);line-height:1.75;}
+.inst-synthesis{
+  font-size:12px;color:var(--text);line-height:1.8;
+  padding:10px 12px;background:var(--iching-bg);
+  border-left:3px solid var(--cyan);border-radius:0 5px 5px 0;
+  margin-bottom:8px;
+}
+.inst-tag{
+  display:inline-block;font-size:9px;font-weight:700;padding:1px 5px;border-radius:2px;
+  margin-right:3px;margin-top:3px;
+  background:rgba(10,88,112,0.1);color:var(--cyan);border:1px solid rgba(10,88,112,0.2);
+}
+.inst-tag.bull{background:rgba(26,107,58,0.1);color:var(--green);border-color:rgba(26,107,58,0.2);}
+.inst-tag.bear{background:rgba(160,20,32,0.1);color:var(--red);border-color:rgba(160,20,32,0.2);}
+.inst-tag.neutral{background:rgba(128,80,0,0.1);color:var(--amber);border-color:rgba(128,80,0,0.2);}
+
+/* ══ ICHING MODULE ══ */
 .iching-hexagram{
   display:flex;flex-direction:column;gap:3px;padding:8px 0;
 }
@@ -1276,6 +1310,40 @@ canvas.main-c{width:100%!important;}
       <span style="color:var(--muted);font-size:11px">⏳ 初始化中...</span>
     </div>
     <div id="macroPulseMeta" style="padding:0 14px 8px;"></div>
+  </div>
+
+  <!-- ══ INSTITUTIONAL RESEARCH HUB ══ -->
+  <div id="instResPanel" style="background:linear-gradient(135deg,rgba(10,88,112,0.05),rgba(10,96,80,0.05));border-bottom:2px solid var(--line2);">
+    <div style="padding:10px 14px 6px;display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:2px;color:var(--cyan);text-transform:uppercase;">🏛️ 机构研究 · Institutional Intelligence</div>
+        <div style="font-size:10px;color:var(--dim);margin-top:2px;">Man · AQR · Citadel · GMO · Apollo · VisualCapitalist · Haver</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span id="instResTimer" style="font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums;">30:00</span>
+        <button onclick="refreshInstRes(true)" style="padding:3px 9px;border:1px solid var(--cyan);border-radius:3px;background:rgba(10,88,112,0.08);color:var(--cyan);font-family:inherit;font-size:10px;cursor:pointer;font-weight:700;">↺ 研究</button>
+        <button onclick="toggleInstRes()" id="instResToggleBtn" style="padding:3px 9px;border:1px solid var(--line2);border-radius:3px;background:transparent;color:var(--muted);font-family:inherit;font-size:10px;cursor:pointer;">⌄</button>
+      </div>
+    </div>
+    <div id="instResBody" style="display:block;">
+      <!-- Source badges -->
+      <div style="padding:4px 14px 6px;display:flex;flex-wrap:wrap;gap:4px;" id="instResBadges">
+        <span class="inst-badge" data-src="man" onclick="showInstDetail('man')" title="Man Institute">Man</span>
+        <span class="inst-badge" data-src="aqr" onclick="showInstDetail('aqr')" title="AQR Capital">AQR</span>
+        <span class="inst-badge" data-src="citadel" onclick="showInstDetail('citadel')" title="Citadel">Citadel</span>
+        <span class="inst-badge" data-src="gmo" onclick="showInstDetail('gmo')" title="GMO">GMO</span>
+        <span class="inst-badge" data-src="apollo" onclick="showInstDetail('apollo')" title="Apollo Academy">Apollo</span>
+        <span class="inst-badge" data-src="vc" onclick="showInstDetail('vc')" title="Visual Capitalist">VisCapital</span>
+        <span class="inst-badge" data-src="haver" onclick="showInstDetail('haver')" title="Haver Analytics">Haver</span>
+      </div>
+      <!-- Synthesis output -->
+      <div id="instResContent" style="padding:0 14px 8px;font-size:12px;color:var(--text);line-height:1.8;">
+        <span style="color:var(--muted);font-size:11px">🏛️ 点击「研究」读取最新机构观点 · 每30分钟自动更新</span>
+      </div>
+      <!-- Individual source detail (expandable) -->
+      <div id="instResDetail" style="display:none;padding:0 14px 10px;"></div>
+      <div id="instResMeta" style="padding:0 14px 8px;"></div>
+    </div>
   </div>
 
   <!-- TIMELINE at top of right panel -->
@@ -8383,6 +8451,341 @@ function addCustom(){
   }selectSym(v);
 }
 
+// ╔══════════════════════════════════════════════════════════════════════╗
+// ║  FINCH MODULE 6 — 机构研究情报中枢 (Institutional Research Hub)      ║
+// ║  持续扫描顶级机构网站，提炼市场观点，融入FINCH分析体系                 ║
+// ║                                                                      ║
+// ║  信源：                                                               ║
+// ║  · Man Institute (man.com/institute)                                  ║
+// ║  · AQR Capital (aqr.com/insights)                                    ║
+// ║  · Citadel / Ken Griffin Office (citadel.com/insights)               ║
+// ║  · GMO (gmo.com/insights)                                            ║
+// ║  · Apollo Academy (apolloacademy.com)                                 ║
+// ║  · Visual Capitalist (visualcapitalist.com)                          ║
+// ║  · Haver Analytics (haver.com)                                       ║
+// ║                                                                      ║
+// ║  工作原理：调用Claude API + web_search工具，让AI主动检索各机构最新      ║
+// ║  研究报告、市场评论和宏观观点，综合提炼成可操作的市场情报。             ║
+// ╚══════════════════════════════════════════════════════════════════════╝
+
+var INST_RES = {
+  lock: false,
+  cdown: 1800,        // 30 min refresh cycle
+  interval: null,
+  lastUpdate: null,
+  synthesis: '',      // Combined synthesis for AI context
+  sources: {},        // Per-source data  { man:{text, ts, sentiment}, aqr:{...}, ... }
+  activeSrc: null,    // Currently expanded source detail
+};
+
+// ── Source definitions ──
+var INST_SOURCES = [
+  {
+    id: 'man',
+    name: 'Man Institute',
+    url: 'https://www.man.com/maninstitute',
+    searchQ: 'Man Institute latest research market outlook crypto macro 2025 2026',
+    color: 'var(--indigo)',
+    icon: '🔬',
+  },
+  {
+    id: 'aqr',
+    name: 'AQR Capital Insights',
+    url: 'https://www.aqr.com/Insights',
+    searchQ: 'AQR Capital Insights latest paper factor investing market outlook 2025 2026',
+    color: 'var(--blue)',
+    icon: '📐',
+  },
+  {
+    id: 'citadel',
+    name: 'Citadel Insights',
+    url: 'https://www.citadel.com/insights/',
+    searchQ: 'Citadel hedge fund market view macro outlook 2025 2026',
+    color: 'var(--violet)',
+    icon: '🏰',
+  },
+  {
+    id: 'gmo',
+    name: 'GMO Research',
+    url: 'https://www.gmo.com/americas/research-library/',
+    searchQ: 'GMO Jeremy Grantham 7 year asset class return forecast market bubble 2025 2026',
+    color: 'var(--teal)',
+    icon: '📊',
+  },
+  {
+    id: 'apollo',
+    name: 'Apollo Academy',
+    url: 'https://www.apolloacademy.com',
+    searchQ: 'Apollo Academy private credit macro economic outlook 2025 2026',
+    color: 'var(--orange)',
+    icon: '🏛️',
+  },
+  {
+    id: 'vc',
+    name: 'Visual Capitalist',
+    url: 'https://www.visualcapitalist.com',
+    searchQ: 'Visual Capitalist latest data chart market trends crypto macro 2025 2026',
+    color: 'var(--rose)',
+    icon: '📈',
+  },
+  {
+    id: 'haver',
+    name: 'Haver Analytics',
+    url: 'https://www.haver.com',
+    searchQ: 'Haver Analytics economic data macro indicators market analysis 2025 2026',
+    color: 'var(--cyan)',
+    icon: '📉',
+  },
+];
+
+// ── Start the auto-refresh engine ──
+function startInstResEngine() {
+  // First run after 8s (give page time to fully load)
+  setTimeout(function() { refreshInstRes(false); }, 8000);
+  // Countdown ticker
+  INST_RES.interval = setInterval(function() {
+    INST_RES.cdown--;
+    var m = Math.floor(INST_RES.cdown / 60);
+    var s = String(INST_RES.cdown % 60).padStart(2, '0');
+    var te = document.getElementById('instResTimer');
+    if (te) te.textContent = m + ':' + s;
+    if (INST_RES.cdown <= 0) {
+      INST_RES.cdown = 1800;
+      refreshInstRes(false);
+    }
+  }, 1000);
+}
+
+// ── Toggle panel collapse ──
+function toggleInstRes() {
+  var body = document.getElementById('instResBody');
+  var btn = document.getElementById('instResToggleBtn');
+  if (!body) return;
+  var isOpen = body.style.display !== 'none';
+  body.style.display = isOpen ? 'none' : 'block';
+  if (btn) btn.textContent = isOpen ? '⌃' : '⌄';
+}
+
+// ── Main refresh function — calls Claude API with web_search ──
+async function refreshInstRes(manual) {
+  if (INST_RES.lock && !manual) return;
+  INST_RES.lock = true;
+
+  var contentEl = document.getElementById('instResContent');
+  var metaEl = document.getElementById('instResMeta');
+  var badgesEl = document.getElementById('instResBadges');
+
+  if (contentEl) contentEl.innerHTML = '<span style="color:var(--cyan);font-size:11px">🔍 正在扫描机构研究网站...</span>';
+
+  // Mark all badges as loading
+  if (badgesEl) {
+    badgesEl.querySelectorAll('.inst-badge').forEach(function(b) {
+      b.classList.add('loading');
+    });
+  }
+
+  // Build the current market context to give Claude
+  var sym  = (S.sym || 'BTCUSDT').replace('USDT', '');
+  var px   = S.lastPx > 0 ? fmtP(S.lastPx) : '—';
+  var sig  = S.lastSignal;
+  var dir  = sig ? (sig.isBull ? '多头' : '空头') : '分析中';
+  var conf = sig ? sig.conf + '%' : '—';
+  var fg   = S.fg ? parseInt(S.fg.value) : 50;
+  var now  = new Date().toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
+  var btcDom = S.macro && S.macro.btcDom ? S.macro.btcDom.toFixed(1) + '%' : '—';
+
+  var systemPrompt = `你是FINCH系统的机构研究情报分析师，专门收集和综合全球顶级投资机构的最新研究和市场观点。
+
+当前市场快照 (${now}):
+- 分析币种: ${sym}/USDT, 价格: ${px}
+- FINCH技术信号: ${dir}, 置信度: ${conf}
+- 恐慌贪婪指数: ${fg}, BTC主导率: ${btcDom}
+
+你的任务：使用web_search工具搜索以下机构的最新研究和市场观点：
+1. Man Institute (man.com/maninstitute) - 量化研究
+2. AQR Capital Insights (aqr.com) - 因子投资观点
+3. Citadel (citadel.com) - 宏观市场观点
+4. GMO (gmo.com) - 长期资产配置与泡沫警告
+5. Apollo Academy (apolloacademy.com) - 私信贷与宏观经济
+6. Visual Capitalist (visualcapitalist.com) - 数据可视化洞察
+7. Haver Analytics (haver.com) - 宏观经济数据
+
+搜索后，请严格按以下JSON格式输出，不要有任何前言或解释：
+
+{
+  "synthesis": "150字以内中文综合分析，整合所有机构观点，与当前加密市场联系，给出可操作建议",
+  "sentiment": "bull或bear或neutral",
+  "sources": {
+    "man": {"headline": "最新研究标题或核心观点（中文）", "detail": "2-3句详细说明", "sentiment": "bull/bear/neutral", "relevance": "与加密/宏观市场的关联"},
+    "aqr": {"headline": "...", "detail": "...", "sentiment": "...", "relevance": "..."},
+    "citadel": {"headline": "...", "detail": "...", "sentiment": "...", "relevance": "..."},
+    "gmo": {"headline": "...", "detail": "...", "sentiment": "...", "relevance": "..."},
+    "apollo": {"headline": "...", "detail": "...", "sentiment": "...", "relevance": "..."},
+    "vc": {"headline": "...", "detail": "...", "sentiment": "...", "relevance": "..."},
+    "haver": {"headline": "...", "detail": "...", "sentiment": "...", "relevance": "..."}
+  },
+  "keyThemes": ["主题1", "主题2", "主题3"],
+  "cryptoImplication": "机构研究对加密市场的综合含义（1-2句）",
+  "riskLevel": "high/medium/low"
+}
+
+只输出JSON，不加任何其他文字。`;
+
+  try {
+    var resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 3000,
+        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+        system: systemPrompt,
+        messages: [{
+          role: 'user',
+          content: '请立即搜索以上7家机构网站的最新内容，然后以指定JSON格式输出综合分析。用中文撰写所有文本字段。'
+        }]
+      })
+    });
+
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+
+    var data = await resp.json();
+
+    // Extract text blocks from response (may contain tool_use blocks too)
+    var text = (data.content || [])
+      .filter(function(b) { return b.type === 'text'; })
+      .map(function(b) { return b.text || ''; })
+      .join('').trim();
+
+    // Strip markdown code fences if present
+    text = text.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/g, '').trim();
+
+    var parsed = JSON.parse(text);
+    renderInstResData(parsed);
+
+  } catch (e) {
+    // Graceful fallback
+    var fallback = 'API调用失败：' + (e.message || '未知错误') + '。请检查网络连接或稍后重试。';
+    if (contentEl) contentEl.innerHTML = '<span style="color:var(--amber);font-size:11px">⚠️ ' + fallback + '</span>';
+    if (badgesEl) badgesEl.querySelectorAll('.inst-badge').forEach(function(b) { b.classList.remove('loading'); });
+  } finally {
+    INST_RES.lock = false;
+    INST_RES.cdown = 1800;
+  }
+}
+
+// ── Render the parsed institutional research data ──
+function renderInstResData(data) {
+  if (!data) return;
+
+  // Cache data
+  INST_RES.synthesis = data.synthesis || '';
+  INST_RES.sources = data.sources || {};
+  INST_RES.lastUpdate = new Date();
+
+  var contentEl = document.getElementById('instResContent');
+  var metaEl = document.getElementById('instResMeta');
+  var badgesEl = document.getElementById('instResBadges');
+
+  // Render synthesis
+  if (contentEl) {
+    var sentCol = data.sentiment === 'bull' ? 'var(--green)' : data.sentiment === 'bear' ? 'var(--red)' : 'var(--amber)';
+    var sentIcon = data.sentiment === 'bull' ? '▲ 机构偏多' : data.sentiment === 'bear' ? '▼ 机构偏空' : '⚡ 机构中性';
+    var riskBadge = data.riskLevel === 'high' ? '<span class="inst-tag bear">⚠️ HIGH RISK</span>' : data.riskLevel === 'low' ? '<span class="inst-tag bull">✅ LOW RISK</span>' : '<span class="inst-tag neutral">⚡ MED RISK</span>';
+
+    var themeHtml = '';
+    if (data.keyThemes && data.keyThemes.length) {
+      themeHtml = '<div style="margin-top:7px;display:flex;flex-wrap:wrap;gap:4px;">' +
+        data.keyThemes.map(function(t) { return '<span class="inst-tag">' + t + '</span>'; }).join('') +
+        '</div>';
+    }
+
+    var cryptoImplHtml = data.cryptoImplication
+      ? '<div style="margin-top:8px;font-size:11px;padding:6px 10px;background:rgba(10,88,112,0.06);border-radius:4px;border-left:2px solid var(--cyan);color:var(--text);line-height:1.7;">' +
+        '🔗 加密含义：' + data.cryptoImplication + '</div>'
+      : '';
+
+    contentEl.innerHTML =
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;">' +
+        '<span style="font-size:12px;font-weight:700;color:' + sentCol + ';">' + sentIcon + '</span>' +
+        riskBadge +
+      '</div>' +
+      '<div class="inst-synthesis">' + data.synthesis + '</div>' +
+      themeHtml +
+      cryptoImplHtml;
+  }
+
+  // Update badges
+  if (badgesEl) {
+    badgesEl.querySelectorAll('.inst-badge').forEach(function(b) {
+      b.classList.remove('loading', 'active');
+      var srcId = b.getAttribute('data-src');
+      if (data.sources && data.sources[srcId]) {
+        b.classList.add('updated');
+        var srcSent = data.sources[srcId].sentiment;
+        b.style.borderColor = srcSent === 'bull' ? 'var(--green)' : srcSent === 'bear' ? 'var(--red)' : '';
+        b.style.color = srcSent === 'bull' ? 'var(--teal)' : srcSent === 'bear' ? 'var(--red)' : 'var(--cyan)';
+      }
+    });
+  }
+
+  // Render meta timestamp
+  if (metaEl) {
+    var myt = toMYT(new Date());
+    var ts = String(myt.getUTCHours()).padStart(2, '0') + ':' + String(myt.getUTCMinutes()).padStart(2, '0') + ' MYT';
+    metaEl.innerHTML = '<span style="font-size:10px;color:var(--muted)">机构情报更新: ' + ts + ' · 每30分钟自动刷新 · 点击机构名查看详情</span>';
+  }
+}
+
+// ── Show detail for a specific source ──
+function showInstDetail(srcId) {
+  var detailEl = document.getElementById('instResDetail');
+  if (!detailEl) return;
+
+  // Toggle: if same source and already showing, close
+  if (INST_RES.activeSrc === srcId && detailEl.style.display !== 'none') {
+    detailEl.style.display = 'none';
+    INST_RES.activeSrc = null;
+    document.querySelectorAll('.inst-badge').forEach(function(b) { b.classList.remove('active'); });
+    return;
+  }
+
+  INST_RES.activeSrc = srcId;
+  document.querySelectorAll('.inst-badge').forEach(function(b) {
+    b.classList.remove('active');
+    if (b.getAttribute('data-src') === srcId) b.classList.add('active');
+  });
+
+  var srcDef = INST_SOURCES.find(function(s) { return s.id === srcId; });
+  var srcData = INST_RES.sources[srcId];
+
+  if (!srcData) {
+    detailEl.style.display = 'block';
+    detailEl.innerHTML = '<div style="font-size:11px;color:var(--muted);padding:8px 0">' +
+      (srcDef ? srcDef.icon + ' ' + srcDef.name : srcId) + ' — 尚无数据，请先点击「研究」更新。</div>';
+    return;
+  }
+
+  var sentCol = srcData.sentiment === 'bull' ? 'var(--green)' : srcData.sentiment === 'bear' ? 'var(--red)' : 'var(--amber)';
+  var sentIcon = srcData.sentiment === 'bull' ? '▲ 看多' : srcData.sentiment === 'bear' ? '▼ 看空' : '⚡ 中性';
+
+  detailEl.style.display = 'block';
+  detailEl.innerHTML =
+    '<div class="inst-source-card">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">' +
+        '<span class="inst-source-name">' + (srcDef ? srcDef.icon + ' ' : '') + (srcDef ? srcDef.name : srcId) + '</span>' +
+        '<span style="font-size:11px;font-weight:700;color:' + sentCol + '">' + sentIcon + '</span>' +
+      '</div>' +
+      '<div style="font-size:12px;font-weight:700;color:var(--bright);margin-bottom:5px;line-height:1.5">' + (srcData.headline || '—') + '</div>' +
+      '<div class="inst-source-body">' + (srcData.detail || '') + '</div>' +
+      (srcData.relevance ? '<div style="margin-top:7px;font-size:11px;padding:5px 9px;background:rgba(10,88,112,0.06);border-radius:3px;color:var(--cyan);border-left:2px solid var(--cyan);">🔗 ' + srcData.relevance + '</div>' : '') +
+      (srcDef ? '<div style="margin-top:6px;"><a href="' + srcDef.url + '" target="_blank" rel="noopener" style="font-size:10px;color:var(--dim);text-decoration:none;">🌐 ' + srcDef.url + ' ↗</a></div>' : '') +
+    '</div>';
+}
+
+// ── Expose synthesis to AI assistant buildSystemContext ──
+// Patch is applied via hook below after functions are defined
+
 // ═══════════════════════════════════════════════════════════════
 // FINCH SMART ASSISTANT ENGINE
 // Real-time market analysis chat assistant powered by Claude API
@@ -8496,6 +8899,10 @@ R:R = ${res.rr?.toFixed(2)}:1
 恐慌贪婪指数: ${fg} (${fg<20?'极度恐惧':fg<35?'恐惧':fg>80?'极度贪婪':fg>65?'贪婪':'中性'})
 BTC主导率: ${S.macro?.btcDom?.toFixed(1)||'--'}%
 月相: ${lunar.name} (${lunar.dTN}天后新月)
+
+== 🏛️ 机构研究情报 (Man·AQR·Citadel·GMO·Apollo·VisualCapitalist·Haver) ==
+${INST_RES.synthesis ? INST_RES.synthesis : '机构研究尚未加载 — 用户可点击「研究」按钮获取最新机构观点'}
+${INST_RES.lastUpdate ? '情报更新时间: ' + INST_RES.lastUpdate.toISOString().replace('T',' ').slice(0,16) + ' UTC' : ''}
 
 == 你的回答规则 ==
 1. 直接给出明确判断，不要模糊。有观点比没观点好。
@@ -9483,6 +9890,7 @@ async function init(){
   // ── Start Brain Engine and Macro Pulse ──
   setTimeout(startBrainEngine, 2500);
   setTimeout(startMacroPulse, 3500);
+  setTimeout(startInstResEngine, 5000);
 }
 init();
 
@@ -11504,15 +11912,15 @@ resetLearnedWeights = function() {
 };
 
 // ── 3.3 Version constants + console branding ──
-const FINCH_VERSION = '2.1.0';
-const FINCH_BUILD   = '2026-03-16';
+const FINCH_VERSION = '2.2.0';
+const FINCH_BUILD   = '2026-03-17';
 
 // Console welcome banner
 setTimeout(() => {
   try {
     console.log('%c🐦 FINCH v' + FINCH_VERSION + ' (Build: ' + FINCH_BUILD + ')', 'color:#8B6914;font-size:16px;font-weight:bold;');
     console.log('%c📊 全维度加密货币分析系统 · 增强版', 'color:#5C5040;font-size:12px;');
-    console.log('%c⚖️ Ray Dalio全天候象限 · 🚀 Naval杠杆分析 · 🔮 江恩时间节点 · 📊 回测系统 · 🧠 自学习权重', 'color:#581890;font-size:12px;');
+    console.log('%c⚖️ Ray Dalio全天候象限 · 🚀 Naval杠杆分析 · 🔮 江恩时间节点 · 📊 回测系统 · 🧠 自学习权重 · 🏛️ 机构研究情报', 'color:#581890;font-size:12px;');
   } catch(e) {}
 }, 500);
 
@@ -12536,6 +12944,7 @@ switchMobileModTab = function(tab, btn) {
       <!-- Quick Action Buttons -->
       <div style="padding:8px 18px;display:flex;gap:6px;flex-wrap:wrap;border-top:1px solid var(--line);background:var(--bg1);">
         <button class="quick-btn" onclick="quickAsk('现在可以入场吗？给我完整分析')">📍 入场分析</button>
+        <button class="quick-btn" onclick="quickAsk('根据最新机构研究，现在宏观环境对加密市场有何影响？')">🏛️ 机构观点</button>
         <button class="quick-btn" onclick="quickAsk('当前最强的做多信号是什么？')">▲ 看多依据</button>
         <button class="quick-btn" onclick="quickAsk('当前最强的做空信号是什么？')">▼ 看空依据</button>
         <button class="quick-btn" onclick="quickAsk('止盈止损应该怎么设置？')">🎯 TP/SL 建议</button>
