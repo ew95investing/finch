@@ -1,10 +1,11 @@
 <!-- 
-  FINCH — 全维度加密货币市场分析系统
+  FINCH v38 — 全维度市场分析系统 (加密 · 美股 · 马股 · 新加坡股 · 黄金 · 石油 · 白银 · 外汇)
   GitHub Pages: place this file as index.html in your repo root
   No build step · No npm · No server · Pure HTML/CSS/JS
-  Data: Binance WebSocket + REST · CoinGecko · DeFi Llama · Alternative.me
-  All free APIs, no keys required
-  © FINCH — For educational / research purposes only
+  Data: Binance WebSocket + REST (Crypto) · TwelveData API (Stocks/Forex/Commodities)
+  CoinGecko · DeFi Llama · Alternative.me
+  TwelveData API Key: 337e585e74004139b7023d78f2e1d228
+  © FINCH v38 — For educational / research purposes only
   Not financial advice
 -->
 <!DOCTYPE html>
@@ -12,10 +13,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="robots" content="noindex,nofollow">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://fonts.googleapis.com https://fonts.gstatic.com https://api.binance.com https://api1.binance.com https://api2.binance.com https://api3.binance.com https://api4.binance.com https://data-api.binance.vision https://fapi.binance.com https://api.alternative.me https://api.coingecko.com https://api.llama.fi https://corsproxy.io https://api.allorigins.win https://thingproxy.freeboard.io https://api.anthropic.com https://api.blockchain.info wss://stream.binance.com; frame-ancestors 'none';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://fonts.googleapis.com https://fonts.gstatic.com https://api.binance.com https://api1.binance.com https://api2.binance.com https://api3.binance.com https://api4.binance.com https://data-api.binance.vision https://fapi.binance.com https://api.alternative.me https://api.coingecko.com https://api.llama.fi https://corsproxy.io https://api.allorigins.win https://thingproxy.freeboard.io https://api.anthropic.com https://api.blockchain.info https://api.twelvedata.com wss://stream.binance.com; frame-ancestors 'none';">
 <meta http-equiv="X-Frame-Options" content="DENY">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
-<title>FINCH v37 — 全维度市场分析</title>
+<title>FINCH v38 — 全维度市场分析 · 加密·股票·外汇·商品</title>
 
 <!-- ═══ PWA / iOS APP META ═══ -->
 <meta name="mobile-web-app-capable" content="yes">
@@ -24,7 +25,7 @@
 <meta name="apple-mobile-web-app-title" content="FINCH">
 <meta name="application-name" content="FINCH">
 <meta name="theme-color" content="#F0EDE6">
-<meta name="description" content="FINCH — 全维度加密货币市场分析系统">
+<meta name="description" content="FINCH v38 — 全维度市场分析系统 加密·股票·外汇·商品">
 <meta name="format-detection" content="telephone=no">
 
 <!-- iOS Icons (inline SVG-generated, no external file needed) -->
@@ -1102,6 +1103,72 @@ canvas.main-c{width:100%!important;}
 .conf-bar-wrap{height:3px;background:var(--bg3);border-radius:2px;overflow:hidden;margin-top:5px;}
 .conf-bar-fill{height:100%;border-radius:2px;transition:width .5s;}
 
+/* ══ ASSET CLASS SELECTOR ══ */
+.asset-cls-bar{
+  display:flex;align-items:center;gap:0;
+  background:var(--bg2);border-bottom:1px solid var(--line2);
+  overflow-x:auto;flex-shrink:0;padding:0 10px;height:34px;
+}
+.acb-btn{
+  flex:0 0 auto;padding:0 12px;height:100%;border:none;background:transparent;
+  font-family:inherit;font-size:10px;letter-spacing:.5px;color:var(--muted);
+  cursor:pointer;border-bottom:2px solid transparent;transition:all .12s;
+  white-space:nowrap;font-weight:600;text-transform:uppercase;
+}
+.acb-btn:hover{color:var(--text);}
+.acb-btn.active{color:var(--gold);border-bottom-color:var(--gold);font-weight:700;}
+.acb-divider{width:1px;height:18px;background:var(--line2);margin:0 4px;flex-shrink:0;}
+.asset-type-pill{
+  display:inline-block;font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;
+  letter-spacing:.5px;text-transform:uppercase;margin-left:4px;
+}
+.at-crypto{background:rgba(40,48,160,0.12);color:var(--indigo);}
+.at-stock{background:rgba(26,107,58,0.12);color:var(--green);}
+.at-fx{background:rgba(10,88,112,0.12);color:var(--cyan);}
+.at-commodity{background:rgba(139,105,20,0.12);color:var(--gold);}
+.td-status{
+  display:flex;align-items:center;gap:5px;padding:3px 10px;
+  border-radius:4px;border:1px solid var(--line2);font-size:10px;
+  background:var(--bg2);flex-shrink:0;
+}
+.td-dot{width:6px;height:6px;border-radius:50%;background:var(--dim);}
+.td-dot.live{background:var(--teal);animation:blink 2s infinite;}
+.td-dot.err{background:var(--red);}
+.mhrs-badge{
+  font-size:10px;padding:2px 7px;border-radius:3px;
+  background:rgba(0,0,0,0.06);color:var(--muted);
+  border:1px solid var(--line);margin-left:6px;
+}
+.mhrs-open{background:rgba(26,107,58,0.1);color:var(--green);border-color:var(--green-bd);}
+.mhrs-close{background:rgba(128,80,0,0.08);color:var(--amber);}
+.learn-entry{
+  background:var(--card);border:1px solid var(--card-bd);
+  border-radius:5px;padding:9px 11px;margin-bottom:6px;
+  box-shadow:var(--shadow);
+}
+.learn-entry-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
+.learn-sym{font-size:11px;font-weight:700;color:var(--bright);}
+.learn-score.good{color:var(--green);}
+.learn-score.bad{color:var(--red);}
+.learn-body{font-size:11px;color:var(--muted);line-height:1.7;}
+.learn-insight{
+  margin-top:6px;font-size:11px;color:var(--text);
+  font-family:'Noto Sans SC',sans-serif;line-height:1.8;
+  padding-top:6px;border-top:1px solid var(--line);
+}
+.wl-group-hd{
+  padding:5px 12px 3px;font-size:9px;letter-spacing:2px;
+  color:var(--muted);text-transform:uppercase;font-weight:700;
+  background:var(--bg2);border-bottom:1px solid var(--line);
+  border-top:1px solid var(--line);
+}
+@keyframes tdSpin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+.td-loading::after{
+  content:'';display:inline-block;width:10px;height:10px;
+  border:2px solid var(--line2);border-top-color:var(--teal);
+  border-radius:50%;animation:tdSpin .6s linear infinite;margin-left:6px;vertical-align:middle;
+}
+
 </style>
 </head>
 <body>
@@ -1111,7 +1178,7 @@ canvas.main-c{width:100%!important;}
   <div class="brand-wrap">
     <div style="display:flex;flex-direction:column;justify-content:center;">
       <div class="brand">FINCH</div>
-      <div class="brand-sub">全维度分析</div>
+      <div class="brand-sub">全维度市场分析 v38</div>
     </div>
   </div>
 
@@ -1131,9 +1198,10 @@ canvas.main-c{width:100%!important;}
   </div>
 
   <div class="topbar-right">
-    <span style="font-size:9px;color:var(--dim);padding:2px 6px;border:1px solid var(--line2);border-radius:3px;letter-spacing:.5px;">v2.1</span>
+    <span style="font-size:9px;color:var(--dim);padding:2px 6px;border:1px solid var(--line2);border-radius:3px;letter-spacing:.5px;">v38</span>
     <span class="clock-el" id="clockEl">--:--:-- MYT</span>
     <div class="conn-pill"><div class="conn-dot" id="connDot"></div><span id="connLbl" style="font-size:10px">Connecting</span></div>
+    <div class="td-status"><div class="td-dot" id="tdDot"></div><span id="tdLbl" style="font-size:10px">TwelveData</span></div>
   </div>
 </div>
 
@@ -1191,10 +1259,24 @@ canvas.main-c{width:100%!important;}
 
 <!-- ══ LEFT — WATCHLIST ══ -->
 <div class="left-panel">
-  <div class="panel-head">市场 Markets</div>
+  <div class="panel-head" style="display:flex;align-items:center;justify-content:space-between;padding-right:10px;">
+    <span>市场 Markets</span>
+    <span id="wlCount" style="font-size:9px;color:var(--muted);letter-spacing:0;font-weight:400"></span>
+  </div>
+  <!-- Asset class filter tabs -->
+  <div class="asset-cls-bar">
+    <button class="acb-btn active" onclick="setAssetFilter('all',this)" title="全部">全部</button>
+    <div class="acb-divider"></div>
+    <button class="acb-btn" onclick="setAssetFilter('crypto',this)" title="加密货币">🪙</button>
+    <button class="acb-btn" onclick="setAssetFilter('us_stock',this)" title="美股">🇺🇸</button>
+    <button class="acb-btn" onclick="setAssetFilter('my_stock',this)" title="马股">🇲🇾</button>
+    <button class="acb-btn" onclick="setAssetFilter('sg_stock',this)" title="新股">🇸🇬</button>
+    <button class="acb-btn" onclick="setAssetFilter('forex',this)" title="外汇">💱</button>
+    <button class="acb-btn" onclick="setAssetFilter('commodity',this)" title="商品">🥇</button>
+  </div>
   <div id="symList"></div>
   <div class="add-sym">
-    <input id="custInput" placeholder="如 DOTUSDT" onkeydown="if(event.key==='Enter')addCustom()">
+    <input id="custInput" placeholder="如 AAPL · BTCUSDT · USD/SGD" onkeydown="if(event.key==='Enter')addCustom()">
     <button onclick="addCustom()">＋ 添加 Add</button>
   </div>
 </div>
@@ -1202,7 +1284,10 @@ canvas.main-c{width:100%!important;}
 <!-- ══ ANALYSIS COL — strategy + chart at bottom ══ -->
 <div class="analysis-col" id="analysisCol">
   <div class="price-header">
-    <div class="ph-sym" id="symLabel">BTC / USDT</div>
+    <div class="ph-sym" id="symLabel">
+      <span id="phSym">BTC / USDT</span>
+      <span id="phSymLabel"></span>
+    </div>
     <div class="ph-row1">
       <div class="ph-price" id="priceBig">--</div>
       <div class="ph-chg" id="priceChg">--</div>
@@ -1333,8 +1418,8 @@ canvas.main-c{width:100%!important;}
         <span class="inst-badge" data-src="citadel" onclick="showInstDetail('citadel')" title="Citadel">Citadel</span>
         <span class="inst-badge" data-src="gmo" onclick="showInstDetail('gmo')" title="GMO">GMO</span>
         <span class="inst-badge" data-src="apollo" onclick="showInstDetail('apollo')" title="Apollo Academy">Apollo</span>
-        <span class="inst-badge" data-src="vc" onclick="showInstDetail('vc')" title="Visual Capitalist">VisCapital</span>
-        <span class="inst-badge" data-src="haver" onclick="showInstDetail('haver')" title="Haver Analytics">Haver</span>
+        <span class="inst-badge" data-src="gs" onclick="showInstDetail('gs')" title="Goldman Sachs Research">GS</span>
+        <span class="inst-badge" data-src="ms" onclick="showInstDetail('ms')" title="Morgan Stanley Research">MS</span>
       </div>
       <!-- Synthesis output -->
       <div id="instResContent" style="padding:0 14px 8px;font-size:12px;color:var(--text);line-height:1.8;">
@@ -1808,8 +1893,22 @@ canvas.main-c{width:100%!important;}
         onfocus="this.style.borderColor='var(--violet)'" onblur="this.style.borderColor='var(--line2)'">
       <button onclick="brainAskLocal()" style="padding:7px 14px;background:var(--violet);border:none;border-radius:5px;color:#fff;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">问</button>
     </div>
-    <div id="brainFeed" style="max-height:320px;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px;">
+    <div id="brainFeed" style="max-height:280px;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px;">
       <div data-placeholder style="color:var(--muted);font-size:11px;padding:10px 0;text-align:center;">思维引擎启动后将主动推送分析...</div>
+    </div>
+  </div>
+
+  <!-- ══ SELF-LEARNING ENGINE v2 ══ -->
+  <div style="border-top:2px solid var(--line2);padding:12px 14px 0;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:2px;color:var(--rose);text-transform:uppercase;">📚 自学引擎 Self-Learning</div>
+        <div style="font-size:10px;color:var(--dim);margin-top:1px;">交易复盘 · 模式识别 · 持续进化</div>
+      </div>
+      <button onclick="renderLearnPanel()" style="padding:3px 9px;border:1px solid var(--rose);border-radius:3px;background:rgba(136,8,64,0.07);color:var(--rose);font-family:inherit;font-size:10px;cursor:pointer;font-weight:700;">🔄 刷新</button>
+    </div>
+    <div id="learnFeed" style="max-height:300px;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px;">
+      <div style="color:var(--muted);font-size:11px;padding:10px 0;text-align:center;">完成模拟交易后自动积累学习数据...</div>
     </div>
   </div>
 
@@ -2027,15 +2126,492 @@ function buildStrategyMemo(tf){
   return cached;
 }
 
+// ═══════════════════════════════════════════════════════════════════
+//  FINCH v38 — MULTI-ASSET ENGINE
+//  Asset classes: crypto (Binance), stocks (TwelveData), forex, commodities
+// ═══════════════════════════════════════════════════════════════════
+
+// TwelveData API Key
+const TD_KEY = '337e585e74004139b7023d78f2e1d228';
+const TD_BASE = 'https://api.twelvedata.com';
+
+// Asset class definitions
+const ASSET_CLASSES = {
+  crypto:    { label:'🪙 加密 Crypto',     color:'var(--indigo)' },
+  us_stock:  { label:'🇺🇸 美股 US',         color:'var(--green)'  },
+  my_stock:  { label:'🇲🇾 马股 MY',         color:'var(--teal)'   },
+  sg_stock:  { label:'🇸🇬 新股 SG',         color:'var(--blue)'   },
+  forex:     { label:'💱 外汇 Forex',       color:'var(--cyan)'   },
+  commodity: { label:'🪙 商品 Commodity',   color:'var(--gold)'   },
+};
+
+// Interval mapping: Binance → TwelveData
+const TD_IV_MAP = {'15m':'15min','30m':'30min','1h':'1h','4h':'4h','1d':'1day','1w':'1week'};
+
+// Full PAIRS — crypto uses Binance, others use TwelveData
 const PAIRS=[
-  {s:'BTCUSDT',b:'BTC',n:'Bitcoin'},{s:'ETHUSDT',b:'ETH',n:'Ethereum'},
-  {s:'SOLUSDT',b:'SOL',n:'Solana'},{s:'BNBUSDT',b:'BNB',n:'BNB'},
-  {s:'XRPUSDT',b:'XRP',n:'Ripple'},{s:'DOGEUSDT',b:'DOGE',n:'Dogecoin'},
-  {s:'ADAUSDT',b:'ADA',n:'Cardano'},{s:'AVAXUSDT',b:'AVAX',n:'Avalanche'},
-  {s:'DOTUSDT',b:'DOT',n:'Polkadot'},{s:'LINKUSDT',b:'LINK',n:'Chainlink'},
-  {s:'MATICUSDT',b:'MATIC',n:'Polygon'},{s:'LTCUSDT',b:'LTC',n:'Litecoin'},
-  {s:'ATOMUSDT',b:'ATOM',n:'Cosmos'},{s:'NEARUSDT',b:'NEAR',n:'NEAR Protocol'},
+  // ── Crypto (Binance) ──
+  {s:'BTCUSDT',  b:'BTC',  n:'Bitcoin',      cls:'crypto'},
+  {s:'ETHUSDT',  b:'ETH',  n:'Ethereum',      cls:'crypto'},
+  {s:'SOLUSDT',  b:'SOL',  n:'Solana',        cls:'crypto'},
+  {s:'BNBUSDT',  b:'BNB',  n:'BNB',           cls:'crypto'},
+  {s:'XRPUSDT',  b:'XRP',  n:'Ripple',        cls:'crypto'},
+  {s:'DOGEUSDT', b:'DOGE', n:'Dogecoin',      cls:'crypto'},
+  {s:'ADAUSDT',  b:'ADA',  n:'Cardano',       cls:'crypto'},
+  {s:'AVAXUSDT', b:'AVAX', n:'Avalanche',     cls:'crypto'},
+  {s:'DOTUSDT',  b:'DOT',  n:'Polkadot',      cls:'crypto'},
+  {s:'LINKUSDT', b:'LINK', n:'Chainlink',     cls:'crypto'},
+  {s:'MATICUSDT',b:'MATIC',n:'Polygon',       cls:'crypto'},
+  {s:'LTCUSDT',  b:'LTC',  n:'Litecoin',      cls:'crypto'},
+  {s:'ATOMUSDT', b:'ATOM', n:'Cosmos',        cls:'crypto'},
+  {s:'NEARUSDT', b:'NEAR', n:'NEAR Protocol', cls:'crypto'},
+  // ── US Stocks (TwelveData) ──
+  {s:'AAPL',  b:'AAPL',  n:'Apple Inc.',           cls:'us_stock', exchange:'NASDAQ', currency:'USD'},
+  {s:'NVDA',  b:'NVDA',  n:'NVIDIA Corp.',          cls:'us_stock', exchange:'NASDAQ', currency:'USD'},
+  {s:'MSFT',  b:'MSFT',  n:'Microsoft Corp.',       cls:'us_stock', exchange:'NASDAQ', currency:'USD'},
+  {s:'TSLA',  b:'TSLA',  n:'Tesla Inc.',            cls:'us_stock', exchange:'NASDAQ', currency:'USD'},
+  {s:'AMZN',  b:'AMZN',  n:'Amazon.com Inc.',       cls:'us_stock', exchange:'NASDAQ', currency:'USD'},
+  {s:'GOOGL', b:'GOOGL', n:'Alphabet Inc.',         cls:'us_stock', exchange:'NASDAQ', currency:'USD'},
+  {s:'META',  b:'META',  n:'Meta Platforms',        cls:'us_stock', exchange:'NASDAQ', currency:'USD'},
+  {s:'SPY',   b:'SPY',   n:'S&P 500 ETF',           cls:'us_stock', exchange:'NYSE',   currency:'USD'},
+  {s:'QQQ',   b:'QQQ',   n:'Nasdaq 100 ETF',        cls:'us_stock', exchange:'NASDAQ', currency:'USD'},
+  // ── Malaysia Stocks (TwelveData — Bursa Malaysia) ──
+  {s:'1155:MYX', b:'MBB',  n:'Maybank',             cls:'my_stock', exchange:'MYX', currency:'MYR', tdSym:'1155:MYX'},
+  {s:'5347:MYX', b:'TM',   n:'Telekom Malaysia',    cls:'my_stock', exchange:'MYX', currency:'MYR', tdSym:'5347:MYX'},
+  {s:'5168:MYX', b:'HARTA',n:'Hartalega',           cls:'my_stock', exchange:'MYX', currency:'MYR', tdSym:'5168:MYX'},
+  {s:'7113:MYX', b:'PBBANK',n:'Public Bank',        cls:'my_stock', exchange:'MYX', currency:'MYR', tdSym:'7113:MYX'},
+  {s:'5183:MYX', b:'PETRONAS',n:'Petronas Gas',     cls:'my_stock', exchange:'MYX', currency:'MYR', tdSym:'5183:MYX'},
+  // ── Singapore Stocks (TwelveData — SGX) ──
+  {s:'D05:SGX',  b:'DBS',  n:'DBS Bank',            cls:'sg_stock', exchange:'SGX', currency:'SGD', tdSym:'D05:SGX'},
+  {s:'O39:SGX',  b:'OCBC', n:'OCBC Bank',           cls:'sg_stock', exchange:'SGX', currency:'SGD', tdSym:'O39:SGX'},
+  {s:'U11:SGX',  b:'UOB',  n:'United Overseas Bank',cls:'sg_stock', exchange:'SGX', currency:'SGD', tdSym:'U11:SGX'},
+  {s:'C6L:SGX',  b:'SIA',  n:'Singapore Airlines',  cls:'sg_stock', exchange:'SGX', currency:'SGD', tdSym:'C6L:SGX'},
+  {s:'Z74:SGX',  b:'ST',   n:'Singapore Telecom',   cls:'sg_stock', exchange:'SGX', currency:'SGD', tdSym:'Z74:SGX'},
+  // ── Forex (TwelveData) ──
+  {s:'USD/SGD',  b:'USDSGD',n:'USD/SGD',            cls:'forex', tdSym:'USD/SGD'},
+  {s:'USD/MYR',  b:'USDMYR',n:'USD/MYR',            cls:'forex', tdSym:'USD/MYR'},
+  {s:'EUR/USD',  b:'EURUSD',n:'EUR/USD',            cls:'forex', tdSym:'EUR/USD'},
+  {s:'GBP/USD',  b:'GBPUSD',n:'GBP/USD',           cls:'forex', tdSym:'GBP/USD'},
+  {s:'USD/JPY',  b:'USDJPY',n:'USD/JPY',            cls:'forex', tdSym:'USD/JPY'},
+  {s:'SGD/MYR',  b:'SGDMYR',n:'SGD/MYR',           cls:'forex', tdSym:'SGD/MYR'},
+  // ── Commodities (TwelveData) ──
+  {s:'XAU/USD',  b:'GOLD',  n:'Gold (黄金)',         cls:'commodity', tdSym:'XAU/USD'},
+  {s:'XAG/USD',  b:'SILVER',n:'Silver (白银)',       cls:'commodity', tdSym:'XAG/USD'},
+  {s:'WTI/USD',  b:'OIL',   n:'Crude Oil WTI (石油)',cls:'commodity', tdSym:'CL1!'},
+  {s:'BRENT/USD',b:'BRENT', n:'Brent Crude (布伦特)',cls:'commodity', tdSym:'BZ1!'},
 ];
+
+// Helper: is this a non-crypto asset?
+function isTDAsset(sym){ const p=PAIRS.find(x=>x.s===sym); return p && p.cls !== 'crypto'; }
+function getPair(sym){ return PAIRS.find(x=>x.s===sym)||null; }
+function getTDSym(sym){ const p=getPair(sym); return p && (p.tdSym||p.s); }
+function getAssetClass(sym){ const p=getPair(sym); return p?p.cls:'crypto'; }
+
+// Current filter
+let _assetFilter = 'all'; // 'all' | 'crypto' | 'us_stock' | 'my_stock' | 'sg_stock' | 'forex' | 'commodity'
+
+// ─────────────────────────────────────────────
+//  TWELVEDATA API ENGINE
+// ─────────────────────────────────────────────
+const _tdCache = {}; // key: sym+iv → {data, ts}
+
+async function tdFetch(path) {
+  const sep = path.includes('?') ? '&' : '?';
+  const url = `${TD_BASE}${path}${sep}apikey=${TD_KEY}`;
+  try {
+    const r = await tryFetch(url, 10000);
+    const d = await r.json();
+    if(d.status === 'error') throw new Error(d.message || 'TwelveData error');
+    return d;
+  } catch(e) {
+    // Try via CORS proxy if direct fails
+    try {
+      const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
+      const r2 = await tryFetch(proxyUrl, 10000);
+      const d2 = await r2.json();
+      if(d2.status === 'error') throw new Error(d2.message || 'TwelveData proxy error');
+      return d2;
+    } catch(e2) {
+      throw e2;
+    }
+  }
+}
+
+// Fetch real-time quote for TwelveData asset
+async function tdQuote(sym) {
+  const tdSym = getTDSym(sym);
+  try {
+    const d = await tdFetch(`/quote?symbol=${encodeURIComponent(tdSym)}&dp=4`);
+    const px = parseFloat(d.close || d.price || 0);
+    const chg = parseFloat(d.percent_change || 0);
+    const open = parseFloat(d.open || 0);
+    const high = parseFloat(d.high || 0);
+    const low = parseFloat(d.low || 0);
+    const vol = parseFloat(d.volume || 0);
+    updTDStatus(true);
+    return { px, chg, open, high, low, vol, name: d.name||sym, exchange: d.exchange||'' };
+  } catch(e) {
+    updTDStatus(false);
+    return null;
+  }
+}
+
+// Fetch klines (time_series) from TwelveData
+async function tdKlines(sym, iv, limit=300) {
+  const tdSym = getTDSym(sym);
+  const tdIv = TD_IV_MAP[iv] || '1h';
+  const cacheKey = sym + iv;
+  const cached = _tdCache[cacheKey];
+  if(cached && cached.ts && Date.now() - cached.ts < 120000 && cached.data.length >= 50) return cached.data;
+
+  try {
+    const d = await tdFetch(`/time_series?symbol=${encodeURIComponent(tdSym)}&interval=${tdIv}&outputsize=${limit}&dp=4&order=ASC`);
+    if(!d.values || d.values.length < 10) throw new Error('insufficient data');
+    // Convert to Binance-like OHLCV format
+    const kl = d.values.map(v => ({
+      t: new Date(v.datetime + (v.datetime.length <= 10 ? ' 00:00:00' : '')).getTime(),
+      o: parseFloat(v.open),
+      h: parseFloat(v.high),
+      l: parseFloat(v.low),
+      c: parseFloat(v.close),
+      v: parseFloat(v.volume || 0),
+    }));
+    _tdCache[cacheKey] = { data: kl, ts: Date.now() };
+    updTDStatus(true);
+    return kl;
+  } catch(e) {
+    updTDStatus(false);
+    if(cached && cached.data.length >= 10) return cached.data;
+    return [];
+  }
+}
+
+// Update TwelveData status dot
+function updTDStatus(ok) {
+  const dot = document.getElementById('tdDot');
+  const lbl = document.getElementById('tdLbl');
+  if(dot) dot.className = 'td-dot ' + (ok ? 'live' : 'err');
+  if(lbl) lbl.textContent = ok ? 'TwelveData ✓' : 'TD Error';
+}
+
+// Get market hours status for asset
+function getMarketStatus(cls) {
+  const now = new Date();
+  // UTC offset for MYT = +8
+  const mytHour = (now.getUTCHours() + 8) % 24;
+  const mytDay = new Date(now.getTime() + 8*3600000).getUTCDay(); // 0=Sun
+  const isWeekend = mytDay === 0 || mytDay === 6;
+
+  if(cls === 'crypto') return { open: true, label: '24/7' };
+  if(cls === 'my_stock' || cls === 'sg_stock') {
+    // Bursa/SGX: Mon-Fri 9:00-17:00 MYT/SGT
+    if(isWeekend) return { open: false, label: '休市 Closed' };
+    if(mytHour >= 9 && mytHour < 17) return { open: true, label: '开市 Open' };
+    return { open: false, label: '收市 After Hours' };
+  }
+  if(cls === 'us_stock') {
+    // NYSE/NASDAQ: Mon-Fri 21:30-04:00 MYT (9:30am-4pm ET)
+    const etHour = (mytHour - 13 + 24) % 24;
+    if(isWeekend) return { open: false, label: '休市 Closed' };
+    const etMins = etHour * 60 + now.getUTCMinutes();
+    if(etMins >= 570 && etMins < 960) return { open: true, label: '🇺🇸 NYSE Open' };
+    if(etMins >= 480 && etMins < 570) return { open: true, label: '🇺🇸 Pre-Market' };
+    return { open: false, label: '🇺🇸 After Hours' };
+  }
+  if(cls === 'forex' || cls === 'commodity') {
+    // Forex open Mon-Fri (mostly)
+    if(isWeekend) return { open: false, label: '外汇休市' };
+    return { open: true, label: '外汇开市' };
+  }
+  return { open: true, label: '' };
+}
+
+// ─────────────────────────────────────────────
+//  UNIFIED KLINE FETCHER (Binance OR TwelveData)
+// ─────────────────────────────────────────────
+async function fetchKlinesUnified(sym, iv, lim=300) {
+  if(isTDAsset(sym)) {
+    const kl = await tdKlines(sym, iv, lim);
+    if(kl.length > 0) {
+      S.klines[sym+iv] = kl;
+      const lastC = kl[kl.length-1].c;
+      if(lastC > 0) { S.lastPx = lastC; S._seedPrice[sym] = lastC; updatePHPrice(lastC); }
+    }
+    return kl.length > 0 ? kl : mockKlines(sym, iv, lim);
+  }
+  return fetchKlines(sym, iv, lim);
+}
+
+// ─────────────────────────────────────────────
+//  UNIFIED PRICE UPDATER
+// ─────────────────────────────────────────────
+async function refreshTDPrices() {
+  // Only refresh TwelveData assets that are in current filter / visible
+  const tdPairs = PAIRS.filter(p => p.cls !== 'crypto' && (
+    _assetFilter === 'all' || p.cls === _assetFilter
+  )).slice(0, 8); // rate limit: batch first 8
+
+  for(const p of tdPairs) {
+    try {
+      const q = await tdQuote(p.s);
+      if(!q || !q.px) continue;
+      S._tdQuotes = S._tdQuotes || {};
+      S._tdQuotes[p.s] = q;
+      // Update watchlist UI
+      const ep = document.getElementById('px-'+p.s);
+      const ec = document.getElementById('chg-'+p.s);
+      if(ep) ep.textContent = fmtP(q.px);
+      if(ec) { ec.textContent = fmtPct(q.chg); ec.className = 'sym-chg ' + pctC(q.chg); }
+      // Ticker strip
+      const tp = document.getElementById('tt-'+p.s);
+      const tc = document.getElementById('tc-'+p.s);
+      if(tp) { tp.textContent = fmtP(q.px); tp.style.color = q.chg>0?'var(--green)':q.chg<0?'var(--red)':'var(--text)'; }
+      if(tc) { tc.textContent = fmtPct(q.chg,1); tc.className = 'tick-chg ' + pctC(q.chg); }
+      // If this is current symbol
+      if(p.s === S.sym) {
+        S.lastPx = q.px; S._seedPrice[p.s] = q.px;
+        updatePH({ price:q.px, change:q.chg, high:q.high, low:q.low, vol:q.vol });
+      }
+    } catch(e) {}
+  }
+}
+
+// Price ranges for TwelveData assets (for validation)
+const TD_PRICE_RANGES = {
+  'AAPL':[100,400],'NVDA':[10,2000],'MSFT':[200,600],'TSLA':[100,1500],
+  'AMZN':[80,300],'GOOGL':[100,300],'META':[100,800],'SPY':[300,700],'QQQ':[200,600],
+  'USD/SGD':[1.2,1.5],'USD/MYR':[3.5,5.0],'EUR/USD':[0.9,1.3],'GBP/USD':[1.0,1.5],
+  'USD/JPY':[100,170],'SGD/MYR':[2.8,3.6],
+  'XAU/USD':[1500,3500],'XAG/USD':[15,50],'WTI/USD':[30,150],'BRENT/USD':[30,160],
+};
+function tdPriceValid(sym, px) {
+  const r = TD_PRICE_RANGES[sym];
+  if(!r) return px > 0;
+  return px >= r[0] && px <= r[1];
+}
+
+// ─────────────────────────────────────────────
+//  ASSET CLASS FILTER — UI
+// ─────────────────────────────────────────────
+function setAssetFilter(cls, btn) {
+  _assetFilter = cls;
+  document.querySelectorAll('.acb-btn').forEach(b => b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  buildSymList();
+}
+
+// ─────────────────────────────────────────────
+//  SELF-LEARNING ENGINE v2 (persistent via localStorage)
+// ─────────────────────────────────────────────
+const LEARN_KEY = 'finch_v38_learn';
+const LEARN_MAX = 200; // max stored outcomes
+
+function learnLoad() {
+  try { return JSON.parse(localStorage.getItem(LEARN_KEY) || '{"outcomes":[],"assetStats":{},"patternStats":{},"version":2}'); }
+  catch(e) { return { outcomes:[], assetStats:{}, patternStats:{}, version:2 }; }
+}
+function learnSave(db) {
+  try { localStorage.setItem(LEARN_KEY, JSON.stringify(db)); } catch(e) {}
+}
+
+// Record a trade outcome for learning
+function learnRecordOutcome(sym, direction, entryPx, exitPx, exitReason, signals) {
+  const db = learnLoad();
+  const pnlPct = direction === 'long' ? (exitPx-entryPx)/entryPx*100 : (entryPx-exitPx)/entryPx*100;
+  const won = pnlPct > 0;
+  const cls = getAssetClass(sym);
+
+  // Outcome record
+  const rec = {
+    t: Date.now(), sym, cls, direction,
+    entryPx, exitPx, pnlPct: +pnlPct.toFixed(3),
+    won, exitReason,
+    signals: signals || {},
+  };
+  db.outcomes.unshift(rec);
+  if(db.outcomes.length > LEARN_MAX) db.outcomes = db.outcomes.slice(0, LEARN_MAX);
+
+  // Per-asset stats
+  if(!db.assetStats[sym]) db.assetStats[sym] = { wins:0, losses:0, totalPnl:0, trades:0 };
+  const as = db.assetStats[sym];
+  as.trades++; as.totalPnl += pnlPct;
+  won ? as.wins++ : as.losses++;
+
+  // Pattern stats (e.g. rsi_oversold + won)
+  if(signals.rsi < 30) {
+    const pk = 'rsi_oversold';
+    if(!db.patternStats[pk]) db.patternStats[pk] = { wins:0, total:0 };
+    db.patternStats[pk].total++;
+    if(won) db.patternStats[pk].wins++;
+  }
+  if(signals.rsi > 70) {
+    const pk = 'rsi_overbought';
+    if(!db.patternStats[pk]) db.patternStats[pk] = { wins:0, total:0 };
+    db.patternStats[pk].total++;
+    if(won) db.patternStats[pk].wins++;
+  }
+  if(signals.macdBull) {
+    const pk = 'macd_bull_div';
+    if(!db.patternStats[pk]) db.patternStats[pk] = { wins:0, total:0 };
+    db.patternStats[pk].total++;
+    if(won) db.patternStats[pk].wins++;
+  }
+  if(signals.chanBull) {
+    const pk = 'chan_bull_div';
+    if(!db.patternStats[pk]) db.patternStats[pk] = { wins:0, total:0 };
+    db.patternStats[pk].total++;
+    if(won) db.patternStats[pk].wins++;
+  }
+
+  learnSave(db);
+  // Trigger learning card in brain
+  const insight = learnGenerateInsight(db, sym, cls);
+  if(insight) brainAddCard('learning', `📚 自学更新 ${sym}`, insight, null);
+}
+
+// Generate insight text from learning DB
+function learnGenerateInsight(db, sym, cls) {
+  const as = db.assetStats[sym];
+  if(!as || as.trades < 3) return null;
+  const wr = (as.wins/as.trades*100).toFixed(1);
+  const avgPnl = (as.totalPnl/as.trades).toFixed(2);
+  let txt = `${sym} (${as.trades}笔记录): 胜率${wr}% · 平均盈亏${avgPnl>0?'+':''}${avgPnl}%。`;
+
+  // Pattern insights
+  const patterns = db.patternStats;
+  const goodPatterns = Object.entries(patterns)
+    .filter(([k,v]) => v.total >= 3 && v.wins/v.total >= 0.65)
+    .map(([k,v]) => `${k}(${(v.wins/v.total*100).toFixed(0)}%胜率)`)
+    .slice(0,2);
+  if(goodPatterns.length) txt += ` 高胜率模式: ${goodPatterns.join(' · ')}。`;
+
+  const badPatterns = Object.entries(patterns)
+    .filter(([k,v]) => v.total >= 3 && v.wins/v.total <= 0.35)
+    .map(([k,v]) => k)
+    .slice(0,1);
+  if(badPatterns.length) txt += ` 低胜率警告: ${badPatterns.join(',')}在此品种表现差，应降权。`;
+
+  return txt;
+}
+
+// Get learning-adjusted confidence boost for current signal
+function learnGetConfBoost(sym, signals) {
+  const db = learnLoad();
+  const as = db.assetStats[sym];
+  let boost = 0;
+  if(as && as.trades >= 5) {
+    const wr = as.wins / as.trades;
+    boost += (wr - 0.5) * 10; // ±5 based on historical win rate
+  }
+  const patterns = db.patternStats;
+  if(signals && signals.rsi < 30 && patterns.rsi_oversold && patterns.rsi_oversold.total >= 3) {
+    const pwr = patterns.rsi_oversold.wins / patterns.rsi_oversold.total;
+    boost += (pwr - 0.5) * 8;
+  }
+  if(signals && signals.macdBull && patterns.macd_bull_div && patterns.macd_bull_div.total >= 3) {
+    const pwr = patterns.macd_bull_div.wins / patterns.macd_bull_div.total;
+    boost += (pwr - 0.5) * 8;
+  }
+  return Math.max(-10, Math.min(10, Math.round(boost)));
+}
+
+// Render learning stats panel
+function renderLearnPanel() {
+  const el = document.getElementById('learnFeed');
+  if(!el) return;
+  const db = learnLoad();
+  if(!db.outcomes.length) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:11px;padding:10px 0;text-align:center">完成模拟交易后自动学习...</div>';
+    return;
+  }
+  // Summary stats
+  const total = db.outcomes.length;
+  const wins = db.outcomes.filter(o => o.won).length;
+  const wr = (wins/total*100).toFixed(1);
+  const avgPnl = (db.outcomes.reduce((s,o) => s+o.pnlPct, 0)/total).toFixed(2);
+
+  // Top patterns
+  const goodPats = Object.entries(db.patternStats)
+    .filter(([k,v]) => v.total >= 3)
+    .sort(([,a],[,b]) => (b.wins/b.total) - (a.wins/a.total))
+    .slice(0,4);
+
+  // Per-asset best/worst
+  const assetList = Object.entries(db.assetStats)
+    .filter(([k,v]) => v.trades >= 3)
+    .sort(([,a],[,b]) => (b.wins/b.trades) - (a.wins/a.trades));
+
+  let html = `
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px;">
+    <div style="background:var(--card);border:1px solid var(--card-bd);border-radius:5px;padding:8px 10px;text-align:center;">
+      <div style="font-size:16px;font-weight:700;color:${parseFloat(wr)>=55?'var(--green)':parseFloat(wr)>=45?'var(--amber)':'var(--red)'}">${wr}%</div>
+      <div style="font-size:10px;color:var(--muted)">总胜率 Win Rate</div>
+    </div>
+    <div style="background:var(--card);border:1px solid var(--card-bd);border-radius:5px;padding:8px 10px;text-align:center;">
+      <div style="font-size:16px;font-weight:700;color:${parseFloat(avgPnl)>=0?'var(--green)':'var(--red)'}">${avgPnl>0?'+':''}${avgPnl}%</div>
+      <div style="font-size:10px;color:var(--muted)">平均盈亏 Avg PnL</div>
+    </div>
+    <div style="background:var(--card);border:1px solid var(--card-bd);border-radius:5px;padding:8px 10px;text-align:center;">
+      <div style="font-size:16px;font-weight:700;color:var(--bright)">${total}</div>
+      <div style="font-size:10px;color:var(--muted)">学习样本</div>
+    </div>
+  </div>`;
+
+  if(goodPats.length) {
+    html += `<div style="font-size:10px;letter-spacing:1.5px;color:var(--violet);font-weight:700;text-transform:uppercase;margin-bottom:6px;">📊 模式胜率统计</div>`;
+    html += goodPats.map(([k,v]) => {
+      const pwr = (v.wins/v.total*100).toFixed(0);
+      const col = parseInt(pwr)>=60?'var(--green)':parseInt(pwr)>=50?'var(--amber)':'var(--red)';
+      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--line);">
+        <span style="font-size:11px;color:var(--text)">${k.replace(/_/g,' ')}</span>
+        <span style="font-size:11px;font-weight:700;color:${col}">${pwr}% (${v.total}次)</span>
+      </div>`;
+    }).join('');
+  }
+
+  if(assetList.length) {
+    html += `<div style="font-size:10px;letter-spacing:1.5px;color:var(--violet);font-weight:700;text-transform:uppercase;margin:10px 0 6px;">🏆 品种胜率排行</div>`;
+    html += assetList.slice(0,6).map(([sym,v]) => {
+      const pwr = (v.wins/v.trades*100).toFixed(0);
+      const col = parseInt(pwr)>=60?'var(--green)':parseInt(pwr)>=50?'var(--amber)':'var(--red)';
+      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--line);">
+        <span style="font-size:11px;font-weight:700;color:var(--bright)">${sym}</span>
+        <span style="font-size:10px;color:var(--muted)">${v.trades}笔</span>
+        <span style="font-size:11px;font-weight:700;color:${col}">${pwr}%</span>
+      </div>`;
+    }).join('');
+  }
+
+  // Recent outcomes
+  html += `<div style="font-size:10px;letter-spacing:1.5px;color:var(--violet);font-weight:700;text-transform:uppercase;margin:10px 0 6px;">📜 最近学习记录</div>`;
+  html += db.outcomes.slice(0,8).map(o => {
+    const ts = new Date(o.t);
+    const d = `${String(ts.getUTCDate()).padStart(2,'0')}/${String(ts.getUTCMonth()+1).padStart(2,'0')}`;
+    return `<div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--line);font-size:11px;">
+      <span style="font-weight:700;min-width:60px;color:var(--bright)">${o.sym.replace('USDT','').replace(':MYX','').replace(':SGX','')}</span>
+      <span style="color:${o.direction==='long'?'var(--green)':'var(--red)'}">${o.direction==='long'?'▲':'▼'}</span>
+      <span style="font-weight:700;color:${o.won?'var(--green)':'var(--red)'};flex:1">${o.pnlPct>0?'+':''}${o.pnlPct.toFixed(2)}%</span>
+      <span style="color:var(--muted);font-size:10px">${d}</span>
+    </div>`;
+  }).join('');
+
+  html += `<div style="text-align:center;margin-top:8px;">
+    <button onclick="if(confirm('清除所有学习数据?'))learnClearAll()" style="font-size:10px;color:var(--dim);background:none;border:none;cursor:pointer;text-decoration:underline;font-family:inherit">清除学习记录</button>
+  </div>`;
+
+  el.innerHTML = html;
+}
+
+function learnClearAll() {
+  learnSave({ outcomes:[], assetStats:{}, patternStats:{}, version:2 });
+  renderLearnPanel();
+  brainAddCard('learning', '🔄 学习记录已清除', '所有历史交易学习数据已重置。FINCH将重新开始积累经验。', null);
+}
+
+// Hook paper trading close to auto-record learning
+const _origClosePaper = typeof closePaperPosition === 'function' ? closePaperPosition : null;
+
+
 
 // ═══ FORMAT ═══
 function fmtP(n){
@@ -2232,9 +2808,21 @@ function mockKlines(sym,tf,lim){
 
 // Known seed prices so mock data is roughly correct even before first API call
 S._seedPrice={
+  // Crypto
   BTCUSDT:83000,ETHUSDT:2066,SOLUSDT:130,BNBUSDT:600,XRPUSDT:2.20,
   DOGEUSDT:0.18,ADAUSDT:0.70,AVAXUSDT:22,DOTUSDT:4.5,LINKUSDT:13,
   MATICUSDT:0.35,LTCUSDT:90,ATOMUSDT:5,NEARUSDT:3,
+  // US Stocks
+  'AAPL':195,'NVDA':875,'MSFT':415,'TSLA':175,'AMZN':185,'GOOGL':170,'META':510,
+  'SPY':520,'QQQ':445,
+  // MY Stocks (MYR)
+  '1155:MYX':9.20,'5347:MYX':6.50,'5168:MYX':2.80,'7113:MYX':4.15,'5183:MYX':18.50,
+  // SG Stocks (SGD)
+  'D05:SGX':34.50,'O39:SGX':14.50,'U11:SGX':31.50,'C6L:SGX':6.80,'Z74:SGX':2.30,
+  // Forex
+  'USD/SGD':1.340,'USD/MYR':4.720,'EUR/USD':1.083,'GBP/USD':1.265,'USD/JPY':149.5,'SGD/MYR':3.520,
+  // Commodities
+  'XAU/USD':2320,'XAG/USD':27.5,'WTI/USD':78,'BRENT/USD':82,
 };
 
 // Price sanity check: validate fetched price against expected range
@@ -2245,6 +2833,12 @@ function priceValid(sym, px){
     ADAUSDT:[0.05,10],AVAXUSDT:[3,500],DOTUSDT:[1,200],
     LINKUSDT:[1,200],MATICUSDT:[0.01,20],LTCUSDT:[20,1000],
     ATOMUSDT:[1,100],NEARUSDT:[0.5,100],
+    // TD assets
+    'AAPL':[100,400],'NVDA':[10,2000],'MSFT':[200,600],'TSLA':[100,1500],
+    'AMZN':[80,300],'GOOGL':[100,300],'META':[100,800],'SPY':[300,700],'QQQ':[200,600],
+    'USD/SGD':[1.2,1.5],'USD/MYR':[3.5,5.0],'EUR/USD':[0.9,1.3],'GBP/USD':[1.0,1.5],
+    'USD/JPY':[100,170],'SGD/MYR':[2.8,3.6],
+    'XAU/USD':[1500,3500],'XAG/USD':[15,50],'WTI/USD':[30,150],'BRENT/USD':[30,160],
   };
   const r=ranges[sym];
   if(!r)return px>0;
@@ -2288,7 +2882,9 @@ async function fetchKlines(sym,iv,lim=300){
 }
 async function refreshPrices(){
   try{
-    const syms=JSON.stringify(PAIRS.map(p=>p.s));
+    // v38: only crypto pairs use Binance API
+    const cryptoPairs = PAIRS.filter(p => p.cls === 'crypto' || !p.cls);
+    const syms=JSON.stringify(cryptoPairs.map(p=>p.s));
     const r=await bF(`/api/v3/ticker/24hr?symbols=${encodeURIComponent(syms)}`);
     const data=await r.json();
     data.forEach(t=>{
@@ -2306,21 +2902,32 @@ async function refreshPrices(){
       }
     });
   }catch(e){
-    // Fallback: fetch just current symbol price
-    try{
-      const px=await fastPrice(S.sym);
-      if(px>0){S.lastPx=px;S._seedPrice[S.sym]=px;updatePHPrice(px);}
-    }catch(e2){}
+    // Fallback: fetch just current symbol price (crypto only)
+    if(!isTDAsset(S.sym)){
+      try{
+        const px=await fastPrice(S.sym);
+        if(px>0){S.lastPx=px;S._seedPrice[S.sym]=px;updatePHPrice(px);}
+      }catch(e2){}
+    }
   }
 }
 function updConn(ok,host){
   const dot=document.getElementById('connDot');const lbl=document.getElementById('connLbl');
+  if(!dot||!lbl)return;
+  // v38: differentiate TwelveData vs Binance
+  if(isTDAsset(S.sym)){
+    dot.className='conn-dot rest';
+    lbl.textContent='TwelveData';
+    return;
+  }
   if(S.wsOk){dot.className='conn-dot live';lbl.textContent='Live WS';}
   else if(ok){dot.className='conn-dot rest';lbl.textContent=host?host.split('.')[0]:'REST';}
   else{dot.className='conn-dot';lbl.textContent='Connecting...';}
 }
 function updatePHPrice(px){
-  if(!px||px<=0||!priceValid(S.sym,px))return;
+  // v38: for TwelveData assets, always allow price through (different ranges)
+  if(!px||px<=0)return;
+  if(!isTDAsset(S.sym)&&!priceValid(S.sym,px))return;
   const fmted=fmtP(px);
   const big=document.getElementById('priceBig');
   if(big){
@@ -2335,6 +2942,13 @@ function updatePHPrice(px){
 }
 
 function connectWS(sym){
+  // v38: WebSocket only for Binance crypto assets
+  if(isTDAsset(sym)){
+    if(S.ws){try{S.ws.close();}catch(e){}S.ws=null;}
+    S.wsOk=false;
+    updConn(false,'TwelveData');
+    return;
+  }
   if(S.ws){try{S.ws.close();}catch(e){}S.ws=null;}
   S.wsOk=false;updConn(false);
   // Try both stream endpoints
@@ -2445,20 +3059,92 @@ async function selectSym(sym){
   const newKlines={};keysToKeep.forEach(k=>newKlines[k]=S.klines[k]);
   S.klines=newKlines;
   S.sym=sym;
-  const b=sym.replace('USDT','').replace('BTC','');
-  $set('chartSym',b+' / USDT');
-  $set('symLabel',b+' / USDT');
-  $set('expChartSym',b+'/USDT');
-  connectWS(sym);
-  await loadAll(sym);
+
+  // ── Asset-class-aware label display ──
+  const pair = getPair(sym);
+  const cls = pair ? pair.cls : 'crypto';
+  const isTD = cls !== 'crypto';
+
+  // Build display label
+  let displayLabel = sym;
+  if(cls === 'crypto') displayLabel = sym.replace('USDT','/USDT').replace('BTC','/BTC');
+  else if(cls === 'forex') displayLabel = sym;
+  else if(cls === 'commodity') displayLabel = pair ? pair.n : sym;
+  else displayLabel = pair ? pair.b + ' · ' + pair.n : sym;
+
+  $set('chartSym', displayLabel);
+  $set('symLabel', displayLabel);
+  $set('expChartSym', displayLabel);
+
+  // Show asset type badge + market hours in price header
+  const clsInfo = ASSET_CLASSES[cls] || {};
+  const mhrs = getMarketStatus(cls);
+  const symLabelEl = document.getElementById('phSymLabel');
+  if(symLabelEl) {
+    const typeMap = {crypto:'at-crypto',us_stock:'at-stock',my_stock:'at-stock',sg_stock:'at-stock',forex:'at-fx',commodity:'at-commodity'};
+    const pillCls = typeMap[cls] || 'at-crypto';
+    symLabelEl.innerHTML = displayLabel +
+      `<span class="asset-type-pill ${pillCls}">${clsInfo.label||cls}</span>` +
+      `<span class="mhrs-badge ${mhrs.open?'mhrs-open':'mhrs-close'}">${mhrs.label}</span>`;
+  }
+  // ph-sym fallback
+  const phSym = document.getElementById('phSym');
+  if(phSym) phSym.textContent = displayLabel;
+
+  // WS only for crypto
+  if(!isTD) {
+    // For TwelveData assets, try to get a quick quote first
+    S.wsOk = false;
+    try {
+      const q = await tdQuote(sym);
+      if(q && q.px > 0) {
+        S.lastPx = q.px; S._seedPrice[sym] = q.px;
+        updatePH({ price:q.px, change:q.chg, high:q.high||q.px, low:q.low||q.px, vol:q.vol||0 });
+      }
+    } catch(e) {}
+  } else {
+    connectWS(sym);
+  }
+
+  await loadAllUnified(sym);
 }
+
+// Unified loadAll that routes to correct data source
+async function loadAllUnified(sym) {
+  if(isTDAsset(sym)) {
+    // For TwelveData assets, use tdKlines
+    const tf = S.stratTF || '4h';
+    const needed = [tf, '1d', '1w', S.chartTF || '4h'];
+    await Promise.all([...new Set(needed)].map(t => tdKlines(sym, t, 300).then(kl => {
+      if(kl.length) {
+        S.klines[sym+t] = kl;
+        if(!S.lastPx || S.lastPx <= 0) {
+          S.lastPx = kl[kl.length-1].c;
+          S._seedPrice[sym] = S.lastPx;
+          updatePHPrice(S.lastPx);
+        }
+      }
+    }).catch(()=>{})));
+    // Update chart + analysis with loaded klines
+    const kl = S.klines[sym + (S.chartTF||'4h')] || S.klines[sym+'1d'] || [];
+    if(kl.length) { renderChart(kl, sym); renderSubChart(kl); }
+    renderStrategy(); renderTimeline(); renderSummary();
+    renderAllModules();
+  } else {
+    await loadAll(sym);
+  }
+}
+
 async function setChartTF(tf,btn){
   S.chartTF=tf;
   document.querySelectorAll('.tf-seg-btn').forEach(b=>b.classList.remove('active'));
   if(btn)btn.classList.add('active');
-  const kl=await fetchKlines(S.sym,tf,300);
-  renderChart(kl,S.sym);renderSubChart(kl);
+  const kl = isTDAsset(S.sym)
+    ? await tdKlines(S.sym, tf, 300).then(k=>{if(k.length)S.klines[S.sym+tf]=k;return k;}).catch(()=>[])
+    : await fetchKlines(S.sym, tf, 300);
+  if(kl.length) { renderChart(kl,S.sym); renderSubChart(kl); }
 }
+
 function setChartType(t,btn){
   S.chartType=t;
   document.querySelectorAll('.ct-toggle-btn').forEach(b=>b.classList.remove('active'));
@@ -2478,12 +3164,12 @@ async function setStrat(tf,btn){
   if(btn)btn.classList.add('active');
   var _sa=document.getElementById('stratArea');
   if(_sa)_sa.innerHTML='<div style="color:var(--muted);font-size:14px;padding:20px 0">⏳ 加载 '+tf+'...</div>';
-  // Ensure klines for this TF are loaded
+  // Ensure klines for this TF are loaded — route to TwelveData or Binance
   const needed=[tf,'1d','1w'];
-  await Promise.all(needed.map(t=>{
-    if(!S.klines[S.sym+t]||S.klines[S.sym+t].length<50)return fetchKlines(S.sym,t,300);
-    return Promise.resolve();
-  }));
+  const fetcher = isTDAsset(S.sym)
+    ? t => (!S.klines[S.sym+t]||S.klines[S.sym+t].length<50) ? tdKlines(S.sym,t,300).then(kl=>{if(kl.length)S.klines[S.sym+t]=kl;}) : Promise.resolve()
+    : t => (!S.klines[S.sym+t]||S.klines[S.sym+t].length<50) ? fetchKlines(S.sym,t,300) : Promise.resolve();
+  await Promise.all(needed.map(fetcher));
   if(!S.lastPx){const kl=S.klines[S.sym+tf]||[];if(kl.length)S.lastPx=kl[kl.length-1].c;}
   renderStrategy();renderTimeline();renderSummary();
 }
@@ -4274,6 +4960,14 @@ async function loadAllIntelligence() {
   if (INTEL.lastFetch && now - INTEL.lastFetch < INTEL.fetchInterval) return;
   INTEL.lastFetch = now;
 
+  // CoinGecko/DeFi Llama intelligence is only relevant for crypto assets
+  // For stocks/forex/commodities, skip to avoid burning API quota
+  const cls = getAssetClass(S.sym);
+  if(cls !== 'crypto') {
+    // For non-crypto, just refresh the macro pulse which handles all asset classes
+    return;
+  }
+
   // Fire all in parallel but stagger slightly
   loadCoinGeckoGlobal();
   await new Promise(r => setTimeout(r, 400));
@@ -4599,7 +5293,33 @@ async function fetchKlinesThrottled(sym,tf,limit){
 }
 
 // ═══ LOAD ALL ═══
+// ── v38: renderAllModules — convenience wrapper to re-render all right-panel modules ──
+function renderAllModules(){
+  const px = S.lastPx;
+  if(!px || px <= 0) return;
+  const sym = S.sym;
+  const tf = S.chartTF || '4h';
+  const kl = S.klines[sym+tf] || S.klines[sym+'1h'] || S.klines[sym+'4h'] || S.klines[sym+'1d'] || [];
+  try { renderTech(kl, px); } catch(e) {}
+  try { renderVegas(kl); } catch(e) {}
+  try { renderFib(px, kl); } catch(e) {}
+  try { renderGann(px); } catch(e) {}
+  try { renderChan(kl, px); } catch(e) {}
+  try { renderLunar(); } catch(e) {}
+  try { renderIching(px); } catch(e) {}
+  try { renderGannTimeNodes(px); } catch(e) {}
+  try { renderStrategy(); } catch(e) {}
+  try { renderTimeline(); } catch(e) {}
+  try { renderSummary(); } catch(e) {}
+}
+
 async function loadAll(sym){
+  // ── v38: Route TwelveData assets to their own loader ──
+  if(isTDAsset(sym)){
+    await loadAllUnified(sym);
+    return;
+  }
+
   const _cl=document.getElementById('chartLoad');if(_cl)_cl.style.display='flex';
   $html('stratArea',`
     <div style="padding:20px 0;text-align:center">
@@ -8428,28 +9148,73 @@ function sendWA(){if(!S.waPhone){alert('请先设置手机号');return;}window.o
 
 // ═══ SYM LIST ═══
 function buildSymList(){
-  var _slEl=document.getElementById('symList');if(_slEl)_slEl.innerHTML=PAIRS.map(p=>`
-    <div class="sym-item" id="si-${p.s}" onclick="selectSym('${p.s}')">
-      <div><div class="sym-name">${p.b}</div><div class="sym-sub">${p.n}</div></div>
-      <div class="sym-right">
-        <div class="sym-price" id="px-${p.s}">--</div>
-        <div class="sym-chg neu" id="chg-${p.s}">--</div>
-      </div>
-    </div>`).join('');
-  var _siEl=document.getElementById('si-'+S.sym);if(_siEl)_siEl.classList.add('active');
+  const _slEl=document.getElementById('symList');
+  if(!_slEl) return;
+
+  // Filter by current class
+  const filtered = _assetFilter === 'all'
+    ? PAIRS
+    : PAIRS.filter(p => p.cls === _assetFilter);
+
+  // Group by cls
+  const groups = {};
+  filtered.forEach(p => {
+    if(!groups[p.cls]) groups[p.cls]=[];
+    groups[p.cls].push(p);
+  });
+
+  const clsOrder = ['crypto','us_stock','my_stock','sg_stock','forex','commodity'];
+  const clsNames = {
+    crypto:'🪙 加密货币',us_stock:'🇺🇸 美股 US Stocks',
+    my_stock:'🇲🇾 马股 Bursa Malaysia',sg_stock:'🇸🇬 新股 SGX',
+    forex:'💱 外汇 Forex',commodity:'🥇 商品 Commodities'
+  };
+
+  let html = '';
+  clsOrder.forEach(cls => {
+    const group = groups[cls];
+    if(!group || !group.length) return;
+    html += `<div class="wl-group-hd">${clsNames[cls]||cls}</div>`;
+    group.forEach(p => {
+      const mhrs = getMarketStatus(p.cls);
+      const mhrsHtml = `<div style="font-size:9px;color:${mhrs.open?'var(--teal)':'var(--dim)'}">${mhrs.open?'◉':'○'} ${mhrs.label}</div>`;
+      html += `<div class="sym-item" id="si-${CSS.escape?CSS.escape(p.s):p.s.replace(/[/:]/g,'_')}" onclick="selectSym('${p.s}')">
+        <div>
+          <div class="sym-name">${p.b}</div>
+          <div class="sym-sub">${p.n.length>18?p.n.slice(0,18)+'…':p.n}</div>
+          ${mhrsHtml}
+        </div>
+        <div class="sym-right">
+          <div class="sym-price" id="px-${p.s}" style="font-size:12px">--</div>
+          <div class="sym-chg neu" id="chg-${p.s}">--</div>
+        </div>
+      </div>`;
+    });
+  });
+  _slEl.innerHTML = html;
+
+  // Re-mark active
+  const activeSym = S.sym;
+  const activeEl = document.querySelector(`[id="si-${activeSym}"]`) || document.getElementById('si-'+activeSym.replace(/[/:]/g,'_'));
+  if(activeEl) activeEl.classList.add('active');
 }
+
 function addCustom(){
   let v=($id('custInput')||{}).value;
   if(!v)return;v=v.trim().toUpperCase();
-  if(!v)return;if(!v.endsWith('USDT')&&!v.endsWith('BTC'))v+='USDT';
+  if(!v)return;
+  // Support crypto or TwelveData symbols
+  const isCryptoInput = !v.includes('/') && !v.includes(':') && !['AAPL','TSLA','NVDA','MSFT','DBS','OCBC'].some(x=>v.startsWith(x));
+  if(isCryptoInput && !v.endsWith('USDT')&&!v.endsWith('BTC'))v+='USDT';
   if(!PAIRS.find(p=>p.s===v)){
-    const b=v.replace('USDT','').replace('BTC','');PAIRS.push({s:v,b,n:b});
-    const el=document.getElementById('symList');const div=document.createElement('div');
-    div.className='sym-item';div.id='si-'+v;div.onclick=()=>selectSym(v);
-    div.innerHTML=`<div><div class="sym-name">${b}</div><div class="sym-sub">${v}</div></div><div class="sym-right"><div class="sym-price" id="px-${v}">--</div><div class="sym-chg neu" id="chg-${v}">--</div></div>`;
-    if(el)el.appendChild(div);
-  }selectSym(v);
+    const b=v.replace('USDT','').replace('BTC','').split('/')[0].split(':')[0];
+    const isCrypto = v.endsWith('USDT')||v.endsWith('BTC');
+    PAIRS.push({s:v,b,n:b, cls: isCrypto?'crypto':'us_stock'});
+    buildSymList();
+  }
+  selectSym(v);
 }
+
 
 // ╔══════════════════════════════════════════════════════════════════════╗
 // ║  FINCH MODULE 6 — 机构研究情报中枢 (Institutional Research Hub)      ║
@@ -8584,49 +9349,87 @@ async function refreshInstRes(manual) {
     });
   }
 
-  // Build the current market context to give Claude
-  var sym  = (S.sym || 'BTCUSDT').replace('USDT', '');
+  // Build asset-class-aware market context
+  var sym  = S.sym || 'BTCUSDT';
+  var pair = getPair(sym);
+  var cls  = pair ? pair.cls : 'crypto';
+  var displaySym = pair ? (pair.b + (cls==='crypto'?'/USDT':cls==='forex'?'':' ('+pair.exchange+')')) : sym;
   var px   = S.lastPx > 0 ? fmtP(S.lastPx) : '—';
   var sig  = S.lastSignal;
   var dir  = sig ? (sig.isBull ? '多头' : '空头') : '分析中';
   var conf = sig ? sig.conf + '%' : '—';
   var fg   = S.fg ? parseInt(S.fg.value) : 50;
   var now  = new Date().toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
-  var btcDom = S.macro && S.macro.btcDom ? S.macro.btcDom.toFixed(1) + '%' : '—';
+  var mhrs = getMarketStatus(cls);
+
+  // Build asset-specific context snippet
+  var assetContext = '';
+  var assetFocus = '';
+  if (cls === 'crypto') {
+    var btcDom = S.macro && S.macro.btcDom ? S.macro.btcDom.toFixed(1) + '%' : '—';
+    assetContext = `- 恐慌贪婪指数: ${fg}, BTC主导率: ${btcDom}`;
+    assetFocus = '加密货币市场、比特币、以太坊、DeFi、Web3监管、机构配置加密资产';
+  } else if (cls === 'us_stock') {
+    assetContext = `- 市场: 美国股市 (${pair?pair.exchange:'NYSE/NASDAQ'})\n- 板块: ${pair?pair.n:'科技股'}`;
+    assetFocus = '美国股市、标普500、纳斯达克、科技股、美联储政策、企业盈利、宏观经济';
+  } else if (cls === 'my_stock') {
+    assetContext = `- 市场: 马来西亚股市 (Bursa Malaysia)\n- 股票: ${pair?pair.n:sym}`;
+    assetFocus = '马来西亚股市、Bursa Malaysia、马元汇率、大宗商品、东南亚宏观经济、Bank Negara政策';
+  } else if (cls === 'sg_stock') {
+    assetContext = `- 市场: 新加坡股市 (SGX)\n- 股票: ${pair?pair.n:sym}`;
+    assetFocus = '新加坡股市、SGX、新加坡元、REITs、东南亚经济、MAS货币政策、中美贸易';
+  } else if (cls === 'forex') {
+    assetContext = `- 货币对: ${displaySym}\n- 市场状态: ${mhrs.label}`;
+    assetFocus = '外汇市场、央行政策、美元指数、利率差异、经济数据、地缘政治风险';
+    if (sym.includes('MYR')) assetFocus += '、马来西亚令吉、Bank Negara、大宗商品出口';
+    if (sym.includes('SGD')) assetFocus += '、新加坡元、MAS政策、新加坡经济';
+  } else if (cls === 'commodity') {
+    assetContext = `- 商品: ${pair?pair.n:sym}`;
+    assetFocus = sym.includes('XAU')||sym.includes('GOLD')
+      ? '黄金市场、避险需求、美元走势、实际利率、央行购金、通胀预期'
+      : sym.includes('XAG')||sym.includes('SILVER')
+      ? '白银市场、工业需求、太阳能、绿色能源、黄金白银比'
+      : '原油市场、OPEC政策、供需平衡、地缘政治、美元走势、全球经济增长';
+  }
 
   var systemPrompt = `你是FINCH系统的机构研究情报分析师，专门收集和综合全球顶级投资机构的最新研究和市场观点。
 
 当前市场快照 (${now}):
-- 分析币种: ${sym}/USDT, 价格: ${px}
+- 分析品种: ${displaySym}, 价格: ${px}
+- 资产类别: ${cls} | 市场状态: ${mhrs.label}
 - FINCH技术信号: ${dir}, 置信度: ${conf}
-- 恐慌贪婪指数: ${fg}, BTC主导率: ${btcDom}
+${assetContext}
+- 关注焦点: ${assetFocus}
 
-你的任务：使用web_search工具搜索以下机构的最新研究和市场观点：
-1. Man Institute (man.com/maninstitute) - 量化研究
-2. AQR Capital Insights (aqr.com) - 因子投资观点
-3. Citadel (citadel.com) - 宏观市场观点
-4. GMO (gmo.com) - 长期资产配置与泡沫警告
-5. Apollo Academy (apolloacademy.com) - 私信贷与宏观经济
-6. Visual Capitalist (visualcapitalist.com) - 数据可视化洞察
-7. Haver Analytics (haver.com) - 宏观经济数据
+你的任务：使用web_search工具搜索以下机构的最新研究和市场观点，重点关注与"${assetFocus}"相关的内容：
+1. Man Institute (man.com/maninstitute) - 量化研究与系统性策略
+2. AQR Capital Insights (aqr.com) - 因子投资与宏观观点
+3. Citadel (citadel.com) - 宏观对冲基金观点
+4. GMO (gmo.com) - 长期资产配置与估值分析
+5. Apollo Academy (apolloacademy.com) - 宏观经济与信贷市场
+6. Goldman Sachs Research (goldmansachs.com/insights) - 大行宏观研究
+7. Morgan Stanley Research (morganstanley.com/ideas) - 市场策略观点
 
 搜索后，请严格按以下JSON格式输出，不要有任何前言或解释：
 
 {
-  "synthesis": "150字以内中文综合分析，整合所有机构观点，与当前加密市场联系，给出可操作建议",
+  "synthesis": "150字以内中文综合分析，整合所有机构观点，与当前分析品种(${displaySym})直接联系，给出可操作建议",
   "sentiment": "bull或bear或neutral",
+  "assetClass": "${cls}",
   "sources": {
-    "man": {"headline": "最新研究标题或核心观点（中文）", "detail": "2-3句详细说明", "sentiment": "bull/bear/neutral", "relevance": "与加密/宏观市场的关联"},
+    "man": {"headline": "最新研究标题或核心观点（中文）", "detail": "2-3句详细说明，联系${displaySym}", "sentiment": "bull/bear/neutral", "relevance": "与当前品种的关联"},
     "aqr": {"headline": "...", "detail": "...", "sentiment": "...", "relevance": "..."},
     "citadel": {"headline": "...", "detail": "...", "sentiment": "...", "relevance": "..."},
     "gmo": {"headline": "...", "detail": "...", "sentiment": "...", "relevance": "..."},
     "apollo": {"headline": "...", "detail": "...", "sentiment": "...", "relevance": "..."},
-    "vc": {"headline": "...", "detail": "...", "sentiment": "...", "relevance": "..."},
-    "haver": {"headline": "...", "detail": "...", "sentiment": "...", "relevance": "..."}
+    "gs": {"headline": "...", "detail": "...", "sentiment": "...", "relevance": "..."},
+    "ms": {"headline": "...", "detail": "...", "sentiment": "...", "relevance": "..."}
   },
   "keyThemes": ["主题1", "主题2", "主题3"],
-  "cryptoImplication": "机构研究对加密市场的综合含义（1-2句）",
-  "riskLevel": "high/medium/low"
+  "assetImplication": "机构研究对${displaySym}的综合含义与近期风险提示（2-3句）",
+  "catalysts": ["近期催化剂1", "近期催化剂2"],
+  "riskLevel": "high/medium/low",
+  "timeHorizon": "short(1-2周)/medium(1-3月)/long(3月以上)"
 }
 
 只输出JSON，不加任何其他文字。`;
@@ -8637,12 +9440,12 @@ async function refreshInstRes(manual) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
-        max_tokens: 3000,
+        max_tokens: 3500,
         tools: [{ type: 'web_search_20250305', name: 'web_search' }],
         system: systemPrompt,
         messages: [{
           role: 'user',
-          content: '请立即搜索以上7家机构网站的最新内容，然后以指定JSON格式输出综合分析。用中文撰写所有文本字段。'
+          content: `请立即搜索以上7家机构网站的最新内容（重点关注：${assetFocus}），然后以指定JSON格式输出综合分析。用中文撰写所有文本字段。当前分析品种：${displaySym}。`
         }]
       })
     });
@@ -8664,7 +9467,6 @@ async function refreshInstRes(manual) {
     renderInstResData(parsed);
 
   } catch (e) {
-    // Graceful fallback
     var fallback = 'API调用失败：' + (e.message || '未知错误') + '。请检查网络连接或稍后重试。';
     if (contentEl) contentEl.innerHTML = '<span style="color:var(--amber);font-size:11px">⚠️ ' + fallback + '</span>';
     if (badgesEl) badgesEl.querySelectorAll('.inst-badge').forEach(function(b) { b.classList.remove('loading'); });
@@ -8691,7 +9493,12 @@ function renderInstResData(data) {
   if (contentEl) {
     var sentCol = data.sentiment === 'bull' ? 'var(--green)' : data.sentiment === 'bear' ? 'var(--red)' : 'var(--amber)';
     var sentIcon = data.sentiment === 'bull' ? '▲ 机构偏多' : data.sentiment === 'bear' ? '▼ 机构偏空' : '⚡ 机构中性';
-    var riskBadge = data.riskLevel === 'high' ? '<span class="inst-tag bear">⚠️ HIGH RISK</span>' : data.riskLevel === 'low' ? '<span class="inst-tag bull">✅ LOW RISK</span>' : '<span class="inst-tag neutral">⚡ MED RISK</span>';
+    var riskBadge = data.riskLevel === 'high' ? '<span class="inst-tag bear">⚠️ HIGH RISK</span>'
+      : data.riskLevel === 'low' ? '<span class="inst-tag bull">✅ LOW RISK</span>'
+      : '<span class="inst-tag neutral">⚡ MED RISK</span>';
+    var horizonBadge = data.timeHorizon
+      ? '<span class="inst-tag" style="background:rgba(40,48,160,0.08);color:var(--indigo);border-color:rgba(40,48,160,0.2);">⏱ ' + data.timeHorizon + '</span>'
+      : '';
 
     var themeHtml = '';
     if (data.keyThemes && data.keyThemes.length) {
@@ -8700,29 +9507,42 @@ function renderInstResData(data) {
         '</div>';
     }
 
-    var cryptoImplHtml = data.cryptoImplication
-      ? '<div style="margin-top:8px;font-size:11px;padding:6px 10px;background:rgba(10,88,112,0.06);border-radius:4px;border-left:2px solid var(--cyan);color:var(--text);line-height:1.7;">' +
-        '🔗 加密含义：' + data.cryptoImplication + '</div>'
+    // Asset implication (replaces cryptoImplication, covers all classes)
+    var implText = data.assetImplication || data.cryptoImplication || '';
+    var implIcon = (data.assetClass === 'forex') ? '💱' : (data.assetClass === 'commodity') ? '🥇'
+      : (data.assetClass && data.assetClass.includes('stock')) ? '📈' : '🔗';
+    var implHtml = implText
+      ? '<div style="margin-top:8px;font-size:11px;padding:6px 10px;background:rgba(10,88,112,0.06);border-radius:4px;border-left:2px solid var(--cyan);color:var(--text);line-height:1.7;">'
+        + implIcon + ' 市场含义：' + implText + '</div>'
       : '';
 
+    // Catalysts
+    var catHtml = '';
+    if (data.catalysts && data.catalysts.length) {
+      catHtml = '<div style="margin-top:7px;"><span style="font-size:10px;letter-spacing:1px;color:var(--amber);font-weight:700;text-transform:uppercase;">⚡ 近期催化剂</span>'
+        + '<div style="margin-top:4px;display:flex;flex-direction:column;gap:3px;">'
+        + data.catalysts.map(function(c){ return '<div style="font-size:11px;color:var(--text);padding:3px 8px;background:rgba(128,80,0,0.07);border-radius:3px;border-left:2px solid var(--amber)">'+c+'</div>'; }).join('')
+        + '</div></div>';
+    }
+
     contentEl.innerHTML =
-      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;">' +
+      '<div style="display:flex;align-items:center;gap:6px;margin-bottom:7px;flex-wrap:wrap;">' +
         '<span style="font-size:12px;font-weight:700;color:' + sentCol + ';">' + sentIcon + '</span>' +
-        riskBadge +
+        riskBadge + horizonBadge +
       '</div>' +
       '<div class="inst-synthesis">' + data.synthesis + '</div>' +
-      themeHtml +
-      cryptoImplHtml;
+      themeHtml + implHtml + catHtml;
   }
 
-  // Update badges
+  // Update badges — also handle new gs/ms sources
   if (badgesEl) {
     badgesEl.querySelectorAll('.inst-badge').forEach(function(b) {
       b.classList.remove('loading', 'active');
       var srcId = b.getAttribute('data-src');
-      if (data.sources && data.sources[srcId]) {
+      var srcData = data.sources && (data.sources[srcId] || data.sources[srcId === 'gs' ? 'goldmansachs' : srcId === 'ms' ? 'morgan' : srcId]);
+      if (srcData) {
         b.classList.add('updated');
-        var srcSent = data.sources[srcId].sentiment;
+        var srcSent = srcData.sentiment;
         b.style.borderColor = srcSent === 'bull' ? 'var(--green)' : srcSent === 'bear' ? 'var(--red)' : '';
         b.style.color = srcSent === 'bull' ? 'var(--teal)' : srcSent === 'bear' ? 'var(--red)' : 'var(--cyan)';
       }
@@ -8733,7 +9553,9 @@ function renderInstResData(data) {
   if (metaEl) {
     var myt = toMYT(new Date());
     var ts = String(myt.getUTCHours()).padStart(2, '0') + ':' + String(myt.getUTCMinutes()).padStart(2, '0') + ' MYT';
-    metaEl.innerHTML = '<span style="font-size:10px;color:var(--muted)">机构情报更新: ' + ts + ' · 每30分钟自动刷新 · 点击机构名查看详情</span>';
+    var cls = data.assetClass || 'crypto';
+    var clsLabel = {crypto:'加密',us_stock:'美股',my_stock:'马股',sg_stock:'新股',forex:'外汇',commodity:'商品'}[cls]||cls;
+    metaEl.innerHTML = '<span style="font-size:10px;color:var(--muted)">机构情报 [' + clsLabel + '] 更新: ' + ts + ' · 每30分钟刷新 · 点击机构名查看详情</span>';
   }
 }
 
@@ -8847,21 +9669,63 @@ function updateAssistantContext(){
 function buildSystemContext(){
   const res=S.lastSignal;
   const px=S.lastPx;
-  const sym=S.sym.replace('USDT','');
+  const sym=S.sym;
+  const pair=getPair(sym);
+  const cls=pair?pair.cls:'crypto';
+  const displaySym=pair?pair.b:sym.replace('USDT','');
   const fg=S.fg?parseInt(S.fg.value):50;
   const lunar=getLunar();
+  const mhrs=getMarketStatus(cls);
+
+  // Learning-based context
+  const db=learnLoad();
+  const assetStats=db.assetStats[sym];
+  const learnCtx=assetStats&&assetStats.trades>=3
+    ?`\n== 📚 自学历史 (${sym}) ==\n历史胜率: ${(assetStats.wins/assetStats.trades*100).toFixed(0)}% (${assetStats.trades}笔) | 平均PnL: ${(assetStats.totalPnl/assetStats.trades).toFixed(2)}%`
+    :'';
 
   if(!res||!px){
-    return `你是 FINCH，一个专业的加密货币市场分析助理。当前正在分析 ${sym}/USDT，但市场数据尚未加载完成。请告知用户稍等片刻。`;
+    return `你是 FINCH v38，一个专业的多资产市场分析助理，覆盖加密货币、美股、马股、新股、外汇与商品。当前正在分析 ${displaySym}（${cls}），但市场数据尚未加载完成。请告知用户稍等片刻。`;
   }
 
-  return `你是 FINCH，一个专业的加密货币市场分析助理，有15年实战经验。你说话直接、有观点、有温度，像一个真正懂市场的老手。
+  // Asset-specific context block
+  let assetCtx='';
+  if(cls==='crypto'){
+    assetCtx=`恐慌贪婪指数: ${fg} (${fg<20?'极度恐惧':fg<35?'恐惧':fg>80?'极度贪婪':fg>65?'贪婪':'中性'})
+BTC主导率: ${S.macro?.btcDom?.toFixed(1)||'--'}%
+资金费率: ${res.fundingRate?(res.fundingRate.toFixed(4)+'%'):'未知'} (${(res.fundingRate||0)>0.05?'多头过热':(res.fundingRate||0)<-0.02?'空头过热':'正常'})`;
+  } else if(cls==='us_stock'){
+    assetCtx=`交易所: ${pair?.exchange||'NYSE/NASDAQ'} | 货币: USD
+市场状态: ${mhrs.label}
+行业板块: 科技/成长股`;
+  } else if(cls==='my_stock'){
+    assetCtx=`交易所: Bursa Malaysia | 货币: MYR
+市场状态: ${mhrs.label}
+主要驱动: 令吉汇率、大宗商品、国内政策`;
+  } else if(cls==='sg_stock'){
+    assetCtx=`交易所: SGX | 货币: SGD
+市场状态: ${mhrs.label}
+主要驱动: 新币走势、MAS政策、东盟经济`;
+  } else if(cls==='forex'){
+    assetCtx=`货币对: ${displaySym} | 市场: 24小时外汇
+市场状态: ${mhrs.label}
+注意: 央行政策、利率差、经济数据`;
+  } else if(cls==='commodity'){
+    assetCtx=`商品: ${pair?.n||displaySym}
+市场状态: ${mhrs.label}
+驱动因素: 供需、美元指数、地缘政治`;
+  }
 
-== 当前实时市场快照 (${sym}/USDT · ${res.tf}周期) ==
+  return `你是 FINCH v38，一个专业的多资产市场分析助理，覆盖加密货币、美股、马股、新加坡股、外汇与大宗商品。你有15年实战经验，说话直接、有观点、有温度，像一个真正懂市场的老手。
+
+== 当前实时市场快照 (${displaySym} · ${cls} · ${res.tf}周期) ==
 现价: ${fmtP(px)}
 方向信号: ${res.isBull?'▲ 做多 LONG':'▼ 做空 SHORT'}
 置信度: ${res.conf}% | 综合评分: ${res.score>0?'+':''}${res.score?.toFixed(2)}
 信号分歧率: ${(res.conflictRatio*100||0).toFixed(0)}% (${res.conflictRatio>0.45?'高分歧':'低分歧'})
+
+== 资产类别信息 ==
+${assetCtx}
 
 == 技术指标 ==
 RSI 14: ${res.rsi?.toFixed(1)} (${res.rsi<30?'深度超卖':res.rsi<38?'超卖':res.rsi>72?'深度超买':res.rsi>62?'超买':'中性'})
@@ -8869,22 +9733,20 @@ MACD: ${res.macdD?.hist>0?'多头动能(正柱)':'空头动能(负柱)'} ${res.m
 BB 位置: ${(res.bbPos*100).toFixed(0)}% (${res.bbPos>0.85?'极度超买':res.bbPos>0.75?'近上轨':res.bbPos<0.15?'极度超卖':res.bbPos<0.25?'近下轨':'中间'})
 MA20/MA55: ${res.ma20v&&res.ma55v?(res.ma20v>res.ma55v?'多头排列 ▲':'空头排列 ▼'):'--'} | MA200: ${res.ma200v?(px>res.ma200v?'价在上方':'价在下方'):'N/A'}
 Stoch %K: ${res.stoch?.k?.toFixed(0)||'--'} | ADX: ${res.adx?.adx?.toFixed(1)||'--'} (${res.adx?.strong?'强趋势':res.adx?.trending?'趋势':res.adx?.ranging?'震荡市':'弱趋势'})
-Supertrend: ${res.supertrend?.bull?'▲多头':'▼空头'} @ ${fmtP(res.supertrend?.value)}
 Vegas通道: ${res.vegas?(res.vegas.above?'价在上方 强势':res.vegas.below?'价在下方 弱势':'通道内整理'):'数据不足'}
-历史波动率(HV): ${res.hv?.hv?.toFixed(1)||'--'}% 年化 (${res.hv?.expanding?'扩张↑':res.hv?.contracting?'收缩↓':'稳定'})
+历史波动率(HV): ${res.hv?.hv?.toFixed(1)||'--'}% 年化
 
 == 量价与市场结构 ==
 OBV: ${res.obv?.obvTrend===1?'↑量能增加':'↓量能减少'} ${res.obv?.obvDiv?'⚡量价背驰':''}
-CVD: ${res.cvd?.bullishDelta?'买盘主导':'卖盘主导'} ${res.cvd?.diverging?'(量价背驰)':''}
 市场结构: ${res.mktStr?.bias==='bull'?'HH/HL多头结构':res.mktStr?.bias==='bear'?'LL/LH空头结构':'中性'} ${res.mktStr?.bullCHoCH?'(CHoCH多头反转)':res.mktStr?.bearCHoCH?'(CHoCH空头反转)':''}
 多时框架MTF: ${res.mtf?.bullCount||0}多/${res.mtf?.bearCount||0}空 (${res.mtf?.fullyAligned?'完全共振':res.mtf?.partiallyAligned?'部分共振':'分歧'})
 K线形态: ${res.candles?.patterns?.length?res.candles.patterns.map(p=>p.n).join('、'):'无特殊形态'}
-资金费率: ${res.fundingRate?(res.fundingRate.toFixed(4)+'%'):'未知'} (${(res.fundingRate||0)>0.05?'多头过热':(res.fundingRate||0)<-0.02?'空头过热':'正常'})
 
 == 缠论与周期 ==
 缠论: ${res.chan?(res.chan.bullDiv?'底背驰':res.chan.bearDiv?'顶背驰':res.chan.bullBi?'上升笔':'下降笔'):'--'}
 斐波那契: ${res.nF618?'价格接近61.8%黄金支撑 ⚡':'未在关键斐波位'}
 高时框架: 日线${res.tr1d>0?'多头':'空头'} | 周线${res.tr1w>0?'多头':'空头'}
+月相: ${lunar.name} (${lunar.dTN}天后新月)
 
 == 入场计划 ==
 建议入场: ${fmtP(res.entry)} (${res.entryNote})
@@ -8895,23 +9757,20 @@ SL1: ${fmtP(res.sls?.[0]?.p)} (${res.sls?.[0]?.pct?.toFixed(2)}%)
 SL2: ${fmtP(res.sls?.[1]?.p)} (${res.sls?.[1]?.pct?.toFixed(2)}%)
 R:R = ${res.rr?.toFixed(2)}:1
 
-== 宏观情绪 ==
-恐慌贪婪指数: ${fg} (${fg<20?'极度恐惧':fg<35?'恐惧':fg>80?'极度贪婪':fg>65?'贪婪':'中性'})
-BTC主导率: ${S.macro?.btcDom?.toFixed(1)||'--'}%
-月相: ${lunar.name} (${lunar.dTN}天后新月)
-
-== 🏛️ 机构研究情报 (Man·AQR·Citadel·GMO·Apollo·VisualCapitalist·Haver) ==
+== 🏛️ 机构研究情报 (Man·AQR·Citadel·GMO·Apollo·GS·MS) ==
 ${INST_RES.synthesis ? INST_RES.synthesis : '机构研究尚未加载 — 用户可点击「研究」按钮获取最新机构观点'}
 ${INST_RES.lastUpdate ? '情报更新时间: ' + INST_RES.lastUpdate.toISOString().replace('T',' ').slice(0,16) + ' UTC' : ''}
+${learnCtx}
 
 == 你的回答规则 ==
 1. 直接给出明确判断，不要模糊。有观点比没观点好。
-2. 重点解读量价关系(OBV/CVD)、ADX趋势强度、MTF共振——这些是用户最难自己判断的
+2. 根据资产类别调整分析角度：加密→链上数据/资金费率；股票→基本面/盈利；外汇→利差/央行；商品→供需/美元
 3. 当信号分歧率>40%时，主动提醒用户谨慎
 4. 如果R:R < 1.5，主动说出来
 5. 用简洁中文回答，段落式，不用列表除非在比较多个选项
 6. 如果用户问入场，给出: 入场价、止损、止盈、R:R、理由、风险提示
-7. 语气要像一个对市场有见解的老手，不是机器人`;
+7. 语气要像一个对市场有见解的老手，不是机器人
+8. 如有学习历史数据，可结合历史胜率给出更个性化的建议`;
 }
 
 // ── Add a message to the chat ──
@@ -9827,20 +10686,20 @@ function runMiniBacktest(res, kl){
   }catch(e){return null;}
 }
 
-// FINCH System Integrity: 7431e6c7f23ae48b — unauthorised modification detected by hash mismatch
+// FINCH v38 — Multi-Asset Engine
 async function init(){
   buildSymList();buildFilters();renderLunar();
   initMobileLayout(); // adaptive layout
 
+  // Update version badge
+  document.querySelectorAll('[style*="v2.1"]').forEach(el=>{el.textContent='v38';});
+
   // Step 1: Fast price bootstrap — try to get BTC price ASAP via any method
-  // This ensures S.lastPx > 0 before klines load
   const bootstrapPrice=async()=>{
-    // Try fast single-price endpoint first (lightest request)
     const px=await fastPrice('BTCUSDT').catch(()=>0);
     if(px>0){
       S.lastPx=px;S._seedPrice['BTCUSDT']=px;
       updatePHPrice(px);
-      console.log('Bootstrap price:',px);
       return true;
     }
     return false;
@@ -9866,14 +10725,27 @@ async function init(){
   setInterval(loadFG,300000);setInterval(loadMacro,300000);
   setTimeout(function(){loadOnChain();loadCoinDetail();},4000);
   setInterval(function(){loadOnChain();loadCoinDetail();},600000);
-  // Intelligence layer — CoinGecko + DeFi Llama (free, no key)
-  setTimeout(()=>loadAllIntelligence(),2000); // slight delay so main data loads first
-  setInterval(()=>loadAllIntelligence(),300000); // refresh every 5 min
-  setInterval(refreshPrices,5000); // refresh every 5s
+  setTimeout(()=>loadAllIntelligence(),2000);
+  setInterval(()=>loadAllIntelligence(),300000);
+  setInterval(refreshPrices,5000); // crypto prices every 5s
 
-  // Step 4: Full data load
+  // ── v38: TwelveData price refresh ──
+  // Initial fetch after 3s, then every 30s (TwelveData free tier: 8 req/min)
+  setTimeout(()=>refreshTDPrices(),3000);
+  setInterval(()=>refreshTDPrices(),30000);
+
+  // Step 4: Full data load — start with BTC
   await selectSym('BTCUSDT');
-  setInterval(()=>loadAll(S.sym),60000);
+  setInterval(()=>{
+    if(isTDAsset(S.sym)){
+      // For TwelveData assets, re-fetch quote + klines every 60s
+      tdQuote(S.sym).then(q=>{
+        if(q&&q.px>0){S.lastPx=q.px;S._seedPrice[S.sym]=q.px;updatePH({price:q.px,change:q.chg,high:q.high||q.px,low:q.low||q.px,vol:q.vol||0});}
+      }).catch(()=>{});
+    } else {
+      loadAll(S.sym);
+    }
+  },60000);
 
   // Step 5: Start 30-second auto-refresh of signals
   startAutoRefresh();
@@ -9881,18 +10753,38 @@ async function init(){
   // Step 6: Retry price if still 0 after 3s (network was slow)
   setTimeout(async()=>{
     if(S.lastPx<=0){
-      console.log('Retrying price fetch...');
       await bootstrapPrice();
       if(S.lastPx>0) await loadAll(S.sym);
     }
   },3000);
 
-  // ── Start Brain Engine and Macro Pulse ──
+  // ── Start Brain Engine, Macro Pulse, Inst Research, Learning Engine ──
   setTimeout(startBrainEngine, 2500);
   setTimeout(startMacroPulse, 3500);
   setTimeout(startInstResEngine, 5000);
+  // ── v38: wire paper trading close to self-learning ──
+  setTimeout(()=>{
+    if(typeof closePaperPosition === 'function'){
+      const _orig = closePaperPosition;
+      window.closePaperPosition = function(id, closePrice, reason){
+        // Find position before closing
+        const pos = PT.positions.find(p=>p.id===id);
+        if(pos){
+          const px = closePrice||(S.lastPx||pos.entry);
+          learnRecordOutcome(
+            pos.sym, pos.dir, pos.entry, px, reason||'manual',
+            { rsi: S.lastSignal?.rsi||50, macdBull: S.lastSignal?.macdD?.bullDiv||false, chanBull: S.lastSignal?.chan?.bullDiv||false }
+          );
+        }
+        _orig.call(window, id, closePrice, reason);
+      };
+    }
+    // Render learning panel if tab visible
+    renderLearnPanel();
+  }, 2000);
 }
 init();
+
 
 // ╔══════════════════════════════════════════════════════════════════════╗
 // ║  FINCH BRAIN ENGINE — 纯本地主动推理系统                             ║
@@ -10197,7 +11089,10 @@ async function refreshMacroPulse(manual){
   var metaEl= document.getElementById('macroPulseMeta');
   if(el) el.innerHTML = '<span style="color:var(--muted);font-size:11px">🔄 更新中...</span>';
 
-  var sym  = (S.sym||'BTCUSDT').replace('USDT','');
+  var sym  = S.sym || 'BTCUSDT';
+  var pair = getPair(sym);
+  var cls  = pair ? pair.cls : 'crypto';
+  var displaySym = pair ? pair.b : sym.replace('USDT','');
   var px   = S.lastPx>0 ? fmtP(S.lastPx) : '—';
   var sig  = S.lastSignal;
   var dir  = sig ? (sig.isBull?'▲多头':'▼空头') : '分析中';
@@ -10206,12 +11101,37 @@ async function refreshMacroPulse(manual){
   var rr   = sig ? sig.rr.toFixed(2) : '—';
   var fg   = S.fg ? parseInt(S.fg.value) : null;
   var fgLbl= fg!==null?(fg<20?'极度恐惧':fg<35?'恐惧':fg>80?'极度贪婪':fg>65?'贪婪':'中性'):'—';
+  var mhrs = getMarketStatus(cls);
   var now  = new Date();
   var nowStr = now.toISOString().replace('T',' ').slice(0,16)+' UTC';
 
-  var prompt = '你是顶级加密市场交易员，现在时间是 '+nowStr+'。\n'
-    +'当前分析币种：'+sym+'/USDT，价格：'+px+'，FINCH技术信号：'+dir+'，置信度：'+conf+'，RSI：'+rsi+'，R:R：'+rr+'，F&G：'+(fg||'—')+'（'+fgLbl+'）。\n\n'
-    +'请用100字以内中文，精炼输出：①今日加密市场整体走势 ②'+sym+'关键技术位和驱动因素 ③操作建议（做多/做空/等待）。\n'
+  // Build asset-class-specific prompt
+  var marketContext = '';
+  var promptFocus = '';
+  if (cls === 'crypto') {
+    var btcDom = S.macro&&S.macro.btcDom ? S.macro.btcDom.toFixed(1)+'%' : '—';
+    marketContext = '加密市场，BTC主导率：'+btcDom+'，恐慌贪婪指数：'+(fg||'—')+'（'+fgLbl+'）';
+    promptFocus = '①今日加密市场整体走势 ②'+displaySym+'关键技术位和驱动因素 ③操作建议（做多/做空/等待）';
+  } else if (cls === 'us_stock') {
+    marketContext = '美国股市，品种：'+displaySym+'（'+pair.exchange+'），市场状态：'+mhrs.label;
+    promptFocus = '①美股大盘走势与板块轮动 ②'+displaySym+'基本面与技术位 ③当前风险与操作建议';
+  } else if (cls === 'my_stock') {
+    marketContext = 'Bursa Malaysia马股，品种：'+displaySym+'（马币计价），市场状态：'+mhrs.label;
+    promptFocus = '①马股大盘走势与令吉汇率 ②'+displaySym+'基本面与技术位 ③当前风险与操作建议';
+  } else if (cls === 'sg_stock') {
+    marketContext = 'SGX新加坡股市，品种：'+displaySym+'（新币计价），市场状态：'+mhrs.label;
+    promptFocus = '①新股大盘走势与新币走势 ②'+displaySym+'基本面与技术位 ③当前风险与操作建议';
+  } else if (cls === 'forex') {
+    marketContext = '外汇市场，货币对：'+displaySym+'，市场状态：'+mhrs.label;
+    promptFocus = '①主要央行政策动向与美元走势 ②'+displaySym+'关键支撑阻力与驱动因素 ③操作建议';
+  } else if (cls === 'commodity') {
+    marketContext = '商品市场，品种：'+(pair?pair.n:displaySym);
+    promptFocus = '①商品市场整体环境与供需 ②'+(pair?pair.n:displaySym)+'关键技术位与基本面驱动 ③操作建议';
+  }
+
+  var prompt = '你是顶级多资产交易员，现在时间是 '+nowStr+'。\n'
+    +'当前分析品种：'+displaySym+'（'+marketContext+'），价格：'+px+'，FINCH信号：'+dir+'，置信度：'+conf+'，RSI：'+rsi+'，R:R：'+rr+'。\n\n'
+    +'请用120字以内中文，精炼输出：'+promptFocus+'。\n'
     +'专业直接，每点一句，不要废话和客套。';
 
   try{
