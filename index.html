@@ -1,5 +1,6 @@
 <!-- 
-  FINCH v39 — 全维度市场分析系统 (加密 · 美股 · 马股 · 新加坡股 · 黄金 · 石油 · 白银 · 外汇)
+  FINCH v41 — 全维度市场分析系统 (加密 · 美股 · 马股 · 新加坡股 · 黄金 · 石油 · 白银 · 外汇)
+  v41 升级：宏观大方向 · 分析有效期 · 方向失效预警三大模块
   GitHub Pages: place this file as index.html in your repo root
   No build step · No npm · No server · Pure HTML/CSS/JS
   Data: Binance WebSocket + REST (Crypto) · TwelveData API (Stocks/Forex/Commodities)
@@ -16,7 +17,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://fonts.googleapis.com https://fonts.gstatic.com https://api.binance.com https://api1.binance.com https://api2.binance.com https://api3.binance.com https://api4.binance.com https://data-api.binance.vision https://data-stream.binance.vision https://fapi.binance.com https://api.alternative.me https://api.coingecko.com https://api.llama.fi https://corsproxy.io https://api.allorigins.win https://thingproxy.freeboard.io https://api.anthropic.com https://api.blockchain.info https://api.twelvedata.com wss://stream.binance.com wss://data-stream.binance.vision; connect-src 'self' https: wss: data: blob:; frame-ancestors 'none';">
 <meta http-equiv="X-Frame-Options" content="DENY">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>FINCH v39 — 全维度市场分析 · 加密·股票·外汇·商品</title>
+<title>FINCH v41 — 全维度市场分析 · 加密·股票·外汇·商品</title>
 
 <!-- ═══ PWA / iOS APP META ═══ -->
 <meta name="mobile-web-app-capable" content="yes">
@@ -1194,7 +1195,7 @@ canvas.main-c{width:100%!important;}
   <div class="brand-wrap">
     <div style="display:flex;flex-direction:column;justify-content:center;">
       <div class="brand">FINCH</div>
-      <div class="brand-sub">全维度市场分析 v40</div>
+      <div class="brand-sub">全维度市场分析 v41</div>
     </div>
   </div>
 
@@ -6784,8 +6785,16 @@ function _Φ9x(tf){
 
   const badge=document.getElementById('biasBadge');
   if(badge){
-    badge.style.cssText=`background:${isBull?'rgba(26,107,58,0.08)':'rgba(160,20,32,0.08)'};color:${isBull?'var(--green)':'var(--red)'};border:1px solid ${isBull?'rgba(26,107,58,0.25)':'rgba(160,20,32,0.25)'};`;
-    badge.textContent=(isBull?'▲ 做多 LONG':'▼ 做空 SHORT')+` · ${conf}%`;
+    try{
+      const _mb=_computeMacroBias({isBull,tr1d,tr1w,vegas,mktStr,mtf,adx,chan:_ChanFull(kl,price),hv,ma20v,ma55v,ma200v,price,conf,conflictRatio:conflict.conflictRatio});
+      const _macroIcon=_mb.alignedWithMacro?'✅':'⚠️';
+      badge.style.cssText=`background:${isBull?'rgba(26,107,58,0.08)':'rgba(160,20,32,0.08)'};color:${isBull?'var(--green)':'var(--red)'};border:1px solid ${isBull?'rgba(26,107,58,0.25)':'rgba(160,20,32,0.25)'};`;
+      badge.textContent=(isBull?'▲ 做多':'▼ 做空')+` · ${conf}% ${_macroIcon}`;
+      badge.title=_macroIcon==='✅'?`顺势: ${_mb.macroLabel}`:`⚠️ 逆势: ${_mb.macroLabel}`;
+    }catch(e){
+      badge.style.cssText=`background:${isBull?'rgba(26,107,58,0.08)':'rgba(160,20,32,0.08)'};color:${isBull?'var(--green)':'var(--red)'};border:1px solid ${isBull?'rgba(26,107,58,0.25)':'rgba(160,20,32,0.25)'};`;
+      badge.textContent=(isBull?'▲ 做多 LONG':'▼ 做空 SHORT')+` · ${conf}%`;
+    }
   }
 
   const volProfile=_Ρ3v(kl);
@@ -6804,6 +6813,269 @@ function _Φ9x(tf){
     nearestSupport,nearestResist,vwapLevel:vwap};
 }
 
+
+// ═══════════════════════════════════════════════════════════════════════════
+// FINCH v41 UPGRADE — THREE NEW INTELLIGENCE MODULES
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ── MODULE A: ANALYSIS VALIDITY WINDOW ──────────────────────────────────────
+// "当前分析有效到什么时候？什么时候开始可能换方向？"
+// Returns: { validUntil(Date), validLabel, decayLabel, expiryBars, reasons[], urgency }
+function _computeValidityWindow(res) {
+  try {
+    const { tf, price, atrRaw, hv, barMs, adx, conflictRatio, mktStr, conf } = res;
+    const barMsVal = barMs || 3600000;
+    const atr = atrRaw || price * 0.015;
+
+    // Base validity in bars depends on timeframe — higher TF = longer valid signal
+    const baseValidity = {
+      '15m': 3, '30m': 4, '1h': 5, '4h': 6, '1d': 8, '1w': 10
+    }[tf] || 5;
+
+    // Modifiers
+    let validBars = baseValidity;
+    const reasons = [];
+
+    // High ADX trending market → signal lasts longer
+    if (adx?.strong) { validBars += 2; reasons.push('强趋势ADX延长有效期'); }
+    else if (adx?.ranging) { validBars -= 1; reasons.push('震荡市缩短有效期'); }
+
+    // High volatility → signal decays faster
+    const hvAnn = hv?.hv || 40;
+    if (hvAnn > 80) { validBars -= 2; reasons.push('极高波动率加速衰减'); }
+    else if (hvAnn > 60) { validBars -= 1; reasons.push('高波动率缩短有效期'); }
+    else if (hvAnn < 25) { validBars += 1; reasons.push('低波动率延长有效期'); }
+
+    // High conflict → unstable, expires sooner
+    if (conflictRatio > 0.4) { validBars -= 1; reasons.push('信号分歧高→易失效'); }
+
+    // Strong structure → more durable
+    if (mktStr?.hhhl || mktStr?.lllh) { validBars += 1; reasons.push('清晰市场结构'); }
+
+    // Low confidence → expires sooner
+    if (conf < 55) { validBars -= 1; reasons.push('置信度偏低'); }
+
+    validBars = Math.max(1, validBars);
+    const validMs = validBars * barMsVal;
+    const validUntil = new Date(Date.now() + validMs);
+    const myt = toMYT(validUntil);
+    const dateStr = `${String(myt.getUTCMonth()+1).padStart(2,'0')}/${String(myt.getUTCDate()).padStart(2,'0')} ${String(myt.getUTCHours()).padStart(2,'0')}:${String(myt.getUTCMinutes()).padStart(2,'0')} MYT`;
+
+    // Urgency: how soon does this expire?
+    const hoursLeft = validMs / 3600000;
+    const urgency = hoursLeft < 2 ? 'critical' : hoursLeft < 8 ? 'soon' : 'stable';
+
+    // Human label for how long
+    const validLabel = validMs < 3600000
+      ? `约${Math.round(validMs/60000)}分钟内有效`
+      : validMs < 86400000
+      ? `约${Math.round(validMs/3600000)}小时内有效`
+      : `约${Math.round(validMs/86400000)}天内有效`;
+
+    // Decay message — when to re-check
+    const recheckMs = validMs * 0.6;
+    const recheckLabel = recheckMs < 3600000
+      ? `${Math.round(recheckMs/60000)}分钟后`
+      : `${Math.round(recheckMs/3600000)}小时后`;
+
+    return { validUntil, validLabel, validBars, validMs, dateStr, reasons, urgency, recheckLabel };
+  } catch(e) {
+    return { validLabel: '未知', urgency: 'stable', reasons: [], recheckLabel: '--', dateStr: '--' };
+  }
+}
+
+// ── MODULE B: REGIME FLIP DETECTION ─────────────────────────────────────────
+// "什么条件/价格会让这个分析完全失效？什么是方向转换的早期预警？"
+// Returns: { flipPrice, flipPct, earlyWarnings[], regimeConditions[], flipRisk('low'|'medium'|'high') }
+function _computeRegimeFlip(res, kl) {
+  try {
+    const { isBull, price, atrRaw, sls, tps, entry, adx, mktStr, chan, macdD,
+            hv, rsi, conflictRatio, conf, vegas } = res;
+    const atr = atrRaw || price * 0.015;
+
+    const earlyWarnings = [];
+    const regimeConditions = [];
+    let flipRisk = 'low';
+
+    // ── PRIMARY FLIP PRICE ──
+    // The price level where the current analysis is definitively invalidated
+    const flipPrice = isBull
+      ? (sls[1]?.p || sls[0]?.p * 0.995)   // For long: SL2 breach = regime flip
+      : (sls[1]?.p || sls[0]?.p * 1.005);   // For short: SL2 breach = regime flip
+    const flipPct = Math.abs((flipPrice - price) / price * 100).toFixed(2);
+
+    // ── EARLY WARNING CONDITIONS ──
+    // These are PRECURSORS — not yet a flip, but increasing probability
+
+    // 1. RSI divergence building
+    if (isBull && rsi > 65) { earlyWarnings.push({ icon:'⚡', text:`RSI ${rsi.toFixed(0)} 接近超买 — 多头动能减弱中`, severity:'medium' }); flipRisk = flipRisk==='low'?'medium':flipRisk; }
+    if (!isBull && rsi < 35) { earlyWarnings.push({ icon:'⚡', text:`RSI ${rsi.toFixed(0)} 接近超卖 — 空头动能减弱中`, severity:'medium' }); flipRisk = flipRisk==='low'?'medium':flipRisk; }
+
+    // 2. MACD momentum waning
+    if (isBull && macdD?.hist > 0 && macdD.hist < (res.macdPrevHist||macdD.hist) * 0.5) {
+      earlyWarnings.push({ icon:'📉', text:'MACD柱缩短 — 多头动能衰减预警', severity:'medium' });
+    }
+    if (macdD?.bearDiv) { earlyWarnings.push({ icon:'🔴', text:'MACD顶背驰 — 转空信号', severity:'high' }); flipRisk = 'high'; }
+    if (macdD?.bullDiv) { earlyWarnings.push({ icon:'🟢', text:'MACD底背驰 — 转多信号', severity:'high' }); }
+
+    // 3. Structure CHoCH (Change of Character) — most reliable flip signal
+    if (isBull && mktStr?.bearCHoCH) {
+      earlyWarnings.push({ icon:'⚠️', text:'结构CHoCH空头反转 — 高概率方向转换信号', severity:'high' });
+      flipRisk = 'high';
+    }
+    if (!isBull && mktStr?.bullCHoCH) {
+      earlyWarnings.push({ icon:'⚠️', text:'结构CHoCH多头反转 — 高概率方向转换信号', severity:'high' });
+      flipRisk = 'high';
+    }
+
+    // 4. Vegas channel breach
+    if (isBull && vegas && !vegas.above && !vegas.inChannel) {
+      earlyWarnings.push({ icon:'☁️', text:'Vegas通道失守 — 中期趋势减弱', severity:'medium' });
+      flipRisk = flipRisk==='low'?'medium':flipRisk;
+    }
+
+    // 5. High conflict ratio — market is indecisive
+    if (conflictRatio > 0.45) {
+      earlyWarnings.push({ icon:'⚔️', text:`信号分歧${(conflictRatio*100).toFixed(0)}% — 市场方向博弈加剧`, severity:'medium' });
+      flipRisk = flipRisk==='low'?'medium':flipRisk;
+    }
+
+    // 6. Canlde-based patterns suggesting reversal
+    if (kl && kl.length >= 3) {
+      const last3 = kl.slice(-3);
+      const bearEngulf = !isBull ? false : (last3[2].o > last3[1].c && last3[2].c < last3[1].o);
+      const bullEngulf = isBull ? false : (last3[2].o < last3[1].c && last3[2].c > last3[1].o);
+      if (bearEngulf) { earlyWarnings.push({ icon:'🕯️', text:'看跌吞没K线 — 短期反转预警', severity:'medium' }); }
+      if (bullEngulf) { earlyWarnings.push({ icon:'🕯️', text:'看涨吞没K线 — 短期转多预警', severity:'medium' }); }
+
+      // Shooting star / hammer at extremes
+      const lastC = kl[kl.length-1];
+      const body = Math.abs(lastC.c - lastC.o);
+      const upperWick = lastC.h - Math.max(lastC.c, lastC.o);
+      const lowerWick = Math.min(lastC.c, lastC.o) - lastC.l;
+      if (isBull && upperWick > body * 2.5 && rsi > 60) {
+        earlyWarnings.push({ icon:'🕯️', text:'上影线极长(流星) — 多头推进受阻', severity:'medium' });
+      }
+      if (!isBull && lowerWick > body * 2.5 && rsi < 40) {
+        earlyWarnings.push({ icon:'🕯️', text:'下影线极长(锤子) — 空头推进受阻', severity:'medium' });
+      }
+    }
+
+    // ── HARD REGIME FLIP CONDITIONS ──
+    // These, if met, would trigger a full analysis reversal
+    regimeConditions.push({
+      label: isBull ? '做多失效条件' : '做空失效条件',
+      condition: isBull
+        ? `收盘价跌破 ${fmtP(flipPrice)}（连续2根K线确认）`
+        : `收盘价突破 ${fmtP(flipPrice)}（连续2根K线确认）`,
+      consequence: isBull ? '多头分析立即失效，转为空头格局' : '空头分析立即失效，转为多头格局',
+      color: 'var(--red)'
+    });
+
+    // Secondary: Structure flip
+    regimeConditions.push({
+      label: '结构转换信号',
+      condition: isBull
+        ? `价格创出更低低点（低于 ${fmtP(Math.min(...(kl||[{l:price}]).slice(-10).map(k=>k.l)))}）`
+        : `价格创出更高高点（高于 ${fmtP(Math.max(...(kl||[{h:price}]).slice(-10).map(k=>k.h)))}）`,
+      consequence: isBull ? 'LL出现，HH/HL结构破位，趋势转空' : 'HH出现，LL/LH结构破位，趋势转多',
+      color: 'var(--amber)'
+    });
+
+    // Tertiary: Volume-confirmed
+    regimeConditions.push({
+      label: '量价背离警戒',
+      condition: isBull
+        ? 'OBV持续下降而价格不跌（量价背离扩大）'
+        : 'OBV持续上升而价格不涨（量价背离扩大）',
+      consequence: '主力悄然撤离/买入，方向转换前兆',
+      color: 'var(--blue)'
+    });
+
+    return { flipPrice, flipPct, earlyWarnings, regimeConditions, flipRisk };
+  } catch(e) {
+    return { flipPrice: 0, flipPct: '0', earlyWarnings: [], regimeConditions: [], flipRisk: 'low' };
+  }
+}
+
+// ── MODULE C: MACRO REGIME / BIG PICTURE BIAS ──────────────────────────────
+// "大方向是什么？当前信号是顺大势还是逆大势？"
+// Returns: { macroBull, macroStrength('weak'|'moderate'|'strong'), macroLabel,
+//            macroScore, components[], tradeContext, alignedWithMacro }
+function _computeMacroBias(res) {
+  try {
+    const { isBull, tr1d, tr1w, vegas, mktStr, mtf, adx, chan, hv,
+            ma20v, ma55v, ma200v, price, conf, conflictRatio } = res;
+
+    let macroScore = 0;
+    const components = [];
+
+    // ── WEEKLY TREND (highest weight — defines primary trend) ──
+    if (tr1w > 0) { macroScore += 3; components.push({ icon:'📅', label:'周线', value:'多头', color:'var(--green)', weight:3 }); }
+    else if (tr1w < 0) { macroScore -= 3; components.push({ icon:'📅', label:'周线', value:'空头', color:'var(--red)', weight:3 }); }
+    else { components.push({ icon:'📅', label:'周线', value:'中性', color:'var(--muted)', weight:0 }); }
+
+    // ── DAILY TREND ──
+    if (tr1d > 0) { macroScore += 2; components.push({ icon:'📆', label:'日线', value:'多头', color:'var(--green)', weight:2 }); }
+    else if (tr1d < 0) { macroScore -= 2; components.push({ icon:'📆', label:'日线', value:'空头', color:'var(--red)', weight:2 }); }
+    else { components.push({ icon:'📆', label:'日线', value:'中性', color:'var(--muted)', weight:0 }); }
+
+    // ── VEGAS CHANNEL (medium-term institutional trend) ──
+    if (vegas?.above) { macroScore += 2; components.push({ icon:'🌊', label:'Vegas', value:'多头上方', color:'var(--green)', weight:2 }); }
+    else if (vegas?.below) { macroScore -= 2; components.push({ icon:'🌊', label:'Vegas', value:'空头下方', color:'var(--red)', weight:2 }); }
+    else if (vegas) { components.push({ icon:'🌊', label:'Vegas', value:'通道内整理', color:'var(--amber)', weight:0 }); }
+
+    // ── MA200 (bear/bull market separator) ──
+    if (ma200v) {
+      if (price > ma200v * 1.02) { macroScore += 2; components.push({ icon:'📊', label:'MA200', value:`价在上方(+${((price/ma200v-1)*100).toFixed(1)}%)`, color:'var(--green)', weight:2 }); }
+      else if (price < ma200v * 0.98) { macroScore -= 2; components.push({ icon:'📊', label:'MA200', value:`价在下方(${((price/ma200v-1)*100).toFixed(1)}%)`, color:'var(--red)', weight:2 }); }
+      else { components.push({ icon:'📊', label:'MA200', value:'价在附近(关键区域)', color:'var(--amber)', weight:0 }); }
+    }
+
+    // ── MARKET STRUCTURE HH/HL or LL/LH ──
+    if (mktStr?.hhhl) { macroScore += 1.5; components.push({ icon:'🏗️', label:'结构', value:'HH/HL多头', color:'var(--green)', weight:1.5 }); }
+    else if (mktStr?.lllh) { macroScore -= 1.5; components.push({ icon:'🏗️', label:'结构', value:'LL/LH空头', color:'var(--red)', weight:1.5 }); }
+    else { components.push({ icon:'🏗️', label:'结构', value:'中性', color:'var(--muted)', weight:0 }); }
+
+    // ── MTF ALIGNMENT ──
+    if (mtf?.fullyAligned && mtf?.bullCount > mtf?.bearCount) { macroScore += 1; components.push({ icon:'⚡', label:'多周期', value:`${mtf.bullCount}多/${mtf.bearCount}空 完全共振`, color:'var(--green)', weight:1 }); }
+    else if (mtf?.fullyAligned && mtf?.bearCount > mtf?.bullCount) { macroScore -= 1; components.push({ icon:'⚡', label:'多周期', value:`${mtf.bullCount}多/${mtf.bearCount}空 完全共振`, color:'var(--red)', weight:1 }); }
+    else if (mtf) { components.push({ icon:'⚡', label:'多周期', value:`${mtf.bullCount||0}多/${mtf.bearCount||0}空 分歧`, color:'var(--amber)', weight:0 }); }
+
+    // ── CHAN THEORY STRUCTURE ──
+    if (chan?.bullDivStrong) { macroScore += 1; components.push({ icon:'🔱', label:'缠论', value:'强底背驰', color:'var(--green)', weight:1 }); }
+    else if (chan?.bearDivStrong) { macroScore -= 1; components.push({ icon:'🔱', label:'缠论', value:'强顶背驰', color:'var(--red)', weight:1 }); }
+
+    const macroBull = macroScore > 0;
+    const macroAbs = Math.abs(macroScore);
+    const macroStrength = macroAbs >= 7 ? 'strong' : macroAbs >= 4 ? 'moderate' : 'weak';
+    const macroLabel = macroStrength === 'strong'
+      ? (macroBull ? '强势牛市格局 Bull Market' : '强势熊市格局 Bear Market')
+      : macroStrength === 'moderate'
+      ? (macroBull ? '中期偏多 Bullish Bias' : '中期偏空 Bearish Bias')
+      : '方向不明 Ranging / Transitional';
+
+    const alignedWithMacro = (isBull === macroBull) || macroStrength === 'weak';
+
+    // Trade context — what does this mean for the current signal?
+    let tradeContext = '';
+    if (macroStrength === 'strong' && alignedWithMacro) {
+      tradeContext = `当前${isBull?'做多':'做空'}信号与大方向完全一致（宏观${macroBull?'牛市':'熊市'}），顺势单，可适当放宽目标，收紧止损。`;
+    } else if (macroStrength === 'strong' && !alignedWithMacro) {
+      tradeContext = `⚠️ 当前${isBull?'做多':'做空'}信号与大方向相悖！宏观为${macroBull?'牛市':'熊市'}，当前为次级${isBull?'反弹':'回调'}。严格控制仓位，TP1到手即跑，勿恋战。`;
+    } else if (macroStrength === 'moderate' && alignedWithMacro) {
+      tradeContext = `中期${macroBull?'偏多':'偏空'}格局支撑当前方向，信号可信度提升。注意中期关键阻力/支撑位附近减仓。`;
+    } else if (macroStrength === 'moderate' && !alignedWithMacro) {
+      tradeContext = `当前信号与中期格局存在分歧，属于逆势交易。目标保守，止损严格，随时准备离场。`;
+    } else {
+      tradeContext = `市场大方向尚不明朗，当前信号为区间震荡中的波段机会。控制仓位，快进快出。`;
+    }
+
+    return { macroBull, macroStrength, macroLabel, macroScore, components, tradeContext, alignedWithMacro };
+  } catch(e) {
+    return { macroBull: true, macroStrength: 'weak', macroLabel: '方向不明', macroScore: 0, components: [], tradeContext: '', alignedWithMacro: true };
+  }
+}
 
 // ═══ RENDER STRATEGY ═══
 function renderStrategy(){
@@ -7176,6 +7448,12 @@ function _doRenderStrategy(res){
   const scenarioText=getScenarioNarrative(mc);
   const barMsVal=res.barMs||3600000;
 
+  // ── v41 NEW MODULES ──
+  const klForFlip=S.klines[S.sym+(res.tf||S.stratTF)]||[];
+  const validity=_computeValidityWindow(res);
+  const regimeFlip=_computeRegimeFlip(res,klForFlip);
+  const macroBias=_computeMacroBias(res);
+
   // ── Build TP/SL rows ──
   const tpColors=['var(--teal)','var(--green)','var(--blue)'];
   const tpBgs=['rgba(10,96,80,0.07)','rgba(26,107,58,0.07)','rgba(26,58,138,0.07)'];
@@ -7366,6 +7644,143 @@ function _doRenderStrategy(res){
       <div style="font-size:12px;color:var(--text);padding:8px 12px;border-left:3px solid ${actionColor};background:rgba(255,255,255,0.5);border-radius:0 6px 6px 0;line-height:1.7">${verdict.watchFor}</div>
     </div>`:''}
   </div>
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- BLOCK 1B: 🕐 ANALYSIS VALIDITY WINDOW + REGIME FLIP ALERT  -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  ${(()=>{
+    const vld=validity;
+    const rf=regimeFlip;
+    const vldColor=vld.urgency==='critical'?'var(--red)':vld.urgency==='soon'?'var(--amber)':'var(--teal)';
+    const vldBg=vld.urgency==='critical'?'rgba(160,20,32,0.06)':vld.urgency==='soon'?'rgba(128,80,0,0.06)':'rgba(10,96,80,0.05)';
+    const vldBd=vld.urgency==='critical'?'rgba(160,20,32,0.25)':vld.urgency==='soon'?'rgba(128,80,0,0.25)':'rgba(10,96,80,0.2)';
+    const flipRiskColor=rf.flipRisk==='high'?'var(--red)':rf.flipRisk==='medium'?'var(--amber)':'var(--teal)';
+    const flipRiskLabel=rf.flipRisk==='high'?'🔴 高':'🟡 中等';
+    const highWarnings=rf.earlyWarnings.filter(w=>w.severity==='high');
+    const medWarnings=rf.earlyWarnings.filter(w=>w.severity==='medium');
+
+    return '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">'
+
+    // ── Left cell: Validity Window ──
+    +'<div style="background:'+vldBg+';border:1px solid '+vldBd+';border-radius:10px;padding:13px 14px;overflow:hidden;">'
+    +'<div style="font-size:10px;letter-spacing:1.5px;color:'+vldColor+';font-weight:700;text-transform:uppercase;margin-bottom:8px">🕐 分析有效期</div>'
+    +'<div style="font-size:16px;font-weight:700;color:'+vldColor+';line-height:1.2;margin-bottom:4px">'+vld.validLabel+'</div>'
+    +'<div style="font-size:10px;color:var(--muted);margin-bottom:8px">到期时间: '+vld.dateStr+'</div>'
+    +'<div style="height:4px;background:var(--bg3);border-radius:2px;overflow:hidden;margin-bottom:8px;">'
+    +'<div style="height:100%;border-radius:2px;background:'+vldColor+';width:'+Math.min(100,Math.max(15,Math.round((vld.validBars/12)*100)))+'%;transition:width 1s;"></div>'
+    +'</div>'
+    +'<div style="font-size:10px;color:var(--muted);line-height:1.6;">'
+    +(vld.reasons.length?'<strong>有效期因素：</strong> '+vld.reasons.join(' · '):'')
+    +'</div>'
+    +'<div style="margin-top:7px;padding:6px 9px;background:rgba(255,255,255,0.55);border-radius:5px;font-size:10px;color:var(--muted);">'
+    +'⚡ <strong style="color:var(--text)">'+vld.recheckLabel+'</strong>重新检验信号有效性'
+    +'</div>'
+    +'</div>'
+
+    // ── Right cell: Regime Flip Risk ──
+    +'<div style="background:rgba(255,255,255,0.6);border:1px solid var(--card-bd);border-radius:10px;padding:13px 14px;overflow:hidden;">'
+    +'<div style="font-size:10px;letter-spacing:1.5px;color:'+flipRiskColor+';font-weight:700;text-transform:uppercase;margin-bottom:8px">⚡ 方向转换风险</div>'
+    +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
+    +'<span style="font-size:13px;font-weight:700;color:'+flipRiskColor+'">'+flipRiskLabel+'</span>'
+    +'<span style="font-size:11px;color:var(--muted)">失效价: </span>'
+    +'<span style="font-size:13px;font-weight:700;color:var(--red)">'+fmtP(rf.flipPrice)+'</span>'
+    +'<span style="font-size:10px;color:var(--muted)">(距现价'+rf.flipPct+'%)</span>'
+    +'</div>'
+    +(highWarnings.length
+      ?'<div style="margin-bottom:5px;">'+highWarnings.map(w=>'<div style="font-size:10px;padding:3px 7px;margin-bottom:3px;border-radius:4px;background:rgba(160,20,32,0.07);border:1px solid rgba(160,20,32,0.18);color:var(--red);line-height:1.5;">'+w.icon+' '+w.text+'</div>').join('')+'</div>'
+      :'')
+    +(medWarnings.length
+      ?'<div>'+medWarnings.slice(0,2).map(w=>'<div style="font-size:10px;padding:3px 7px;margin-bottom:3px;border-radius:4px;background:rgba(128,80,0,0.06);border:1px solid rgba(128,80,0,0.18);color:var(--amber);line-height:1.5;">'+w.icon+' '+w.text+'</div>').join('')+'</div>'
+      :'')
+    +(!rf.earlyWarnings.length?'<div style="font-size:10px;color:var(--green);padding:4px 0;">✅ 暂无早期转换预警</div>':'')
+    +'</div>'
+
+    +'</div>'
+
+    // ── Full-width: Regime Flip Conditions ──
+    +'<div style="background:rgba(255,255,255,0.55);border:1px solid var(--line2);border-radius:10px;padding:12px 14px;margin-bottom:10px;">'
+    +'<div style="font-size:10px;letter-spacing:1.5px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:8px">🔄 方向彻底失效的条件（出现以下任一即需重新评估）</div>'
+    +'<div style="display:flex;flex-direction:column;gap:6px;">'
+    +rf.regimeConditions.map((c,i)=>
+      '<div style="display:grid;grid-template-columns:auto 1fr;gap:8px;align-items:start;padding:7px 10px;background:rgba(0,0,0,0.02);border-radius:6px;border-left:3px solid '+c.color+';">'
+      +'<div style="font-size:10px;font-weight:700;color:'+c.color+';white-space:nowrap;padding-top:1px">'+c.label+'</div>'
+      +'<div><div style="font-size:11px;color:var(--text);line-height:1.5;font-weight:600">'+c.condition+'</div>'
+      +'<div style="font-size:10px;color:var(--muted);margin-top:1px">→ '+c.consequence+'</div></div>'
+      +'</div>'
+    ).join('')
+    +'</div>'
+    +'</div>';
+  })()}
+
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <!-- BLOCK 1C: 🌐 MACRO REGIME / BIG PICTURE ANALYSIS        -->
+  <!-- ══════════════════════════════════════════════════════════ -->
+  ${(()=>{
+    const mb=macroBias;
+    const macroColor=mb.macroStrength==='strong'?(mb.macroBull?'var(--green)':'var(--red)'):mb.macroStrength==='moderate'?(mb.macroBull?'var(--teal)':'var(--rose)'):'var(--amber)';
+    const macroBg=mb.macroStrength==='strong'?(mb.macroBull?'rgba(26,107,58,0.06)':'rgba(160,20,32,0.06)'):mb.macroStrength==='moderate'?(mb.macroBull?'rgba(10,96,80,0.05)':'rgba(136,8,64,0.05)'):'rgba(128,80,0,0.04)';
+    const macroBd=mb.macroStrength==='strong'?(mb.macroBull?'rgba(26,107,58,0.25)':'rgba(160,20,32,0.25)'):'var(--line2)';
+    const alignIcon=mb.alignedWithMacro?'✅ 顺势':'⚠️ 逆势';
+    const alignColor=mb.alignedWithMacro?'var(--green)':'var(--amber)';
+    const strengthBar=Math.min(100,Math.abs(mb.macroScore)/12*100);
+
+    return '<div style="background:'+macroBg+';border:1px solid '+macroBd+';border-radius:10px;margin-bottom:10px;overflow:hidden;">'
+
+    // Header
+    +'<div style="padding:12px 16px;border-bottom:1px solid '+macroBd+'88;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">'
+    +'<div>'
+    +'<div style="font-size:10px;letter-spacing:1.5px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:4px">🌐 大方向 · 宏观格局 Macro Regime</div>'
+    +'<div style="font-size:18px;font-weight:700;color:'+macroColor+';line-height:1.2">'+mb.macroLabel+'</div>'
+    +'</div>'
+    +'<div style="text-align:right;flex-shrink:0;">'
+    +'<div style="font-size:10px;color:var(--muted);margin-bottom:3px">当前信号</div>'
+    +'<div style="font-size:13px;font-weight:700;color:'+alignColor+'">'+alignIcon+'</div>'
+    +'<div style="font-size:10px;color:var(--muted);margin-top:2px">'+(mb.alignedWithMacro?'与大方向一致':'与大方向相悖')+'</div>'
+    +'</div>'
+    +'</div>'
+
+    // Score bar
+    +'<div style="padding:10px 16px;border-bottom:1px solid '+macroBd+'44;">'
+    +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">'
+    +'<span style="font-size:10px;color:var(--muted)">看空←</span>'
+    +'<div style="flex:1;height:8px;background:var(--bg3);border-radius:4px;overflow:hidden;position:relative;">'
+    +'<div style="position:absolute;left:50%;top:0;width:2px;height:100%;background:var(--line3);transform:translateX(-50%);"></div>'
+    +'<div style="position:absolute;top:0;height:100%;border-radius:4px;background:'+macroColor+';'
+    +(mb.macroBull
+      ?'left:50%;width:'+strengthBar/2+'%;'
+      :'right:50%;width:'+strengthBar/2+'%;')
+    +'"></div>'
+    +'</div>'
+    +'<span style="font-size:10px;color:var(--muted)">→看多</span>'
+    +'<span style="font-size:12px;font-weight:700;color:'+macroColor+'">'+mb.macroScore.toFixed(1)+'</span>'
+    +'</div>'
+    +'<div style="font-size:10px;color:var(--muted)">综合宏观得分（满分±12）· 强度: <strong style="color:'+macroColor+'">'+{strong:'强',moderate:'中',weak:'弱'}[mb.macroStrength]+'</strong></div>'
+    +'</div>'
+
+    // Component breakdown — compact grid
+    +'<div style="padding:10px 16px;border-bottom:1px solid '+macroBd+'44;">'
+    +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:5px;">'
+    +mb.components.map(c=>
+      '<div style="display:flex;align-items:center;gap:5px;padding:5px 8px;background:rgba(255,255,255,0.55);border-radius:5px;border:1px solid var(--line);">'
+      +'<span style="font-size:12px">'+c.icon+'</span>'
+      +'<div style="flex:1;min-width:0;">'
+      +'<div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px">'+c.label+'</div>'
+      +'<div style="font-size:11px;font-weight:700;color:'+c.color+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+c.value+'</div>'
+      +'</div>'
+      +'</div>'
+    ).join('')
+    +'</div>'
+    +'</div>'
+
+    // Trade context conclusion
+    +'<div style="padding:11px 16px;">'
+    +'<div style="font-size:12px;color:var(--text);line-height:1.85;padding:9px 12px;background:rgba(255,255,255,0.5);border-radius:6px;border-left:3px solid '+macroColor+';">'
+    +mb.tradeContext
+    +'</div>'
+    +'</div>'
+
+    +'</div>';
+  })()}
 
   <!-- ══════════════════════════════════════ -->
   <!-- BLOCK 2: 🔮 MYSTIC UNIFIED READING   -->
@@ -8900,12 +9315,22 @@ async function triggerAIAnalysis(res){
 - TP1：${fmtP(res.tps[0].p)}（+${((res.tps[0].p-res.entry)/res.entry*100).toFixed(2)}%），SL1：${fmtP(res.sls[0].p)}（${((res.sls[0].p-res.entry)/res.entry*100).toFixed(2)}%）
 - 盈亏比R:R = ${res.rr.toFixed(2)}:1${structuralContext}
 
-请用中文给出一段220-320字的**市场叙事分析**，要求：
-1. 结合江恩时间节点和缠论结构（主趋势/次级运动/高位整理/突破确认）深度解读当前价格行为
-2. 区分：当前运动是主趋势延续，还是次级运动（空间有限，谨慎追）？是高位调整还是趋势反转？
-3. 明确说明：关键支撑/阻力被多次测试后的突破概率判断；是否需要放量确认才可追
+== 宏观大方向 (MACRO REGIME) ==
+- 大方向判断：${(()=>{try{const mb=_computeMacroBias(res);return mb.macroLabel+`（宏观得分${mb.macroScore.toFixed(1)}，强度:${{strong:'强',moderate:'中',weak:'弱'}[mb.macroStrength]}）`;}catch(e){return'--';}})()}
+- 当前信号与大方向：${(()=>{try{const mb=_computeMacroBias(res);return mb.alignedWithMacro?'✅ 顺势交易':'⚠️ 逆势交易（次级运动，严控仓位）';}catch(e){return'--';}})()}
+- 周线趋势：${res.tr1w>0?'多头':'空头'} · 日线趋势：${res.tr1d>0?'多头':'空头'}
+
+== 分析有效期与方向转换预警 ==
+- 当前分析有效期：${(()=>{try{const v=_computeValidityWindow(res);return v.validLabel+'（约'+v.validBars+'根K线，'+v.dateStr+'前有效）';}catch(e){return'--';}})()}
+- 分析失效价格：${(()=>{try{const rf=_computeRegimeFlip(res,[]);return fmtP(rf.flipPrice)+'（距现价'+rf.flipPct+'%），触碰即需重新评估';}catch(e){return'--';}})()}
+- 早期转换预警：${(()=>{try{const rf=_computeRegimeFlip(res,[]);return rf.earlyWarnings.length?rf.earlyWarnings.map(w=>w.text).join('；'):'暂无预警信号';}catch(e){return'--';}})()}
+
+请用中文给出一段250-350字的**市场叙事分析**，要求：
+1. 先判断大方向（宏观格局）：当前是牛市/熊市/震荡哪个阶段？当前信号是主趋势还是次级运动？
+2. 结合江恩时间节点和缠论结构深度解读当前价格行为——是延续还是反弹/回调？
+3. 明确指出：这个入场策略有效到什么时候？价格到什么位置分析就失效了？什么条件会让方向转换？
 4. 分析当前价格区域里大资金/主力/散户各自可能的行为
-5. 给出核心交易判断：现在是等待还是出手？如果是次级运动机会，如何控制目标和止损？
+5. 给出动态操盘建议：不同价格区间的应对方案（例如：在X价位以上保持多头，跌破Y就转为观望）
 6. 语气直接有力，像真正懂江恩缠论的交易员在讲话，不要像机器人报数据
 
 直接输出分析，不要客套话。用简洁有力的段落，不用列表或标题。`;
@@ -10190,7 +10615,7 @@ BTC主导率: ${S.macro?.btcDom?.toFixed(1)||'--'}%
 驱动因素: 供需、美元指数、地缘政治`;
   }
 
-  return `你是 FINCH v38，一个专业的多资产市场分析助理，覆盖加密货币、美股、马股、新加坡股、外汇与大宗商品。你有15年实战经验，说话直接、有观点、有温度，像一个真正懂市场的老手。
+  return `你是 FINCH v41，一个专业的多资产市场分析助理，覆盖加密货币、美股、马股、新加坡股、外汇与大宗商品。你有15年实战经验，说话直接、有观点、有温度，像一个真正懂市场的老手。你的分析必须包含：大方向判断（宏观格局）、当前信号有效期、方向失效条件。
 
 == 当前实时市场快照 (${displaySym} · ${cls} · ${res.tf}周期) ==
 现价: ${fmtP(px)}
@@ -10231,6 +10656,12 @@ SL1: ${fmtP(res.sls?.[0]?.p)} (${res.sls?.[0]?.pct?.toFixed(2)}%)
 SL2: ${fmtP(res.sls?.[1]?.p)} (${res.sls?.[1]?.pct?.toFixed(2)}%)
 R:R = ${res.rr?.toFixed(2)}:1
 
+== 🌐 宏观大方向 (MACRO REGIME) ==
+${(()=>{try{const mb=_computeMacroBias(res);return'大方向: '+mb.macroLabel+' (宏观得分'+mb.macroScore.toFixed(1)+'，强度:'+{strong:'强',moderate:'中',weak:'弱'}[mb.macroStrength]+')\n当前信号: '+(mb.alignedWithMacro?'顺势交易 ✅':'逆势交易 ⚠️ 次级运动，严控仓位');}catch(e){return'宏观格局计算中';}})()}
+
+== 🕐 分析有效期与方向失效条件 ==
+${(()=>{try{const v=_computeValidityWindow(res);const rf=_computeRegimeFlip(res,[]);return'有效期: '+v.validLabel+'（'+v.dateStr+'前）\n失效价格: '+fmtP(rf.flipPrice)+'（距现价'+rf.flipPct+'%，触碰需立即重新评估）\n早期预警: '+(rf.earlyWarnings.length?rf.earlyWarnings.map(w=>w.text).join('；'):'暂无预警');}catch(e){return'--';}})()}
+
 == 🏛️ 机构研究情报 (Man·AQR·Citadel·GMO·Apollo·GS·MS) ==
 ${INST_RES.synthesis ? INST_RES.synthesis : '机构研究尚未加载 — 用户可点击「研究」按钮获取最新机构观点'}
 ${INST_RES.lastUpdate ? '情报更新时间: ' + INST_RES.lastUpdate.toISOString().replace('T',' ').slice(0,16) + ' UTC' : ''}
@@ -10242,9 +10673,11 @@ ${learnCtx}
 3. 当信号分歧率>40%时，主动提醒用户谨慎
 4. 如果R:R < 1.5，主动说出来
 5. 用简洁中文回答，段落式，不用列表除非在比较多个选项
-6. 如果用户问入场，给出: 入场价、止损、止盈、R:R、理由、风险提示
+6. 如果用户问入场，给出: 入场价、止损、止盈、R:R、理由、风险提示、分析有效期
 7. 语气要像一个对市场有见解的老手，不是机器人
-8. 如有学习历史数据，可结合历史胜率给出更个性化的建议`;
+8. 如有学习历史数据，可结合历史胜率给出更个性化的建议
+9. 【重要】每次给入场建议时，必须同时说明：①这个分析有效到什么时候 ②价格到哪里分析就失效 ③当前是顺大势还是逆大势操作
+10. 如果当前是逆势（次级运动），主动提醒：这是逆势交易，目标保守，快进快出，不要恋战`;
 }
 
 // ── Add a message to the chat ──
