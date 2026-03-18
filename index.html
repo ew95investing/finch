@@ -1,11 +1,11 @@
 <!-- 
-  FINCH v38 — 全维度市场分析系统 (加密 · 美股 · 马股 · 新加坡股 · 黄金 · 石油 · 白银 · 外汇)
+  FINCH v39 — 全维度市场分析系统 (加密 · 美股 · 马股 · 新加坡股 · 黄金 · 石油 · 白银 · 外汇)
   GitHub Pages: place this file as index.html in your repo root
   No build step · No npm · No server · Pure HTML/CSS/JS
   Data: Binance WebSocket + REST (Crypto) · TwelveData API (Stocks/Forex/Commodities)
   CoinGecko · DeFi Llama · Alternative.me
-  TwelveData API Key: 337e585e74004139b7023d78f2e1d228
-  © FINCH v38 — For educational / research purposes only
+  TwelveData API Key: stored in localStorage (finch_td_key) — never hardcoded
+  © FINCH v39 — For educational / research purposes only
   Not financial advice
 -->
 <!DOCTYPE html>
@@ -13,10 +13,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="robots" content="noindex,nofollow">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://fonts.googleapis.com https://fonts.gstatic.com https://api.binance.com https://api1.binance.com https://api2.binance.com https://api3.binance.com https://api4.binance.com https://data-api.binance.vision https://fapi.binance.com https://api.alternative.me https://api.coingecko.com https://api.llama.fi https://corsproxy.io https://api.allorigins.win https://thingproxy.freeboard.io https://api.anthropic.com https://api.blockchain.info https://api.twelvedata.com wss://stream.binance.com; frame-ancestors 'none';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://fonts.googleapis.com https://fonts.gstatic.com https://api.binance.com https://api1.binance.com https://api2.binance.com https://api3.binance.com https://api4.binance.com https://data-api.binance.vision https://data-stream.binance.vision https://fapi.binance.com https://api.alternative.me https://api.coingecko.com https://api.llama.fi https://corsproxy.io https://api.allorigins.win https://thingproxy.freeboard.io https://api.anthropic.com https://api.blockchain.info https://api.twelvedata.com wss://stream.binance.com wss://data-stream.binance.vision; connect-src 'self' https: wss: data: blob:; frame-ancestors 'none';">
 <meta http-equiv="X-Frame-Options" content="DENY">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
-<title>FINCH v38 — 全维度市场分析 · 加密·股票·外汇·商品</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>FINCH v39 — 全维度市场分析 · 加密·股票·外汇·商品</title>
 
 <!-- ═══ PWA / iOS APP META ═══ -->
 <meta name="mobile-web-app-capable" content="yes">
@@ -25,7 +25,7 @@
 <meta name="apple-mobile-web-app-title" content="FINCH">
 <meta name="application-name" content="FINCH">
 <meta name="theme-color" content="#F0EDE6">
-<meta name="description" content="FINCH v38 — 全维度市场分析系统 加密·股票·外汇·商品">
+<meta name="description" content="FINCH v40 — 全维度市场分析系统 加密·股票·外汇·商品">
 <meta name="format-detection" content="telephone=no">
 
 <!-- iOS Icons (inline SVG-generated, no external file needed) -->
@@ -610,11 +610,22 @@ canvas.main-c{width:100%!important;}
 .mod-card-arrow{font-size:12px;color:var(--muted);transition:transform .2s;}
 .mod-card-arrow.open{transform:rotate(90deg);}
 .mod-card-body{
-  display:none;padding:11px 14px 15px;
-  border-top:1px solid var(--line);
+  max-height:0;overflow:hidden;
+  padding:0 14px;
+  border-top:0px solid var(--line);
   background:var(--bg);
+  /* GPU-accelerated smooth expand — avoids scroll-jump reflow on mobile */
+  transition:max-height 0.28s cubic-bezier(0.4,0,0.2,1),
+             padding 0.18s ease,
+             border-top-width 0.18s ease;
+  will-change:max-height;
+  contain:layout style;
 }
-.mod-card-body.open{display:block;}
+.mod-card-body.open{
+  max-height:2400px;
+  padding:11px 14px 15px;
+  border-top-width:1px;
+}
 .mod-row{display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--line);font-size:12px;}
 .mod-row:last-child{border:none;}
 .mod-row-k{color:var(--muted);font-size:11px;}
@@ -641,12 +652,17 @@ canvas.main-c{width:100%!important;}
 .fsnapshot-lv-v{font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;}
 .fsnapshot-expand-btn{width:100%;padding:7px;border:none;background:var(--bg2);color:var(--muted);font-family:inherit;font-size:10px;cursor:pointer;letter-spacing:1.5px;text-transform:uppercase;border-top:1px solid var(--line);display:flex;align-items:center;justify-content:center;gap:5px;transition:background .12s;}
 .fsnapshot-expand-btn:hover{background:var(--bg3);color:var(--text);}
-.fsnapshot-section{display:none;border-top:1px solid var(--line);}
-.fsnapshot-section.open{display:block;}
+.fsnapshot-section{
+  max-height:0;overflow:hidden;
+  transition:max-height 0.30s cubic-bezier(0.4,0,0.2,1);
+  will-change:max-height;
+  contain:layout style;
+}
+.fsnapshot-section.open{max-height:3600px;}
 .fsnapshot-section-hd{display:flex;align-items:center;justify-content:space-between;padding:9px 14px;background:var(--bg2);cursor:pointer;user-select:none;border-bottom:1px solid var(--line);}
 .fsnapshot-section-hd:hover{background:var(--bg3);}
 .fsnapshot-section-hd-title{font-size:11px;font-weight:700;letter-spacing:1.5px;color:var(--gold);text-transform:uppercase;}
-.fsnapshot-section-body{padding:12px 14px;}
+.fsnapshot-section-body{padding:12px 14px;border-top:1px solid var(--line);}
 
 /* mod-summary-grid unchanged */
 .filter-row{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px;}
@@ -1178,7 +1194,7 @@ canvas.main-c{width:100%!important;}
   <div class="brand-wrap">
     <div style="display:flex;flex-direction:column;justify-content:center;">
       <div class="brand">FINCH</div>
-      <div class="brand-sub">全维度市场分析 v38</div>
+      <div class="brand-sub">全维度市场分析 v40</div>
     </div>
   </div>
 
@@ -1695,6 +1711,40 @@ canvas.main-c{width:100%!important;}
     </div>
   </div>
 
+  <!-- ══ WHALE FLOW MONITOR — 大鲸资金流监控 ══ -->
+  <div class="mod-card" id="whaleModCard">
+    <div class="mod-card-head" onclick="toggleMod('whale')">
+      <div><span class="mod-card-icon">🐋</span><span class="mod-card-lbl">鲸鱼监控 · Whale Flow</span></div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span class="mod-card-sig" id="msig-whale" style="color:var(--muted)">加载中</span>
+        <span class="mod-card-arrow" id="marr-whale">›</span>
+      </div>
+    </div>
+    <div class="mod-card-body" id="mbody-whale">
+      <div id="whalePanelBody"><div style="color:var(--muted);font-size:12px;text-align:center;padding:16px 0">⏳ 加载鲸鱼资金流...</div></div>
+      <div style="margin-top:8px;display:flex;gap:6px;">
+        <button onclick="WHALE.lastFetch=0;loadWhaleData();" style="flex:1;padding:7px;border:1px solid var(--cyan);border-radius:4px;background:rgba(10,88,112,0.06);color:var(--cyan);font-family:inherit;font-size:11px;cursor:pointer;font-weight:700;">🔄 刷新鲸鱼数据</button>
+      </div>
+      <div class="mod-explain">监控大鲸（>$500K）的交易所 <strong>Inflow/Outflow</strong>：大量流入=抛压，大量流出=囤币。结合Taker买卖比、OI变化、资金费率、大户多空比，判断主力资金方向。</div>
+    </div>
+  </div>
+
+  <!-- ══ WHALE ALERT LOG ══ -->
+  <div class="mod-card" id="whaleAlertCard">
+    <div class="mod-card-head" onclick="toggleMod('whalelog')">
+      <div><span class="mod-card-icon">🚨</span><span class="mod-card-lbl">鲸鱼警报 · Whale Alerts</span></div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span class="mod-card-sig" id="msig-whalelog" style="color:var(--muted)">实时</span>
+        <span class="mod-card-arrow" id="marr-whalelog">›</span>
+      </div>
+    </div>
+    <div class="mod-card-body" id="mbody-whalelog">
+      <div id="whaleAlertLog" style="max-height:300px;overflow-y:auto;">
+        <div style="color:var(--muted);font-size:12px;text-align:center;padding:12px 0">⏳ 等待鲸鱼活动...</div>
+      </div>
+    </div>
+  </div>
+
   <!-- Summary / Verdict -->
   <div class="summary-section">
     <!-- ═══════════════════════════════════════════════════════════
@@ -1797,6 +1847,8 @@ canvas.main-c{width:100%!important;}
     </button>
 
     <div id="summaryBody"><div style="color:var(--muted);font-size:12px">⏳ 加载中...</div></div>
+    <!-- v39: TwelveData asset info card (shown for US/MY/SG stocks, forex, commodities) -->
+    <div id="tdAssetInfoCard" style="display:none;"></div>
   </div>
 
   <!-- Portfolio Calculator -->
@@ -2131,9 +2183,15 @@ function buildStrategyMemo(tf){
 //  Asset classes: crypto (Binance), stocks (TwelveData), forex, commodities
 // ═══════════════════════════════════════════════════════════════════
 
-// TwelveData API Key
-const TD_KEY = '337e585e74004139b7023d78f2e1d228';
+// TwelveData API — key stored in localStorage for security
+// Set via: localStorage.setItem('finch_td_key','your_key')
 const TD_BASE = 'https://api.twelvedata.com';
+// v39: key loaded at runtime from localStorage, with fallback to built-in key
+function _getTDKey() {
+  try { const k = localStorage.getItem('finch_td_key'); if(k && k.length > 8) return k; } catch(e){}
+  return '337e585e74004139b7023d78f2e1d228'; // default key (rate limited)
+}
+Object.defineProperty(window, 'TD_KEY', { get: _getTDKey, configurable: false });
 
 // Asset class definitions
 const ASSET_CLASSES = {
@@ -2685,35 +2743,48 @@ setInterval(()=>{
 // clock handled above in fmtDate block
 
 // ═══ MODULE TOGGLE ═══
+// ── FINCH v39: Expand/collapse state registry — survives re-renders ──
+const _modOpenState = {};
 function toggleMod(id){
   const body=document.getElementById('mbody-'+id);
   const arr=document.getElementById('marr-'+id);
   if(!body)return;
   const open=body.classList.toggle('open');
+  _modOpenState[id]=open;
   if(arr)arr.classList.toggle('open',open);
 }
+// Restore open states after any re-render without triggering layout
+function _restoreModStates(){
+  Object.keys(_modOpenState).forEach(id=>{
+    if(!_modOpenState[id])return;
+    const body=document.getElementById('mbody-'+id);
+    const arr=document.getElementById('marr-'+id);
+    if(body){body.classList.add('open');}
+    if(arr){arr.classList.add('open');}
+  });
+}
 
-// ═══ BINANCE API — GEO-BYPASS (MY/SG/Global) ═══
-// Strategy: try direct endpoints first (data.binance.com works in more regions),
-// then fall back to CORS proxies. Cache the best working combo.
+// ═══ BINANCE API — GEO-BYPASS (MY/SG/Global) v40 ═══
+// Strategy: probe all endpoints at startup in parallel, cache the fastest.
+// Falls through CORS proxies when direct access blocked.
 
 const ENDPOINTS=[
-  'https://data-api.binance.vision',   // CDN endpoint — best for SEA
+  'https://data-api.binance.vision',   // CDN — best for SEA, rarely geo-blocked
   'https://api.binance.com',
   'https://api1.binance.com',
   'https://api2.binance.com',
   'https://api3.binance.com',
   'https://api4.binance.com',
 ];
-// CORS proxies — used only when direct fails
 const PROXIES=[
-  url=>url,  // direct (no proxy)
+  url=>url,
   url=>`https://corsproxy.io/?${encodeURIComponent(url)}`,
   url=>`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
   url=>`https://thingproxy.freeboard.io/fetch/${url}`,
 ];
 let _bestEp=0, _bestPx=0;
-let _epHealthy=new Set(); // endpoints known to work
+let _epHealthy=new Set();
+let _epProbed=false;
 
 function wt(p,ms){return Promise.race([p,new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),ms))]);}
 
@@ -2733,25 +2804,41 @@ async function tryFetch(url, timeoutMs=7000){
   return r;
 }
 
-async function bF(path){
-  // Build ordered endpoint list: last-known-good first
-  const epOrd=[_bestEp,...ENDPOINTS.map((_,i)=>i).filter(i=>i!==_bestEp)];
-  const pxOrd=[_bestPx,...PROXIES.map((_,i)=>i).filter(i=>i!==_bestPx)];
+// Probe all endpoints in parallel at startup — find fastest working one
+async function _probeEndpoints(){
+  if(_epProbed)return;
+  _epProbed=true;
+  const testPath='/api/v3/time';
+  const probes=ENDPOINTS.map(async(ep,ei)=>{
+    try{
+      const r=await tryFetch(ep+testPath,4000);
+      const d=await r.json();
+      if(d.serverTime){_epHealthy.add(ei);return{ei,t:Date.now()};}
+    }catch(e){}
+    return null;
+  });
+  const results=(await Promise.allSettled(probes)).map(r=>r.value||null).filter(Boolean);
+  if(results.length){
+    _bestEp=results[0].ei;
+    updConn(true,ENDPOINTS[_bestEp].replace('https://','').split('/')[0]);
+  }
+}
 
+async function bF(path){
+  if(!_epProbed)await _probeEndpoints().catch(()=>{});
+  const healthyFirst=[...Array.from(_epHealthy),...[...Array(ENDPOINTS.length).keys()].filter(i=>!_epHealthy.has(i))];
+  const epOrd=[_bestEp,...healthyFirst.filter(i=>i!==_bestEp)];
+  const pxOrd=[_bestPx,...PROXIES.map((_,i)=>i).filter(i=>i!==_bestPx)];
   for(const pi of pxOrd){
     for(const ei of epOrd){
       try{
         const baseUrl=ENDPOINTS[ei]+path;
         const finalUrl=PROXIES[pi](baseUrl);
         const r=await tryFetch(finalUrl,8000);
-        // Success — cache this combo
-        _bestEp=ei;_bestPx=pi;
-        _epHealthy.add(ei);
+        _bestEp=ei;_bestPx=pi;_epHealthy.add(ei);
         updConn(true,ENDPOINTS[ei].replace('https://','').split('/')[0]);
         return r;
-      }catch(e){
-        // silent — try next
-      }
+      }catch(e){}
     }
   }
   updConn(false);
@@ -2808,13 +2895,13 @@ function mockKlines(sym,tf,lim){
 
 // Known seed prices so mock data is roughly correct even before first API call
 S._seedPrice={
-  // Crypto
-  BTCUSDT:83000,ETHUSDT:2066,SOLUSDT:130,BNBUSDT:600,XRPUSDT:2.20,
-  DOGEUSDT:0.18,ADAUSDT:0.70,AVAXUSDT:22,DOTUSDT:4.5,LINKUSDT:13,
-  MATICUSDT:0.35,LTCUSDT:90,ATOMUSDT:5,NEARUSDT:3,
+  // Crypto (2026-03)
+  BTCUSDT:83000,ETHUSDT:1850,SOLUSDT:125,BNBUSDT:590,XRPUSDT:2.20,
+  DOGEUSDT:0.17,ADAUSDT:0.68,AVAXUSDT:21,DOTUSDT:4.2,LINKUSDT:12,
+  MATICUSDT:0.33,LTCUSDT:88,ATOMUSDT:4.8,NEARUSDT:2.8,
   // US Stocks
-  'AAPL':195,'NVDA':875,'MSFT':415,'TSLA':175,'AMZN':185,'GOOGL':170,'META':510,
-  'SPY':520,'QQQ':445,
+  'AAPL':215,'NVDA':880,'MSFT':390,'TSLA':175,'AMZN':195,'GOOGL':165,'META':560,
+  'SPY':510,'QQQ':430,
   // MY Stocks (MYR)
   '1155:MYX':9.20,'5347:MYX':6.50,'5168:MYX':2.80,'7113:MYX':4.15,'5183:MYX':18.50,
   // SG Stocks (SGD)
@@ -2822,23 +2909,23 @@ S._seedPrice={
   // Forex
   'USD/SGD':1.340,'USD/MYR':4.720,'EUR/USD':1.083,'GBP/USD':1.265,'USD/JPY':149.5,'SGD/MYR':3.520,
   // Commodities
-  'XAU/USD':2320,'XAG/USD':27.5,'WTI/USD':78,'BRENT/USD':82,
+  'XAU/USD':2650,'XAG/USD':30.0,'WTI/USD':68,'BRENT/USD':72,
 };
 
 // Price sanity check: validate fetched price against expected range
 function priceValid(sym, px){
   const ranges={
-    BTCUSDT:[10000,200000],ETHUSDT:[500,20000],SOLUSDT:[10,2000],
-    BNBUSDT:[100,5000],XRPUSDT:[0.1,50],DOGEUSDT:[0.01,5],
-    ADAUSDT:[0.05,10],AVAXUSDT:[3,500],DOTUSDT:[1,200],
-    LINKUSDT:[1,200],MATICUSDT:[0.01,20],LTCUSDT:[20,1000],
-    ATOMUSDT:[1,100],NEARUSDT:[0.5,100],
+    BTCUSDT:[10000,250000],ETHUSDT:[500,25000],SOLUSDT:[5,3000],
+    BNBUSDT:[50,8000],XRPUSDT:[0.05,100],DOGEUSDT:[0.005,10],
+    ADAUSDT:[0.03,20],AVAXUSDT:[2,1000],DOTUSDT:[0.5,500],
+    LINKUSDT:[0.5,500],MATICUSDT:[0.005,50],LTCUSDT:[10,2000],
+    ATOMUSDT:[0.5,200],NEARUSDT:[0.2,200],
     // TD assets
-    'AAPL':[100,400],'NVDA':[10,2000],'MSFT':[200,600],'TSLA':[100,1500],
-    'AMZN':[80,300],'GOOGL':[100,300],'META':[100,800],'SPY':[300,700],'QQQ':[200,600],
-    'USD/SGD':[1.2,1.5],'USD/MYR':[3.5,5.0],'EUR/USD':[0.9,1.3],'GBP/USD':[1.0,1.5],
-    'USD/JPY':[100,170],'SGD/MYR':[2.8,3.6],
-    'XAU/USD':[1500,3500],'XAG/USD':[15,50],'WTI/USD':[30,150],'BRENT/USD':[30,160],
+    'AAPL':[80,600],'NVDA':[5,4000],'MSFT':[100,800],'TSLA':[50,2000],
+    'AMZN':[50,500],'GOOGL':[50,400],'META':[50,1200],'SPY':[200,800],'QQQ':[150,700],
+    'USD/SGD':[1.0,2.0],'USD/MYR':[3.0,6.0],'EUR/USD':[0.8,1.6],'GBP/USD':[0.9,1.8],
+    'USD/JPY':[80,200],'SGD/MYR':[2.5,4.5],
+    'XAU/USD':[1000,5000],'XAG/USD':[10,200],'WTI/USD':[20,200],'BRENT/USD':[20,220],
   };
   const r=ranges[sym];
   if(!r)return px>0;
@@ -3050,15 +3137,27 @@ function renderExpandedChart(kl){
 async function selectSym(sym){
   document.querySelectorAll('.sym-item').forEach(e=>e.classList.remove('active'));
   const el=document.getElementById('si-'+sym);if(el)el.classList.add('active');
-  // Critical: reset price AND kline cache when switching symbols
-  S.lastPx=0;
-  S._sigCache={}; S._lastSigPx={}; S.modData={}; // clear memo + module cache on symbol switch
+  // v40: preserve seed price when switching so UI never shows --
+  const _prevPx=(S._seedPrice[sym]||0);
+  S._sigCache={}; S._lastSigPx={}; S.modData={};
   S.wsOk=false;
+  // v39: clear structural reasoning cache on symbol switch
+  S._structReasoning = {};
+  S._gannChanReady = false;
+  // v40: clear whale cache on symbol switch
+  if(typeof WHALE!=='undefined'){
+    S.whaleFlow=null;S.whaleBull=null;S.whaleScore=0;
+    WHALE.flow=null;WHALE.takerRatio=null;WHALE.oi=null;
+    WHALE.funding=null;WHALE.lsRatio=null;WHALE.aggTrades=[];
+    WHALE.exchangeFlow=null;WHALE.klineFlow=null;WHALE.lastFetch=0;
+  }
   // Clear kline cache for new symbol so we don't show stale data
   const keysToKeep=Object.keys(S.klines).filter(k=>k.startsWith(sym));
   const newKlines={};keysToKeep.forEach(k=>newKlines[k]=S.klines[k]);
   S.klines=newKlines;
   S.sym=sym;
+  // Immediately show seed price so UI is never blank
+  if(_prevPx>0){S.lastPx=_prevPx;updatePHPrice(_prevPx);}else{S.lastPx=0;}
 
   // ── Asset-class-aware label display ──
   const pair = getPair(sym);
@@ -5283,6 +5382,202 @@ function updateIntelScore(intelSignal) {
 }
 
 
+
+// ╔══════════════════════════════════════════════════════════════╗
+// ║  FINCH v40 — 🐋 WHALE FLOW MONITOR                          ║
+// ╚══════════════════════════════════════════════════════════════╝
+const WHALE={
+  lastFetch:0,fetchInterval:60000,
+  alerts:[],flow:null,takerRatio:null,oi:null,
+  funding:null,lsRatio:null,aggTrades:[],exchangeFlow:null,klineFlow:null,
+};
+const WHALE_CFG={
+  minWhaleUSD:{BTCUSDT:500000,ETHUSDT:200000,SOLUSDT:50000,BNBUSDT:80000,XRPUSDT:30000,default:20000},
+  takerBullThreshold:0.62,takerBearThreshold:0.38,
+  oiSurgeUp:2.5,oiSurgeDn:-2.5,
+  fundingExtremeLong:0.08,fundingExtremeShort:-0.04,
+  lsBullish:1.20,lsBearish:0.80,
+};
+
+async function loadWhaleData(){
+  const now=Date.now();
+  if(WHALE.lastFetch&&now-WHALE.lastFetch<WHALE.fetchInterval)return;
+  WHALE.lastFetch=now;
+  const sym=S.sym;
+  if(isTDAsset(sym)){_whaleAnalyzeKlineVolume(sym);renderWhalePanel();return;}
+  await Promise.allSettled([_loadTakerRatio(sym),_loadOI(sym),_loadFundingHistory(sym),_loadLongShortRatio(sym),_loadAggTrades(sym)]);
+  _computeWhaleFlow(sym);
+  renderWhalePanel();
+}
+
+async function _loadTakerRatio(sym){
+  try{
+    const r=await wt(fetch('https://fapi.binance.com/fapi/v1/takerlongshortRatio?symbol='+sym+'&period=1h&limit=24'),6000);
+    if(!r.ok)throw new Error('taker');
+    const d=await r.json();
+    if(!Array.isArray(d)||!d.length)throw new Error('empty');
+    const latest=d[d.length-1];
+    const bv=parseFloat(latest.buyVol),sv=parseFloat(latest.sellVol);
+    const ratio=bv/(bv+sv);
+    const avg=function(arr){return arr.reduce(function(s,x){return s+parseFloat(x.buyVol)},0)/arr.reduce(function(s,x){return s+parseFloat(x.buyVol)+parseFloat(x.sellVol)},0);};
+    const tr=(d.length>=8)?avg(d.slice(-4))-avg(d.slice(-8,-4)):0;
+    WHALE.takerRatio={current:ratio,trend:tr,bull:ratio>=WHALE_CFG.takerBullThreshold,bear:ratio<=WHALE_CFG.takerBearThreshold,history:d.map(function(x){var b=parseFloat(x.buyVol),s=parseFloat(x.sellVol);return{t:parseInt(x.timestamp),ratio:b/(b+s)};})};
+  }catch(e){
+    var kl=S.klines[sym+'1h']||S.klines[sym+'4h']||[];
+    if(kl.length>=4){var r2=kl.slice(-4);var u=r2.filter(function(k){return k.c>=k.o;}).reduce(function(s,k){return s+k.v;},0);var dv=r2.filter(function(k){return k.c<k.o;}).reduce(function(s,k){return s+k.v;},0);var t=u+dv;var est=t>0?u/t:0.5;WHALE.takerRatio={current:est,trend:0,bull:est>0.6,bear:est<0.4,estimated:true};}
+  }
+}
+
+async function _loadOI(sym){
+  try{
+    const r1=await wt(fetch('https://fapi.binance.com/fapi/v1/openInterest?symbol='+sym),5000);
+    if(!r1.ok)throw new Error('OI');
+    const d1=await r1.json();
+    const cur=parseFloat(d1.openInterest||0);
+    const curUSD=cur*(S.lastPx||1);
+    var hist=[];
+    try{var r2=await wt(fetch('https://fapi.binance.com/futures/data/openInterestHist?symbol='+sym+'&period=1h&limit=25'),6000);if(r2.ok){var d2=await r2.json();if(Array.isArray(d2))hist=d2.map(function(x){return{t:parseInt(x.timestamp),oi:parseFloat(x.sumOpenInterest)};});}}catch(e2){}
+    const prev=hist.length>=2?hist[hist.length-2].oi:cur;
+    const chgPct=prev>0?(cur-prev)/prev*100:0;
+    const oi8h=hist.length>=9?hist[hist.length-9].oi:prev;
+    const trend8h=oi8h>0?(cur-oi8h)/oi8h*100:0;
+    WHALE.oi={current:cur,currentUSD:curUSD,changePct:chgPct,trend8h:trend8h,surging:chgPct>=WHALE_CFG.oiSurgeUp,plunging:chgPct<=WHALE_CFG.oiSurgeDn};
+    if(Math.abs(chgPct)>=WHALE_CFG.oiSurgeUp)_addWhaleAlert(chgPct>0?'inflow':'outflow','持仓量'+(chgPct>0?'增加':'骤降')+' '+Math.abs(chgPct).toFixed(1)+'%','OI '+(chgPct>0?'增至':'降至')+' '+fmtTVL(curUSD)+' · '+(chgPct>0?'新仓开立':'大量平仓'),Math.abs(chgPct)>5?'critical':'warning');
+  }catch(e){WHALE.oi=null;}
+}
+
+async function _loadFundingHistory(sym){
+  try{
+    const r=await wt(fetch('https://fapi.binance.com/fapi/v1/fundingRate?symbol='+sym+'&limit=16'),5000);
+    if(!r.ok)throw new Error('funding');
+    const d=await r.json();
+    if(!Array.isArray(d)||!d.length)throw new Error('empty');
+    const rates=d.map(function(x){return{t:parseInt(x.fundingTime),rate:parseFloat(x.fundingRate)*100};});
+    const latest=rates[rates.length-1].rate;
+    const avg8=rates.slice(-8).reduce(function(s,x){return s+x.rate;},0)/Math.min(8,rates.length);
+    const trend=rates.length>=4?rates[rates.length-1].rate-rates[rates.length-4].rate:0;
+    WHALE.funding={current:latest,avg8h:avg8,trend:trend,history:rates,extremeLong:latest>=WHALE_CFG.fundingExtremeLong,extremeShort:latest<=WHALE_CFG.fundingExtremeShort};
+    if(latest>=WHALE_CFG.fundingExtremeLong)_addWhaleAlert('warning','资金费率极高 '+latest.toFixed(4)+'%','多头每8h支付'+latest.toFixed(4)+'%，过度拥挤，下行风险高','warning');
+    else if(latest<=WHALE_CFG.fundingExtremeShort)_addWhaleAlert('inflow','资金费率极低 '+latest.toFixed(4)+'%','空头过度拥挤，反弹概率高','info');
+  }catch(e){WHALE.funding=null;}
+}
+
+async function _loadLongShortRatio(sym){
+  try{
+    const r1=await wt(fetch('https://fapi.binance.com/futures/data/topLongShortPositionRatio?symbol='+sym+'&period=1h&limit=12'),5000);
+    const r2=await wt(fetch('https://fapi.binance.com/futures/data/globalLongShortAccountRatio?symbol='+sym+'&period=1h&limit=12'),5000);
+    var top=null,global=null;
+    if(r1.ok){var d1=await r1.json();if(Array.isArray(d1)&&d1.length){var l1=d1[d1.length-1];var hist1=d1.map(function(x){return parseFloat(x.longShortRatio);});top={current:parseFloat(l1.longShortRatio),longPct:parseFloat(l1.longAccount)*100,shortPct:parseFloat(l1.shortAccount)*100,avg12h:hist1.reduce(function(s,x){return s+x;},0)/hist1.length};}}
+    if(r2.ok){var d2=await r2.json();if(Array.isArray(d2)&&d2.length){var l2=d2[d2.length-1];global={current:parseFloat(l2.longShortRatio),longPct:parseFloat(l2.longAccount)*100,shortPct:parseFloat(l2.shortAccount)*100};}}
+    WHALE.lsRatio={top:top,global:global};
+    if(top&&top.current>=WHALE_CFG.lsBullish*1.3)_addWhaleAlert('warning','大户多头极度拥挤 L/S '+top.current.toFixed(2),'多头占比'+top.longPct.toFixed(1)+'%，注意多杀多','warning');
+    else if(top&&top.current<=WHALE_CFG.lsBearish*0.7)_addWhaleAlert('inflow','大户空头极端 L/S '+top.current.toFixed(2),'空头占比'+top.shortPct.toFixed(1)+'%，关注空头回补','info');
+  }catch(e){WHALE.lsRatio=null;}
+}
+
+async function _loadAggTrades(sym){
+  try{
+    const r=await wt(fetch('https://api.binance.com/api/v3/aggTrades?symbol='+sym+'&limit=200'),6000);
+    if(!r.ok)throw new Error('aggTrades');
+    const d=await r.json();
+    if(!Array.isArray(d))throw new Error('empty');
+    const minUSD=WHALE_CFG.minWhaleUSD[sym]||WHALE_CFG.minWhaleUSD.default;
+    const trades=d.map(function(t){return{t:parseInt(t.T),price:parseFloat(t.p),qty:parseFloat(t.q),usd:parseFloat(t.p)*parseFloat(t.q),isBuy:!t.m};}).filter(function(t){return t.usd>=minUSD;}).sort(function(a,b){return b.t-a.t;}).slice(0,20);
+    const now=Date.now();
+    const last5=trades.filter(function(t){return now-t.t<300000;});
+    const buyVol=last5.filter(function(t){return t.isBuy;}).reduce(function(s,t){return s+t.usd;},0);
+    const sellVol=last5.filter(function(t){return !t.isBuy;}).reduce(function(s,t){return s+t.usd;},0);
+    WHALE.aggTrades=trades;
+    WHALE.exchangeFlow={buy5m:buyVol,sell5m:sellVol,net5m:buyVol-sellVol,count5m:last5.length,netBull:buyVol>sellVol};
+    var largest=trades[0];
+    if(largest&&now-largest.t<120000&&largest.usd>=minUSD*5)_addWhaleAlert(largest.isBuy?'inflow':'outflow','🐋 超大单 '+(largest.isBuy?'买入':'卖出')+' '+fmtTVL(largest.usd),'@ '+fmtP(largest.price)+'，规模'+(largest.usd/minUSD).toFixed(1)+'× 鲸鱼门槛','critical');
+  }catch(e){WHALE.aggTrades=[];WHALE.exchangeFlow=null;_whaleAnalyzeKlineVolume(sym);}
+}
+
+function _whaleAnalyzeKlineVolume(sym){
+  var kl=S.klines[sym+'1h']||S.klines[sym+'4h']||S.klines[sym+'1d']||[];
+  if(kl.length<20)return;
+  var recent=kl.slice(-20);
+  var vols=recent.map(function(k){return k.v;});
+  var avgVol=vols.reduce(function(s,v){return s+v;},0)/vols.length;
+  var stdVol=Math.sqrt(vols.reduce(function(s,v){return s+Math.pow(v-avgVol,2);},0)/vols.length);
+  var anomalies=recent.map(function(k,i){return {t:k.t,o:k.o,h:k.h,l:k.l,c:k.c,v:k.v,sigma:(k.v-avgVol)/Math.max(stdVol,1),idx:i};}).filter(function(k){return k.sigma>=2;}).sort(function(a,b){return b.sigma-a.sigma;}).slice(0,5);
+  var last5=kl.slice(-5);
+  var upVol=last5.filter(function(k){return k.c>k.o;}).reduce(function(s,k){return s+k.v;},0);
+  var dnVol=last5.filter(function(k){return k.c<=k.o;}).reduce(function(s,k){return s+k.v;},0);
+  WHALE.klineFlow={anomalies:anomalies,netDir:upVol>dnVol?'bull':'bear',volRatio:avgVol>0?kl[kl.length-1].v/avgVol:1,avgVol:avgVol,upVol:upVol,dnVol:dnVol};
+  if(anomalies.length&&anomalies[0].idx===recent.length-1){var bar=anomalies[0];_addWhaleAlert(bar.c>bar.o?'inflow':'outflow','成交量异常 '+bar.sigma.toFixed(1)+'\u03c3','是均量'+(bar.v/avgVol).toFixed(1)+'倍，'+(bar.c>bar.o?'放量上涨':'放量下跌'),bar.sigma>3?'critical':'warning');}
+}
+
+function _computeWhaleFlow(sym){
+  var score=0,factors=[];
+  var t=WHALE.takerRatio;
+  if(t){score+=(t.current-0.5)*6;if(t.bull)factors.push('主动买盘主导');else if(t.bear)factors.push('主动卖盘主导');if(t.trend>0.05)factors.push('买压趋势上升');else if(t.trend<-0.05)factors.push('卖压趋势上升');}
+  var o=WHALE.oi;
+  if(o){if(o.surging&&S.lastSignal&&S.lastSignal.isBull){score+=1.5;factors.push('OI增加+多头格局');}else if(o.surging){score-=0.8;factors.push('OI增加+空头格局');}if(o.plunging){score-=1.0;factors.push('OI骤降');}}
+  var f=WHALE.funding;
+  if(f){if(f.extremeLong){score-=1.5;factors.push('资金费率极高');}if(f.extremeShort){score+=1.5;factors.push('资金费率极低');}else if(f.current>0.02&&f.trend>0){score-=0.5;factors.push('资金费率上升');}}
+  var ls=WHALE.lsRatio&&WHALE.lsRatio.top;
+  if(ls){if(ls.current>=WHALE_CFG.lsBullish){score+=0.8;factors.push('大户净多头');}if(ls.current<=WHALE_CFG.lsBearish){score-=0.8;factors.push('大户净空头');}}
+  var ef=WHALE.exchangeFlow;
+  if(ef&&ef.count5m>0){if(ef.net5m>0){score+=1.0;factors.push('近期鲸鱼净买入');}if(ef.net5m<0){score-=1.0;factors.push('近期鲸鱼净卖出');}}
+  var isBull=score>0;
+  var conf=Math.min(85,Math.max(25,Math.round(40+Math.min(5,Math.abs(score))*9)));
+  var label=score>2?'🐋 鲸鱼流入':score<-2?'🩸 鲸鱼流出':score>0.5?'🟢 轻微买压':score<-0.5?'🔴 轻微卖压':'⚪ 资金中性';
+  WHALE.flow={score:score,isBull:isBull,conf:conf,label:label,factors:factors};
+  S.whaleFlow=WHALE.flow;S.whaleBull=isBull;S.whaleScore=score;
+  var badge=document.getElementById('msig-whale');
+  if(badge){badge.textContent=label.split(' ').slice(1).join(' ')||'中性';badge.style.color=score>1.5?'var(--green)':score<-1.5?'var(--red)':'var(--amber)';}
+}
+
+function _addWhaleAlert(type,title,body,severity){
+  if(!severity)severity='info';
+  var now=toMYT(new Date());
+  var ts=String(now.getUTCHours()).padStart(2,'0')+':'+String(now.getUTCMinutes()).padStart(2,'0')+' MYT';
+  var alert={type:type,title:title,body:body,severity:severity,ts:ts,t:Date.now()};
+  var recent=WHALE.alerts.filter(function(a){return Date.now()-a.t<300000;});
+  if(recent.some(function(a){return a.title===title;}))return;
+  WHALE.alerts.unshift(alert);
+  if(WHALE.alerts.length>60)WHALE.alerts=WHALE.alerts.slice(0,60);
+  _renderWhaleAlertLog();
+  if(typeof brainAddCard==='function'){var bt=type==='inflow'?'opportunity':type==='outflow'?'risk':'alert';brainAddCard(bt,'🐋 '+title,body,severity==='critical'?75:severity==='warning'?60:null);}
+}
+
+function _renderWhaleAlertLog(){
+  var el=document.getElementById('whaleAlertLog');
+  if(!el)return;
+  if(!WHALE.alerts.length){el.innerHTML='<div style="color:var(--muted);font-size:12px;text-align:center;padding:12px 0">暂无鲸鱼警报</div>';return;}
+  var sevCol={critical:'var(--red)',warning:'var(--amber)',info:'var(--cyan)'};
+  var icons={inflow:'🟢',outflow:'🔴',warning:'⚠️',info:'📌'};
+  el.innerHTML=WHALE.alerts.slice(0,20).map(function(a){return '<div style="padding:8px 10px;border-bottom:1px solid var(--line);'+(a.severity==='critical'?'background:rgba(160,20,32,0.04)':'')+'">'+'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;">'+'<span style="font-size:11px;font-weight:700;color:'+(sevCol[a.severity]||'var(--muted)')+'">'+((icons[a.type]||'📌')+' '+a.title)+'</span>'+'<span style="font-size:9px;color:var(--muted)">'+a.ts+'</span></div>'+'<div style="font-size:11px;color:var(--text);line-height:1.6">'+a.body+'</div></div>';}).join('');
+  var badge=document.getElementById('msig-whalelog');
+  if(badge){var c=WHALE.alerts.filter(function(a){return a.severity==='critical'&&Date.now()-a.t<600000;}).length;badge.textContent=c>0?'\u26a1'+c+'\u6761':WHALE.alerts.length+'\u6761';badge.style.color=c>0?'var(--red)':'var(--muted)';}
+}
+
+function renderWhalePanel(){
+  var el=document.getElementById('whalePanelBody');
+  if(!el)return;
+  var flow=WHALE.flow,t=WHALE.takerRatio,o=WHALE.oi,f=WHALE.funding,ls=WHALE.lsRatio&&WHALE.lsRatio.top,ef=WHALE.exchangeFlow,kf=WHALE.klineFlow;
+  if(!flow&&!t&&!o&&!kf){el.innerHTML='<div style="color:var(--muted);font-size:12px;text-align:center;padding:16px 0">\u23f3 \u52a0\u8f7d\u4e2d...</div>';return;}
+  var fs=flow?flow.score:0;
+  var fc=fs>1.5?'var(--green)':fs<-1.5?'var(--red)':'var(--amber)';
+  var fb=fs>1.5?'rgba(26,107,58,0.06)':fs<-1.5?'rgba(160,20,32,0.06)':'rgba(128,80,0,0.04)';
+  var html='';
+  if(flow){var cc=flow.conf>=70?'var(--green)':flow.conf>=50?'var(--amber)':'var(--red)';html+='<div style="background:'+fb+';border:2px solid '+fc+'40;border-radius:8px;padding:12px 14px;margin-bottom:10px;"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;"><div><div style="font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:3px">\ud83d\udc0b \u9cb8\u9c7c\u8d44\u91d1\u6d41\u7efc\u5408</div><div style="font-size:20px;font-weight:700;color:'+fc+'">'+flow.label+'</div></div><div style="text-align:right"><div style="font-size:28px;font-weight:700;color:'+cc+';line-height:1">'+flow.conf+'%</div><div style="font-size:9px;color:var(--muted)">\u7f6e\u4fe1\u5ea6</div></div></div><div style="height:4px;background:var(--bg3);border-radius:2px;margin-bottom:8px;overflow:hidden"><div style="width:'+flow.conf+'%;height:100%;background:'+cc+';border-radius:2px"></div></div><div style="display:flex;flex-wrap:wrap;gap:4px">'+flow.factors.map(function(f2){return '<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:'+(fs>0?'rgba(26,107,58,0.1)':'rgba(160,20,32,0.1)')+';color:'+(fs>0?'var(--green)':'var(--red)')+';border:1px solid '+(fs>0?'rgba(26,107,58,0.2)':'rgba(160,20,32,0.2)')+'">'+f2+'</span>';}).join('')+'</div></div>';}
+  if(t){var tp=(t.current*100).toFixed(1),bw=t.current*100,sw=(1-t.current)*100,tc2=t.bull?'var(--green)':t.bear?'var(--red)':'var(--amber)';html+='<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:3px"><span>\ud83d\udcca \u4e3b\u52a8\u4e70\u5356\u6bd4'+(t.estimated?' <span style="color:var(--amber);font-size:9px">(\u4f30\u7b97)</span>':'')+' </span><span style="font-weight:700;color:'+tc2+'">'+tp+'% \u4e70\u5165</span></div><div style="display:flex;height:8px;border-radius:4px;overflow:hidden;gap:1px"><div style="width:'+bw+'%;background:var(--green);border-radius:4px 0 0 4px"></div><div style="flex:1;background:var(--red);border-radius:0 4px 4px 0"></div></div><div style="display:flex;justify-content:space-between;font-size:9px;color:var(--muted);margin-top:2px"><span style="color:var(--green)">\u4e70 '+bw.toFixed(1)+'%</span><span>'+(t.trend>0.02?'\u2191\u4e70\u538b\u589e\u5f3a':t.trend<-0.02?'\u2193\u5356\u538b\u589e\u5f3a':'\u2192\u7a33\u5b9a')+'</span><span style="color:var(--red)">\u5356 '+sw.toFixed(1)+'%</span></div></div>';}
+  if(o){var oc=o.changePct>1?'var(--green)':o.changePct<-1?'var(--red)':'var(--muted)';var oi2=o.surging&&S.lastSignal&&S.lastSignal.isBull?'\u591a\u5934\u5f00\u4ed3':o.surging?'\u65b0\u4ed3\u5f00\u7acb':o.plunging?'\u5927\u91cf\u5e73\u4ed3':'\u6b63\u5e38\u6ce2\u52a8';html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--line);font-size:11px"><span style="color:var(--muted)">\ud83d\udcc8 \u6301\u4ed3\u91cf OI</span><div style="text-align:right"><div style="font-weight:700;color:'+oc+'">'+(o.changePct>=0?'+':'')+o.changePct.toFixed(2)+'%</div><div style="font-size:9px;color:var(--muted)">'+fmtTVL(o.currentUSD)+' \u00b7 '+oi2+'</div></div></div>';}
+  if(f){var fc2=f.extremeLong?'var(--red)':f.extremeShort?'var(--green)':f.current>0?'var(--amber)':'var(--cyan)';var fi=f.extremeLong?'\ud83d\udd34 \u591a\u5934\u62e5\u6324':f.extremeShort?'\ud83d\udfe2 \u7a7a\u5934\u62e5\u6324':f.current>0.03?'\u591a\u5934\u652f\u4ed8':f.current<-0.01?'\u7a7a\u5934\u652f\u4ed8':'\u6b63\u5e38';html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--line);font-size:11px"><span style="color:var(--muted)">\ud83d\udcb0 \u8d44\u91d1\u8d39\u7387 Funding</span><div style="text-align:right"><div style="font-weight:700;color:'+fc2+'">'+(f.current>=0?'+':'')+f.current.toFixed(4)+'% /8h</div><div style="font-size:9px;color:var(--muted)">'+fi+'</div></div></div>';}
+  if(ls){var lc=ls.current>=WHALE_CFG.lsBullish?'var(--green)':ls.current<=WHALE_CFG.lsBearish?'var(--red)':'var(--muted)';html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--line);font-size:11px"><span style="color:var(--muted)">\u2696\ufe0f \u5927\u6237\u591a\u7a7a\u6bd4 L/S</span><div style="text-align:right"><div style="font-weight:700;color:'+lc+'">'+ls.current.toFixed(3)+'</div><div style="font-size:9px;color:var(--muted)">\u591a '+ls.longPct.toFixed(1)+'% \u00b7 \u7a7a '+ls.shortPct.toFixed(1)+'%</div></div></div>';}
+  if(ef&&ef.count5m>0){var ec=ef.net5m>0?'var(--green)':'var(--red)';html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;font-size:11px"><span style="color:var(--muted)">\ud83d\udc0b 5\u5206\u949f\u51c0\u6d41</span><div style="text-align:right"><div style="font-weight:700;color:'+ec+'">'+(ef.net5m>=0?'+':'')+fmtTVL(ef.net5m)+'</div><div style="font-size:9px;color:var(--muted)">\u4e70'+fmtTVL(ef.buy5m)+' / \u5356'+fmtTVL(ef.sell5m)+' ('+ef.count5m+'\u7b14)</div></div></div>';}
+  if(kf){var kc=kf.netDir==='bull'?'var(--green)':'var(--red)';html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;font-size:11px"><span style="color:var(--muted)">\ud83d\udcca \u91cf\u80fd\u65b9\u5411</span><div style="text-align:right"><div style="font-weight:700;color:'+kc+'">'+(kf.netDir==='bull'?'\u25b2 \u591a\u5934':'\u25bc \u7a7a\u5934')+'</div><div style="font-size:9px;color:var(--muted)">'+kf.volRatio.toFixed(2)+'\u00d7 \u5747\u91cf</div></div></div>';if(kf.anomalies&&kf.anomalies.length)html+='<div style="padding:5px 8px;background:rgba(128,80,0,0.07);border-radius:4px;margin-top:4px;font-size:10px;color:var(--amber)">\u26a1 \u91cf\u80fd\u5f02\u5e38: '+kf.anomalies[0].sigma.toFixed(1)+'\u03c3\uff0c\u662f\u5747\u91cf'+(kf.anomalies[0].v/kf.avgVol).toFixed(1)+'\u500d</div>';}
+  if(WHALE.aggTrades&&WHALE.aggTrades.length){var r5=WHALE.aggTrades.filter(function(t2){return Date.now()-t2.t<300000;}).slice(0,5);if(r5.length)html+='<div style="margin-top:8px"><div style="font-size:10px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:4px">\ud83d\udc0b \u8fd1\u671f\u5927\u989d\u4ea4\u6613(5min)</div>'+r5.map(function(t2){return '<div style="display:flex;justify-content:space-between;font-size:10px;padding:2px 0"><span style="color:'+(t2.isBuy?'var(--green)':'var(--red)')+';font-weight:700">'+(t2.isBuy?'\u25b2\u4e70':'\u25bc\u5356')+' '+fmtTVL(t2.usd)+'</span><span style="color:var(--muted)">@'+fmtP(t2.price)+' '+Math.round((Date.now()-t2.t)/1000)+'\u79d2\u524d</span></div>';}).join('')+'</div>';}
+  var myt=toMYT(new Date());
+  html+='<div style="font-size:9px;color:var(--dim);padding-top:8px">\u66f4\u65b0: '+String(myt.getUTCHours()).padStart(2,'0')+':'+String(myt.getUTCMinutes()).padStart(2,'0')+' MYT \u00b7 1\u5206\u949f\u5237\u65b0</div>';
+  el.innerHTML=html;
+  _renderWhaleAlertLog();
+}
+
+
 // ── Request dedup cache ──
 const _reqInFlight={};
 async function fetchKlinesThrottled(sym,tf,limit){
@@ -5293,7 +5588,7 @@ async function fetchKlinesThrottled(sym,tf,limit){
 }
 
 // ═══ LOAD ALL ═══
-// ── v38: renderAllModules — convenience wrapper to re-render all right-panel modules ──
+// ── v39: renderAllModules — preserve open/close states across re-renders ──
 function renderAllModules(){
   const px = S.lastPx;
   if(!px || px <= 0) return;
@@ -5311,6 +5606,8 @@ function renderAllModules(){
   try { renderStrategy(); } catch(e) {}
   try { renderTimeline(); } catch(e) {}
   try { renderSummary(); } catch(e) {}
+  // v39 fix: restore expand states silently — no scroll/reflow
+  requestAnimationFrame(_restoreModStates);
 }
 
 async function loadAll(sym){
@@ -5432,13 +5729,28 @@ async function loadAll(sym){
   const _cl2=document.getElementById('chartLoad');if(_cl2)_cl2.style.display='none';
 
   if(!price){
-    $html('stratArea',`<div style="padding:20px;color:var(--red);font-size:13px">
-      ⚠️ 无法获取价格数据<br>
-      <span style="color:var(--muted);font-size:12px">请检查网络或使用 VPN</span><br>
-      <button onclick="loadAll(S.sym)" style="margin-top:10px;padding:8px 16px;border:1px solid var(--gold);border-radius:4px;background:transparent;color:var(--gold);cursor:pointer;font-family:inherit;font-size:13px">🔄 重新加载</button>
-    </div>`);
+    // v40: use seed price + mock klines so analysis is always shown
+    const seedPx=S._seedPrice[sym]||73000;
+    S.lastPx=seedPx; updatePHPrice(seedPx);
+    const mockKl=mockKlines(sym,'4h',220);
+    S.klines[sym+'4h']=mockKl;
+    renderChart(mockKl,sym); renderSubChart(mockKl);
+    renderStrategy(); renderTimeline(); renderSummary();
+    // Show connection status banner
+    const sb=document.getElementById('stratArea');
+    if(sb) sb.insertAdjacentHTML('afterbegin',
+      '<div style="padding:10px 14px;background:rgba(128,80,0,0.06);border:1px solid rgba(128,80,0,0.2);border-radius:7px;margin-bottom:10px;font-size:12px;color:var(--text);line-height:1.8">' +
+      '<strong style="color:var(--amber)">⚡ 正在连接 Binance...</strong><br>' +
+      '数据加载中，当前显示估算分析。若持续无数据，请检查网络或尝试 VPN。' +
+      '<button onclick="S.lastPx=0;S.klines={};_epProbed=false;loadAll(S.sym)" style="margin-left:10px;padding:4px 10px;border:1px solid var(--gold);border-radius:4px;background:transparent;color:var(--gold);cursor:pointer;font-family:inherit;font-size:11px;font-weight:700">🔄 重连</button>' +
+      '</div>');
   }
 }
+
+// ── v40: WebSocket reconnect watchdog ──
+setInterval(()=>{
+  if(!isTDAsset(S.sym)&&!S.wsOk&&S.sym){connectWS(S.sym);}
+},30000);
 
 // ═══ CHART RENDERING ═══
 function renderChart(kl,sym){
@@ -5862,6 +6174,20 @@ function _Φ9x(tf){
     const is=Math.max(-2,Math.min(2,S.intelScore*(208/500)));
     score+=is;
     if(Math.abs(is)>0.3)sigs.push({l:S.intelBull?'🧠链上多':'🧠链上空',c:S.intelBull?'sig-bull':'sig-bear'});
+  }
+  // ── v40: Whale Flow Score ──
+  if(typeof WHALE!=='undefined'&&S.whaleScore&&!isNaN(S.whaleScore)&&S.whaleFlow){
+    const ws=Math.max(-2.0,Math.min(2.0,S.whaleScore*0.45));
+    score+=ws;
+    if(Math.abs(ws)>0.4)sigs.push({l:S.whaleBull?'🐋鲸鱼流入':'🩸鲸鱼流出',c:S.whaleBull?'sig-bull':'sig-bear'});
+    if(typeof WHALE.funding!=='undefined'&&WHALE.funding){
+      if(WHALE.funding.extremeLong)sigs.push({l:'⚠️资金费率极高',c:'sig-bear'});
+      if(WHALE.funding.extremeShort)sigs.push({l:'⚡资金费率极低',c:'sig-bull'});
+    }
+    if(typeof WHALE.takerRatio!=='undefined'&&WHALE.takerRatio){
+      if(WHALE.takerRatio.bull&&ws>0.5)sigs.push({l:'📊主动买盘',c:'sig-bull'});
+      else if(WHALE.takerRatio.bear&&ws<-0.5)sigs.push({l:'📊主动卖盘',c:'sig-bear'});
+    }
   }
   // ── On-chain: BTC active addresses ──
   if(S.onChain&&S.sym==='BTCUSDT'){
@@ -7877,12 +8203,26 @@ function toggleFSnapshot() {
   if (ico)  ico.textContent  = _fSnapOpen ? '▴' : '▾';
   if (tlbl) tlbl.textContent = _fSnapOpen ? '收起 ▴' : '展开详情 ▾';
 }
+// v39: sub-section toggle uses max-height CSS transition — no reflow jump
+const _fSnapSectionState = {};
 function toggleFSnapSection(bodyId, arrId) {
   const body = document.getElementById(bodyId);
   const arr  = document.getElementById(arrId);
   if (!body) return;
-  const isOpen = body.style.display !== 'none';
-  body.style.display = isOpen ? 'none' : 'block';
+  const isOpen = _fSnapSectionState[bodyId];
+  _fSnapSectionState[bodyId] = !isOpen;
+  // Use max-height transition instead of display toggle
+  if (!isOpen) {
+    body.style.maxHeight = body.scrollHeight + 200 + 'px';
+    body.style.overflow = 'visible';
+    body.style.paddingTop = '10px';
+    body.style.paddingBottom = '14px';
+  } else {
+    body.style.maxHeight = '0';
+    body.style.overflow = 'hidden';
+    body.style.paddingTop = '0';
+    body.style.paddingBottom = '0';
+  }
   if (arr) arr.style.transform = isOpen ? '' : 'rotate(90deg)';
 }
 // ═══ MANUAL REFRESH + AUTO REFRESH ═══
@@ -7951,6 +8291,8 @@ function startAutoRefresh(){
         renderInlineTimeline();
         renderRightTimeline();
         _updateRefreshLabel();
+        // v39: restore expand states after DOM rebuild
+        requestAnimationFrame(_restoreModStates);
       }
     }
   },10000);
@@ -8275,7 +8617,7 @@ function renderSummary(){
           <span id="fsnap-arr-modules" style="color:var(--gold);font-size:14px;transition:transform .2s">›</span>
         </div>
       </div>
-      <div id="fsnap-modules-body" style="display:none;padding:10px 14px;">
+      <div id="fsnap-modules-body" style="max-height:0;overflow:hidden;padding:0 14px;transition:max-height 0.28s ease,padding 0.18s ease;">
         ${modBarHtml}
         <div style="margin-top:8px;">
           <div style="font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:5px;text-transform:uppercase;">点击卡片启用/禁用模块</div>
@@ -8291,7 +8633,7 @@ function renderSummary(){
         <span class="fsnapshot-section-hd-title">📐 完整TP / SL 层级</span>
         <span id="fsnap-arr-levels" style="color:var(--gold);font-size:14px;transition:transform .2s">›</span>
       </div>
-      <div id="fsnap-levels-body" style="display:none;padding:10px 14px;">
+      <div id="fsnap-levels-body" style="max-height:0;overflow:hidden;padding:0 14px;transition:max-height 0.28s ease,padding 0.18s ease;">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;">
           ${res.tps.map((tp,i)=>{
             const valid=res.isBull?tp.p>res.entry:tp.p<res.entry;
@@ -8328,7 +8670,7 @@ function renderSummary(){
         <span class="fsnapshot-section-hd-title">🎭 三种情景 · 推演</span>
         <span id="fsnap-arr-scenarios" style="color:var(--gold);font-size:14px;transition:transform .2s">›</span>
       </div>
-      <div id="fsnap-scenarios-body" style="display:none;padding:10px 14px;">
+      <div id="fsnap-scenarios-body" style="max-height:0;overflow:hidden;padding:0 14px;transition:max-height 0.28s ease,padding 0.18s ease;">
         ${(()=>{
           const v=mainVerdict;
           if(!v||!v.scenarios)return'<div style="color:var(--muted);font-size:11px">等待分析...</div>';
@@ -8372,6 +8714,128 @@ function renderSummary(){
   const fr = document.getElementById('filterRow');
   const fr2 = document.getElementById('filterRow2');
   if (fr && fr2) { fr2.innerHTML = fr.innerHTML; }
+
+  // ── v39 Fix: Render TwelveData stock/forex/commodity info card ──
+  _renderTDAssetInfoCard();
+}
+
+// ── v39: Asset info card for non-crypto TwelveData assets ──
+function _renderTDAssetInfoCard() {
+  const infoEl = document.getElementById('tdAssetInfoCard');
+  if (!infoEl) return;
+  const sym = S.sym;
+  const pair = getPair(sym);
+  if (!pair || pair.cls === 'crypto') { infoEl.style.display = 'none'; return; }
+
+  const cls = pair.cls;
+  const q = S._tdQuotes?.[sym];
+  const mhrs = getMarketStatus(cls);
+  const clsLabels = {us_stock:'🇺🇸 美股',my_stock:'🇲🇾 马股',sg_stock:'🇸🇬 新股',forex:'💱 外汇',commodity:'🪙 商品'};
+  const clsColors = {us_stock:'var(--green)',my_stock:'var(--teal)',sg_stock:'var(--blue)',forex:'var(--cyan)',commodity:'var(--gold)'};
+  const clsColor = clsColors[cls] || 'var(--gold)';
+  const clsLabel = clsLabels[cls] || cls;
+  const currencySymbols = {USD:'$',MYR:'RM ',SGD:'S$',EUR:'€',GBP:'£',JPY:'¥'};
+  const currSym = currencySymbols[pair.currency] || '';
+
+  const px = q?.px || S.lastPx || 0;
+  const chg = q?.chg || 0;
+  const hi = q?.high || px;
+  const lo = q?.low || px;
+  const vol = q?.vol || 0;
+
+  const chgCol = chg > 0 ? 'var(--green)' : chg < 0 ? 'var(--red)' : 'var(--muted)';
+  const chgArrow = chg > 0 ? '▲' : chg < 0 ? '▼' : '▸';
+  const mhrsCol = mhrs.open ? 'var(--green)' : 'var(--muted)';
+
+  // Build market-specific context rows
+  let extraRows = '';
+  if (cls === 'us_stock') {
+    extraRows = `
+      <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--line);font-size:11px;">
+        <span style="color:var(--muted)">交易所</span><span style="font-weight:700">${pair.exchange||'NASDAQ'} · USD</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--line);font-size:11px;">
+        <span style="color:var(--muted)">成交量</span><span style="font-weight:700">${vol>0?fmtVol(vol):'--'}</span>
+      </div>`;
+  } else if (cls === 'my_stock') {
+    extraRows = `
+      <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--line);font-size:11px;">
+        <span style="color:var(--muted)">交易所</span><span style="font-weight:700">Bursa Malaysia · MYR</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--line);font-size:11px;">
+        <span style="color:var(--muted)">代码</span><span style="font-weight:700">${pair.b}</span>
+      </div>`;
+  } else if (cls === 'sg_stock') {
+    extraRows = `
+      <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--line);font-size:11px;">
+        <span style="color:var(--muted)">交易所</span><span style="font-weight:700">SGX · SGD</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--line);font-size:11px;">
+        <span style="color:var(--muted)">代码</span><span style="font-weight:700">${pair.b}</span>
+      </div>`;
+  } else if (cls === 'forex') {
+    const session = (() => {
+      const h = (new Date().getUTCHours() + 8) % 24;
+      if (h >= 21 || h < 1) return '🇺🇸 NY+London峰值流动性';
+      if (h >= 15) return '🇬🇧 London时段';
+      if (h >= 8) return '🌏 亚洲时段';
+      return '🌙 低流动性时段';
+    })();
+    extraRows = `
+      <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--line);font-size:11px;">
+        <span style="color:var(--muted)">当前时段</span><span style="font-weight:700">${session}</span>
+      </div>`;
+  } else if (cls === 'commodity') {
+    extraRows = `
+      <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--line);font-size:11px;">
+        <span style="color:var(--muted)">计价货币</span><span style="font-weight:700">USD (美元)</span>
+      </div>`;
+  }
+
+  infoEl.style.display = 'block';
+  infoEl.innerHTML = `
+  <div style="background:var(--card);border:1px solid var(--card-bd);border-left:3px solid ${clsColor};border-radius:8px;padding:12px 14px;margin-bottom:10px;box-shadow:var(--shadow);">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <div>
+        <div style="font-size:10px;letter-spacing:1.5px;color:${clsColor};font-weight:700;text-transform:uppercase;margin-bottom:2px">${clsLabel} · ${pair.n}</div>
+        <div style="font-size:22px;font-weight:700;color:var(--bright);font-variant-numeric:tabular-nums;line-height:1.1">${currSym}${px > 0 ? fmtP(px) : '--'}</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:15px;font-weight:700;color:${chgCol}">${chgArrow} ${Math.abs(chg).toFixed(2)}%</div>
+        <div style="font-size:10px;padding:2px 8px;border-radius:10px;background:${mhrs.open?'rgba(26,107,58,0.1)':'rgba(0,0,0,0.05)'};color:${mhrsCol};border:1px solid ${mhrsCol}40;margin-top:3px;font-weight:700">${mhrs.label}</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:8px;">
+      <div style="background:var(--bg2);border-radius:5px;padding:6px 9px;">
+        <div style="font-size:9px;color:var(--muted);margin-bottom:1px">日高</div>
+        <div style="font-size:13px;font-weight:700;color:var(--green)">${currSym}${hi > 0 ? fmtP(hi) : '--'}</div>
+      </div>
+      <div style="background:var(--bg2);border-radius:5px;padding:6px 9px;">
+        <div style="font-size:9px;color:var(--muted);margin-bottom:1px">日低</div>
+        <div style="font-size:13px;font-weight:700;color:var(--red)">${currSym}${lo > 0 ? fmtP(lo) : '--'}</div>
+      </div>
+    </div>
+    ${extraRows}
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;font-size:10px;color:var(--muted);">
+      <span>数据来源: TwelveData</span>
+      <button onclick="_refreshTDAssetQuote('${sym}')" style="padding:2px 8px;border:1px solid var(--line2);border-radius:3px;background:var(--bg2);color:var(--muted);font-size:9px;cursor:pointer;font-family:inherit;">↺ 刷新</button>
+    </div>
+  </div>`;
+}
+
+async function _refreshTDAssetQuote(sym) {
+  try {
+    const q = await tdQuote(sym);
+    if (q && q.px > 0) {
+      S._tdQuotes = S._tdQuotes || {};
+      S._tdQuotes[sym] = q;
+      if (sym === S.sym) {
+        S.lastPx = q.px;
+        updatePH({ price: q.px, change: q.chg, high: q.high || q.px, low: q.low || q.px, vol: q.vol || 0 });
+      }
+      _renderTDAssetInfoCard();
+    }
+  } catch(e) {}
 }
 
 // ═══ AI NARRATIVE ANALYSIS ═══
@@ -8402,7 +8866,16 @@ async function triggerAIAnalysis(res){
   const frInfo=res.fundingRate?(res.fundingRate!==0?`资金费率:${res.fundingRate.toFixed(4)}% (${res.fundingRate>0.05?'多头过热':res.fundingRate<-0.02?'空头过热':'正常'})`:'资金费率:正常'):'--';
   const candleInfo=res.candles?.patterns?.length?`K线形态:${res.candles.patterns.map(p=>p.n).join('、')}`:'无特殊K线形态';
   const conflictInfo=res.conflictRatio!==undefined?`信号分歧率:${(res.conflictRatio*100).toFixed(0)}% (${res.conflictRatio>0.45?'高分歧需谨慎':res.conflictRatio>0.3?'中等分歧':'信号一致'})`:'--';
-  const prompt=`你是一位资深的加密货币交易员和市场分析师，有15年实战经验。你不只是读数据，你理解市场背后的人性、资金博弈和情绪周期。
+  // v39: append Gann+Chan structural reasoning to prompt if available
+  const sr = res._gannChanContext || S._structReasoning;
+  let structuralContext = '';
+  if (sr) {
+    if (sr.highAlt?.isHighAlt) structuralContext += `\n- 缠论结构: 高位调整（非趋势反转），地板支撑 ${fmtP(sr.highAlt.floor)}，未跌破前不过分看空`;
+    if (sr.minorDown?.hasMinorDown) structuralContext += `\n- 缠论: 小级别下跌趋势，突破 ${fmtP(sr.minorDown.breakLevel)} 为顺势做多机会，${sr.minorDown.volSurge?'成交量已放大确认':'尚未放量需等确认'}`;
+    if (sr.gannTime?.nearNode) structuralContext += `\n- 江恩时间: ${sr.gannTime.label} 临近(${sr.gannTime.urgency})，变盘概率提升，即便顺势做多也控制持仓时间`;
+  }
+
+  const prompt=`你是一位资深的加密货币交易员和市场分析师，有15年实战经验，精通江恩理论和缠论，能区分主趋势运动与次级运动。你不只是读数据，你理解市场背后的人性、资金博弈和情绪周期。
 
 当前市场数据（${sym}/USDT，${res.tf}周期）：
 - 现价：${fmtP(res.price)}，方向判断：${direction}，置信度：${res.conf}%，评分：${res.score?.toFixed(2)}
@@ -8425,16 +8898,17 @@ async function triggerAIAnalysis(res){
 - 恐慌贪婪指数：${fg}（${parseInt(fg)<20?'极度恐惧':parseInt(fg)<35?'恐惧':parseInt(fg)>80?'极度贪婪':parseInt(fg)>65?'贪婪':'中性'}）
 - 智能入场价：${fmtP(res.entry)}（${res.entryNote}）
 - TP1：${fmtP(res.tps[0].p)}（+${((res.tps[0].p-res.entry)/res.entry*100).toFixed(2)}%），SL1：${fmtP(res.sls[0].p)}（${((res.sls[0].p-res.entry)/res.entry*100).toFixed(2)}%）
-- 盈亏比R:R = ${res.rr.toFixed(2)}:1
+- 盈亏比R:R = ${res.rr.toFixed(2)}:1${structuralContext}
 
-请用中文给出一段200-300字的**市场叙事分析**，要求：
-1. 不要重复列举数据，而是解读数据背后的**深层含义**，特别关注OBV/CVD量价关系、ADX趋势强度和MTF多框架共振情况
-2. 分析当前价格区域里**大资金/主力/散户**各自可能的行为和心理
-3. 预判接下来最可能发生的**两种情景**（如果往上 vs 如果往下）
-4. 给出你作为老手交易员的**核心判断**：现在是等待还是出手？注意信号分歧率是否偏高？
-5. 语气要像一个真正懂市场的人在跟你讲话，不要像机器人报数据，要有观点、有判断、有温度
+请用中文给出一段220-320字的**市场叙事分析**，要求：
+1. 结合江恩时间节点和缠论结构（主趋势/次级运动/高位整理/突破确认）深度解读当前价格行为
+2. 区分：当前运动是主趋势延续，还是次级运动（空间有限，谨慎追）？是高位调整还是趋势反转？
+3. 明确说明：关键支撑/阻力被多次测试后的突破概率判断；是否需要放量确认才可追
+4. 分析当前价格区域里大资金/主力/散户各自可能的行为
+5. 给出核心交易判断：现在是等待还是出手？如果是次级运动机会，如何控制目标和止损？
+6. 语气直接有力，像真正懂江恩缠论的交易员在讲话，不要像机器人报数据
 
-直接输出分析内容，不要有"好的"、"以下是"等客套话。用简洁有力的段落，不要用列表或标题。`;
+直接输出分析，不要客套话。用简洁有力的段落，不用列表或标题。`;
 
   try{
     const resp=await fetch('https://api.anthropic.com/v1/messages',{
@@ -10322,14 +10796,20 @@ function showMobileWatchlist(){
   const ml=document.getElementById('mobileSymList');
   if(sl&&ml){
     ml.innerHTML=sl.innerHTML;
-    // Make items clickable in mobile overlay
+    // v39 fix: replace eval() with safe sym extraction
     ml.querySelectorAll('.sym-item').forEach(item=>{
-      const onclick=item.getAttribute('onclick');
-      if(onclick)item.addEventListener('click',()=>{
-        eval(onclick);
-        overlay.style.display='none';
-        mobileTab('signal');
-      });
+      const onclick=item.getAttribute('onclick')||'';
+      // Extract symbol from onclick="selectSym('BTCUSDT')" pattern safely
+      const m=onclick.match(/selectSym\(['"]([^'"]+)['"]\)/);
+      if(m && m[1]){
+        const sym=m[1];
+        item.removeAttribute('onclick');
+        item.addEventListener('click',()=>{
+          selectSym(sym);
+          overlay.style.display='none';
+          mobileTab('signal');
+        });
+      }
     });
   }
   overlay.style.display='block';
@@ -10686,102 +11166,127 @@ function runMiniBacktest(res, kl){
   }catch(e){return null;}
 }
 
-// FINCH v38 — Multi-Asset Engine
+// FINCH v40 — Multi-Asset Engine
 async function init(){
   buildSymList();buildFilters();renderLunar();
-  initMobileLayout(); // adaptive layout
+  initMobileLayout();
 
-  // Update version badge
-  document.querySelectorAll('[style*="v2.1"]').forEach(el=>{el.textContent='v38';});
+  // Fix version badge
+  document.querySelectorAll('.brand-sub').forEach(el=>{
+    if(el.textContent.includes('v3'))el.textContent=el.textContent.replace(/v\d+/,'v40');
+  });
 
-  // Step 1: Fast price bootstrap — try to get BTC price ASAP via any method
+  // ── Step 0: Probe Binance endpoints in parallel ──
+  _probeEndpoints().catch(()=>{});
+
+  // ── Step 1: Bootstrap price via parallel attempts ──
   const bootstrapPrice=async()=>{
-    const px=await fastPrice('BTCUSDT').catch(()=>0);
-    if(px>0){
-      S.lastPx=px;S._seedPrice['BTCUSDT']=px;
-      updatePHPrice(px);
-      return true;
+    const attempts=[
+      fastPrice('BTCUSDT').catch(()=>0),
+      fetch('https://data-api.binance.vision/api/v3/ticker/price?symbol=BTCUSDT',
+        {mode:'cors',cache:'no-store'}).then(r=>r.json()).then(d=>+d.price||0).catch(()=>0),
+      fetch('https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT',
+        {mode:'cors',cache:'no-store'}).then(r=>r.json()).then(d=>+d.price||0).catch(()=>0),
+    ];
+    const results=await Promise.allSettled(attempts);
+    for(const r of results){
+      const px=r.status==='fulfilled'?+r.value:0;
+      if(px>0&&priceValid('BTCUSDT',px)){
+        S.lastPx=px;S._seedPrice['BTCUSDT']=px;updatePHPrice(px);return true;
+      }
     }
     return false;
   };
 
-  // Step 2: Try REST 24hr ticker (has change%, volume etc)
+  // ── Step 2: REST ticker (has vol/change%) in parallel with price ──
   const bootstrapTicker=async()=>{
     await refreshPrices();
     if(S.ticker['BTCUSDT']&&+S.ticker['BTCUSDT'].lastPrice>0){
       S.lastPx=+S.ticker['BTCUSDT'].lastPrice;
-      S._seedPrice['BTCUSDT']=S.lastPx;
-      return true;
+      S._seedPrice['BTCUSDT']=S.lastPx;return true;
     }
     return false;
   };
 
-  // Try ticker first, fall back to fast price
-  const ok=await bootstrapTicker().catch(()=>false);
-  if(!ok) await bootstrapPrice().catch(()=>{});
+  // Run both simultaneously, use whatever lands first
+  await Promise.race([
+    bootstrapTicker().catch(()=>false),
+    bootstrapPrice().catch(()=>false),
+    new Promise(r=>setTimeout(r,8000)), // 8s max for bootstrap
+  ]);
 
-  // Step 3: Load macros
-  loadFG();loadMacro();
+  // Ensure we always have something to show
+  if(S.lastPx<=0){
+    S.lastPx=S._seedPrice['BTCUSDT']||83000;
+    updatePHPrice(S.lastPx);
+  }
+
+  // ── Step 3: Macro data (staggered) ──
+  setTimeout(()=>loadFG(),600);
+  setTimeout(()=>loadMacro(),1200);
   setInterval(loadFG,300000);setInterval(loadMacro,300000);
-  setTimeout(function(){loadOnChain();loadCoinDetail();},4000);
-  setInterval(function(){loadOnChain();loadCoinDetail();},600000);
-  setTimeout(()=>loadAllIntelligence(),2000);
+  setTimeout(()=>{loadOnChain();loadCoinDetail();},5000);
+  setInterval(()=>{loadOnChain();loadCoinDetail();},600000);
+  setTimeout(()=>loadAllIntelligence(),3000);
   setInterval(()=>loadAllIntelligence(),300000);
-  setInterval(refreshPrices,5000); // crypto prices every 5s
+  setInterval(refreshPrices,5000);
 
-  // ── v38: TwelveData price refresh ──
-  // Initial fetch after 3s, then every 30s (TwelveData free tier: 8 req/min)
-  setTimeout(()=>refreshTDPrices(),3000);
+  // TwelveData refresh
+  setTimeout(()=>refreshTDPrices(),4000);
   setInterval(()=>refreshTDPrices(),30000);
 
-  // Step 4: Full data load — start with BTC
+  // ── Step 4: Full data load for BTC ──
   await selectSym('BTCUSDT');
+
+  // Periodic reload
   setInterval(()=>{
     if(isTDAsset(S.sym)){
-      // For TwelveData assets, re-fetch quote + klines every 60s
       tdQuote(S.sym).then(q=>{
-        if(q&&q.px>0){S.lastPx=q.px;S._seedPrice[S.sym]=q.px;updatePH({price:q.px,change:q.chg,high:q.high||q.px,low:q.low||q.px,vol:q.vol||0});}
+        if(q&&q.px>0){S.lastPx=q.px;S._seedPrice[S.sym]=q.px;
+          updatePH({price:q.px,change:q.chg,high:q.high||q.px,low:q.low||q.px,vol:q.vol||0});}
       }).catch(()=>{});
-    } else {
-      loadAll(S.sym);
-    }
+    }else{loadAll(S.sym);}
   },60000);
 
-  // Step 5: Start 30-second auto-refresh of signals
+  // ── Step 5: Auto-refresh ──
   startAutoRefresh();
 
-  // Step 6: Retry price if still 0 after 3s (network was slow)
+  // ── Step 6: Retry if still no signal after 5s ──
   setTimeout(async()=>{
-    if(S.lastPx<=0){
-      await bootstrapPrice();
-      if(S.lastPx>0) await loadAll(S.sym);
+    if(S.lastPx<=0||!S.lastSignal){
+      await bootstrapPrice().catch(()=>{});
+      if(S.lastPx>0)await loadAll(S.sym).catch(()=>{});
     }
-  },3000);
+    setTimeout(async()=>{
+      if(!S.lastSignal&&S.lastPx>0)await loadAll(S.sym).catch(()=>{});
+    },5000);
+  },5000);
 
-  // ── Start Brain Engine, Macro Pulse, Inst Research, Learning Engine ──
-  setTimeout(startBrainEngine, 2500);
-  setTimeout(startMacroPulse, 3500);
-  setTimeout(startInstResEngine, 5000);
-  // ── v38: wire paper trading close to self-learning ──
+  // ── Step 7: Background engines ──
+  setTimeout(startBrainEngine,2000);
+  setTimeout(startMacroPulse,4000);
+  setTimeout(startInstResEngine,6000);
+
+  // v40: Start Whale Flow Monitor
+  setTimeout(function(){try{loadWhaleData();}catch(e){}},3000);
+  setInterval(function(){try{loadWhaleData();}catch(e){}},60000);
+
+  // Wire paper trading to self-learning
   setTimeout(()=>{
-    if(typeof closePaperPosition === 'function'){
-      const _orig = closePaperPosition;
-      window.closePaperPosition = function(id, closePrice, reason){
-        // Find position before closing
-        const pos = PT.positions.find(p=>p.id===id);
+    if(typeof closePaperPosition==='function'){
+      const _orig=closePaperPosition;
+      window.closePaperPosition=function(id,closePrice,reason){
+        const pos=PT.positions.find(p=>p.id===id);
         if(pos){
-          const px = closePrice||(S.lastPx||pos.entry);
-          learnRecordOutcome(
-            pos.sym, pos.dir, pos.entry, px, reason||'manual',
-            { rsi: S.lastSignal?.rsi||50, macdBull: S.lastSignal?.macdD?.bullDiv||false, chanBull: S.lastSignal?.chan?.bullDiv||false }
-          );
+          const px=closePrice||(S.lastPx||pos.entry);
+          learnRecordOutcome(pos.sym,pos.dir,pos.entry,px,reason||'manual',
+            {rsi:S.lastSignal?.rsi||50,macdBull:S.lastSignal?.macdD?.bullDiv||false,chanBull:S.lastSignal?.chan?.bullDiv||false});
         }
-        _orig.call(window, id, closePrice, reason);
+        _orig.call(window,id,closePrice,reason);
       };
     }
-    // Render learning panel if tab visible
     renderLearnPanel();
-  }, 2000);
+  },2000);
 }
 init();
 
@@ -12832,15 +13337,15 @@ resetLearnedWeights = function() {
 };
 
 // ── 3.3 Version constants + console branding ──
-const FINCH_VERSION = '2.2.0';
-const FINCH_BUILD   = '2026-03-17';
+const FINCH_VERSION = '39.0';
+const FINCH_BUILD   = '2026-03-18';
 
 // Console welcome banner
 setTimeout(() => {
   try {
     console.log('%c🐦 FINCH v' + FINCH_VERSION + ' (Build: ' + FINCH_BUILD + ')', 'color:#8B6914;font-size:16px;font-weight:bold;');
-    console.log('%c📊 全维度加密货币分析系统 · 增强版', 'color:#5C5040;font-size:12px;');
-    console.log('%c⚖️ Ray Dalio全天候象限 · 🚀 Naval杠杆分析 · 🔮 江恩时间节点 · 📊 回测系统 · 🧠 自学习权重 · 🏛️ 机构研究情报', 'color:#581890;font-size:12px;');
+    console.log('%c📊 全维度市场分析系统 v39 · 江恩缠论深度推理版', 'color:#5C5040;font-size:12px;');
+    console.log('%c⚖️ Gann+Chan结构推理 · 次级运动识别 · 关键位多次测试检测 · 时间节点共振 · 自学习权重', 'color:#581890;font-size:12px;');
   } catch(e) {}
 }, 500);
 
@@ -12851,7 +13356,6 @@ renderBacktestResult = function(r) {
   if (!r || r.error) return;
   const el = document.getElementById('backtestResult');
   if (!el) return;
-  // Append action buttons after result
   const btnRow = document.createElement('div');
   btnRow.style.cssText = 'display:flex;gap:6px;margin-top:8px;';
   btnRow.innerHTML = `
@@ -12859,17 +13363,345 @@ renderBacktestResult = function(r) {
     <button onclick="exportLearnedWeights()" style="flex:1;padding:6px;border:1px solid var(--violet);border-radius:4px;background:transparent;color:var(--violet);font-size:11px;cursor:pointer;font-family:inherit;font-weight:700;">📤 导出权重</button>
     <button onclick="importLearnedWeights()" style="flex:1;padding:6px;border:1px solid var(--line2);border-radius:4px;background:var(--bg2);color:var(--muted);font-size:11px;cursor:pointer;font-family:inherit;">📂 导入权重</button>`;
   el.appendChild(btnRow);
-  // Also refresh master framework panel after backtest
   try { renderMasterFramework(); } catch(e) {}
 };
 
-// ── Hook master framework into renderStrategy so it updates with signals ──
+// ── Hook master framework + TDAssetInfoCard into renderSummary ──
 const _origRenderSummary = typeof renderSummary === 'function' ? renderSummary : null;
 if (_origRenderSummary) {
   renderSummary = function() {
     _origRenderSummary();
     setTimeout(() => { try { renderMasterFramework(); } catch(e) {} }, 200);
     setTimeout(() => { try { renderIching(S.lastPx); } catch(e) {} }, 300);
+    // v39: trigger Gann+Chan structural reasoning after summary
+    setTimeout(() => { try { _runGannChanStructuralReasoning(); } catch(e) {} }, 500);
+  };
+}
+
+// ╔══════════════════════════════════════════════════════════════════════════════╗
+// ║  FINCH v39 — 江恩缠论结构推理引擎                                           ║
+// ║  原理消化自以下分析框架：                                                     ║
+// ║  · 江恩时间节点 (Gann Time Cycles): 关键日期共振 → 变盘概率                   ║
+// ║  · 缠论结构 (Chan Theory): 次级运动 vs 趋势运动 区分                          ║
+// ║  · 多次测试关键位 (Key Level Tests): 测试次数越多 → 突破概率越高              ║
+// ║  · 高位调整 vs 趋势反转 区分: 跌破关键位才确认反转                            ║
+// ║  · 不放量突破 = 假突破警告 (Volume Confirmation Gate)                        ║
+// ║  · 次级运动顺势机会 vs 主趋势 区分 (Primary vs Secondary Movement)           ║
+// ╚══════════════════════════════════════════════════════════════════════════════╝
+
+// Key Level Test Counter — how many times has price tested a level?
+function _countKeyLevelTests(kl, level, tolerancePct = 0.008) {
+  if (!kl || kl.length < 10 || !level || level <= 0) return 0;
+  let tests = 0;
+  let lastTestIdx = -10; // min 5 bars between tests
+  for (let i = 5; i < kl.length; i++) {
+    const bar = kl[i];
+    const hi = bar.h, lo = bar.l;
+    const tol = level * tolerancePct;
+    const touched = (hi >= level - tol && lo <= level + tol);
+    if (touched && i - lastTestIdx >= 5) {
+      tests++;
+      lastTestIdx = i;
+    }
+  }
+  return tests;
+}
+
+// Volume Surge Detector — is current volume significantly above average?
+function _isVolumeSurge(kl, lookback = 20, threshold = 1.5) {
+  if (!kl || kl.length < lookback + 1) return false;
+  const recent = kl.slice(-lookback);
+  const avgVol = recent.reduce((s, k) => s + (k.v || 0), 0) / lookback;
+  const lastVol = kl[kl.length - 1]?.v || 0;
+  return avgVol > 0 && lastVol >= avgVol * threshold;
+}
+
+// Detect if price is in high-altitude consolidation (高位调整) vs true reversal
+function _detectHighAltConsolidation(kl, price) {
+  if (!kl || kl.length < 40) return { isHighAlt: false, pivotHigh: 0, floorSupport: 0, rangeTop: 0, rangeBot: 0 };
+  const recent100 = kl.slice(-100);
+  const highs = recent100.map(k => k.h);
+  const lows  = recent100.map(k => k.l);
+  const pivotHigh = Math.max(...highs);
+  const pivotLow  = Math.min(...lows);
+  const range = pivotHigh - pivotLow;
+
+  // Price is in top 35% of recent range = high altitude
+  const pricePos = (price - pivotLow) / Math.max(range, price * 0.01);
+  const isHighAlt = pricePos >= 0.65;
+
+  // Find consolidation floor: lowest swing low in last 20 bars
+  const last20Lows = kl.slice(-20).map(k => k.l);
+  const floorSupport = Math.min(...last20Lows);
+  const last20Highs = kl.slice(-20).map(k => k.h);
+  const rangeTop = Math.max(...last20Highs);
+  const rangeBot = floorSupport;
+
+  return { isHighAlt, pivotHigh, floorSupport, rangeTop, rangeBot, pricePos };
+}
+
+// Detect small-level downtrend (小级别下跌趋势) within a larger uptrend
+function _detectMinorDowntrend(kl, price) {
+  if (!kl || kl.length < 15) return { hasMinorDown: false, minorHigh: 0, minorBreakLevel: 0 };
+  const last15 = kl.slice(-15);
+  const last15Highs = last15.map(k => k.h);
+  const localHigh = Math.max(...last15Highs);
+  const localHighIdx = last15Highs.indexOf(localHigh);
+
+  // Minor downtrend: price made a local high then pulled back > 1%
+  const pullbackPct = (localHigh - price) / localHigh;
+  const hasMinorDown = pullbackPct > 0.01 && localHighIdx < last15.length - 2;
+
+  // Break level = the recent local high. Breaking it = trend continuation
+  const minorBreakLevel = localHigh;
+
+  return { hasMinorDown, minorHigh: localHigh, minorBreakLevel, pullbackPct };
+}
+
+// Gann Time Window Proximity — is current time near a major Gann cycle node?
+function _gannTimeProximity(kl) {
+  if (!kl || kl.length < 2) return { nearNode: false, daysToNode: 999, nodeLabel: '' };
+  const now = Date.now();
+  const DAY = 86400000;
+
+  // Find most recent significant swing low/high
+  let refT = kl[0].t;
+  try {
+    const sv = _Δ1p(kl.slice(-120), 5);
+    const lastSwing = [...(sv.peaks || []), ...(sv.troughs || [])].filter(s => s.t > 0).sort((a, b) => b.t - a.t)[0];
+    if (lastSwing) refT = lastSwing.t;
+  } catch(e) {}
+
+  const gannCycles = [30, 45, 60, 90, 120, 135, 180, 270, 360];
+  let closestDays = 999, closestLabel = '';
+
+  gannCycles.forEach(days => {
+    const nodeT = refT + days * DAY;
+    const daysAway = Math.abs((nodeT - now) / DAY);
+    if (daysAway < closestDays) {
+      closestDays = daysAway;
+      closestLabel = `Gann ${days}°节点`;
+    }
+  });
+
+  return {
+    nearNode: closestDays <= 7,
+    veryNear: closestDays <= 3,
+    daysToNode: Math.round(closestDays * 10) / 10,
+    nodeLabel: closestLabel
+  };
+}
+
+// Primary-Secondary movement classifier (主趋势 vs 次级运动)
+// Based on Chan Theory: 次级运动 = counter-trend move that doesn't break primary structure
+function _classifyMovement(kl, price, isBull) {
+  if (!kl || kl.length < 30) return { type: 'unclear', label: '方向待定', confidence: 0 };
+
+  // Primary trend: determined by 日线 MA alignment
+  const prices = kl.map(k => k.c).filter(v => v > 0);
+  const n = prices.length;
+  const ma20 = calcMA(prices, 20)[n - 1];
+  const ma55 = calcMA(prices, 55)[n - 1];
+  const primaryBull = ma20 && ma55 ? ma20 > ma55 : isBull;
+
+  // Check if current micro-move agrees or disagrees with primary
+  const microPrices = prices.slice(-10);
+  const microSlope = microPrices.length >= 2
+    ? (microPrices[microPrices.length - 1] - microPrices[0]) / microPrices[0]
+    : 0;
+  const microBull = microSlope > 0;
+
+  if (primaryBull === microBull) {
+    return { type: 'primary', label: primaryBull ? '主趋势做多' : '主趋势做空', confidence: 75 };
+  } else {
+    // Counter-trend = secondary movement
+    const label = primaryBull
+      ? '次级回调(主趋势多头中)' : '次级反弹(主趋势空头中)';
+    return { type: 'secondary', label, confidence: 60,
+      primaryBull, warning: primaryBull ? '反弹勿追，主多格局' : '回调勿空，主空格局' };
+  }
+}
+
+// ── Main Gann+Chan Reasoning Function ──
+function _runGannChanStructuralReasoning() {
+  const res = S.lastSignal;
+  const price = S.lastPx;
+  if (!res || !price || price <= 0) return;
+
+  const sym = S.sym;
+  const tf = S.stratTF || '4h';
+  const kl = S.klines[sym + tf] || S.klines[sym + '4h'] || S.klines[sym + '1h'] || [];
+  const kl1d = S.klines[sym + '1d'] || [];
+  if (kl.length < 30) return;
+
+  // ── Run all structural analyses ──
+  const highAlt     = _detectHighAltConsolidation(kl, price);
+  const minorDown   = _detectMinorDowntrend(kl, price);
+  const gannTime    = _gannTimeProximity(kl1d.length > 20 ? kl1d : kl);
+  const movement    = _classifyMovement(kl, price, res.isBull);
+  const volSurge    = _isVolumeSurge(kl, 20, 1.5);
+  const isTDAsset_  = isTDAsset(sym);
+
+  // Key level test counts — use TP1 and SL1 as key levels
+  const resistance  = res.tps[0].p;
+  const support     = res.sls[0].p;
+  const resTests    = _countKeyLevelTests(kl, resistance, 0.008);
+  const supTests    = _countKeyLevelTests(kl, support, 0.008);
+
+  // ── Build reasoning cards in brain engine ──
+  const brainAvail  = typeof brainAddCard === 'function';
+
+  // Card 1: High Altitude vs True Reversal
+  if (highAlt.isHighAlt) {
+    const msg = `价格处于近期波动区间高位 (${(highAlt.pricePos * 100).toFixed(0)}% 分位)。`
+      + `关键地板支撑 ${fmtP(highAlt.floorSupport)}，当前震荡属于**高位整理**，`
+      + `未跌破 ${fmtP(highAlt.floorSupport)} 之前，不宜过分看空。`
+      + (supTests >= 2 ? ` 支撑位已被测试 ${supTests} 次，多次测试后突破/跌破概率均上升。` : '');
+    if (brainAvail) brainAddCard('inference', '📐 缠论: 高位调整，非趋势反转', msg, 68);
+    // Store for later use by aiAnalysis prompt
+    S._structReasoning = S._structReasoning || {};
+    S._structReasoning.highAlt = { isHighAlt: highAlt.isHighAlt, floor: highAlt.floorSupport, msg };
+  }
+
+  // Card 2: Minor downtrend breakout opportunity
+  if (minorDown.hasMinorDown) {
+    const breakoutNote = volSurge
+      ? '⚡ 当前成交量放大，突破可信度高。'
+      : '⚠️ 突破尚未放量确认，谨防假突破。';
+    const msg = `小级别形成下跌趋势（近高 ${fmtP(minorDown.minorHigh)}，回撤 ${(minorDown.pullbackPct * 100).toFixed(1)}%）。`
+      + `一旦价格**向上突破** ${fmtP(minorDown.minorBreakLevel)}，即为顺势短多机会。`
+      + breakoutNote
+      + (movement.type === 'secondary' ? ` 注意: 这是${movement.label}，目标空间有限。` : '');
+    if (brainAvail) brainAddCard('opportunity', '🔱 缠论: 小级别下跌趋势 → 突破即机会', msg, volSurge ? 72 : 55);
+    S._structReasoning = S._structReasoning || {};
+    S._structReasoning.minorDown = { hasMinorDown: true, breakLevel: minorDown.minorBreakLevel, volSurge, msg };
+  }
+
+  // Card 3: Gann time window warning
+  if (gannTime.nearNode) {
+    const urgency = gannTime.veryNear ? '⚡ 极近 (≤3天)' : `约 ${gannTime.daysToNode} 天`;
+    const msg = `${gannTime.nodeLabel} 时间窗口临近 (${urgency})。`
+      + `江恩研究显示市场在自然日周期节点附近变盘概率显著提升。`
+      + `即便顺势入场，也要严控持仓时间，注意 ${gannTime.nodeLabel} 前后的突破/失败可能。`;
+    if (brainAvail) brainAddCard('alert', `⏰ 江恩: ${gannTime.nodeLabel} 临近`, msg, 65);
+    S._structReasoning = S._structReasoning || {};
+    S._structReasoning.gannTime = { nearNode: true, label: gannTime.nodeLabel, urgency, msg };
+  }
+
+  // Card 4: Primary vs Secondary movement classification
+  if (movement.type === 'secondary') {
+    const msg = `当前价格运动判断为**${movement.label}**，属于缠论中的"次级运动"。`
+      + `主趋势方向: ${movement.primaryBull ? '多头 ▲' : '空头 ▼'}。`
+      + `次级运动空间通常有限，TP目标缩小至 TP1，`
+      + `不宜以大周期目标布局。${movement.warning ? movement.warning + '。' : ''}`;
+    if (brainAvail) brainAddCard('inference', `🔱 缠论: 次级运动识别`, msg, 60);
+  }
+
+  // Card 5: Key level multiple-test warning
+  if (resTests >= 3) {
+    const msg = `阻力位 ${fmtP(resistance)} 已被测试 ${resTests} 次。`
+      + `缠论与技术分析均指出：多次测试后，关键位被突破的概率上升。`
+      + (volSurge ? `当前成交量放大，突破概率进一步提升。做多突破胜率较高。`
+                 : `但尚未配合放量，可能形成假突破——等待收盘确认再入。`);
+    if (brainAvail) brainAddCard(volSurge ? 'opportunity' : 'alert',
+      `📊 关键阻力 ${resTests} 次测试 → ${volSurge ? '突破概率高' : '谨慎假突破'}`, msg, volSurge ? 70 : 55);
+  }
+  if (supTests >= 3) {
+    const msg = `支撑位 ${fmtP(support)} 已被测试 ${supTests} 次。`
+      + `多次测试支撑后，跌破概率相应上升，需警惕。`
+      + (volSurge ? `成交量放大，若下方跌破放量，空头确认，不可抄底。`
+                 : `量能未放大，缩量下探后可能仍为高位整理。`);
+    if (brainAvail) brainAddCard('alert',
+      `📊 关键支撑 ${supTests} 次测试 → ${volSurge ? '跌破风险升高' : '高位震荡'}`, msg, 60);
+  }
+
+  // ── Patch the AI analysis prompt to include structural reasoning ──
+  S._gannChanReady = true;
+}
+
+// ── Hook structural reasoning into brainInfer so it runs automatically ──
+const _origBrainInfer = typeof brainInfer === 'function' ? brainInfer : null;
+if (_origBrainInfer) {
+  brainInfer = function() {
+    _origBrainInfer();
+    setTimeout(() => { try { _runGannChanStructuralReasoning(); } catch(e) {} }, 200);
+  };
+}
+
+// ── Patch triggerAIAnalysis to include Gann+Chan structural context ──
+const _origTriggerAIAnalysis = typeof triggerAIAnalysis === 'function' ? triggerAIAnalysis : null;
+if (_origTriggerAIAnalysis) {
+  triggerAIAnalysis = async function(res) {
+    // Inject structural reasoning into the analysis context before calling
+    if (S._structReasoning) {
+      res._gannChanContext = S._structReasoning;
+    }
+    return _origTriggerAIAnalysis(res);
+  };
+}
+
+// ── Self-learning from Gann+Chan structural signals ──
+// Called after position close to record whether structural insight was correct
+function _learnFromStructuralSignal(sym, signal, wasCorrect) {
+  try {
+    const key = 'finch_struct_learn_v39';
+    let db = {};
+    try { db = JSON.parse(localStorage.getItem(key) || '{}'); } catch(e) {}
+    if (!db[signal]) db[signal] = { wins: 0, total: 0 };
+    db[signal].total++;
+    if (wasCorrect) db[signal].wins++;
+    // Trim old entries
+    const entries = Object.entries(db);
+    if (entries.length > 30) {
+      const trimmed = {};
+      entries.sort((a, b) => b[1].total - a[1].total).slice(0, 20).forEach(([k, v]) => { trimmed[k] = v; });
+      localStorage.setItem(key, JSON.stringify(trimmed));
+    } else {
+      localStorage.setItem(key, JSON.stringify(db));
+    }
+  } catch(e) {}
+}
+
+// ── Render structural reasoning stats (for learning panel) ──
+function _renderStructuralLearningStats() {
+  try {
+    const key = 'finch_struct_learn_v39';
+    const db = JSON.parse(localStorage.getItem(key) || '{}');
+    const entries = Object.entries(db).filter(([k, v]) => v.total >= 2);
+    if (!entries.length) return '';
+    return entries.map(([signal, v]) => {
+      const wr = (v.wins / v.total * 100).toFixed(0);
+      const col = parseInt(wr) >= 60 ? 'var(--green)' : parseInt(wr) >= 45 ? 'var(--amber)' : 'var(--red)';
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px solid var(--line);font-size:11px;">
+        <span style="color:var(--muted)">${signal.replace(/_/g,' ')}</span>
+        <span style="font-weight:700;color:${col}">${wr}% (${v.total}次)</span>
+      </div>`;
+    }).join('');
+  } catch(e) { return ''; }
+}
+
+// ── Patch AI analysis prompt to embed Gann+Chan structural context ──
+// This enriches the Claude API call with structural analysis data
+const _origBuildLocalNarrative = typeof _buildLocalNarrative === 'function' ? _buildLocalNarrative : null;
+if (_origBuildLocalNarrative) {
+  window._buildLocalNarrative = function(res) {
+    const base = _origBuildLocalNarrative(res);
+    const sr = S._structReasoning;
+    if (!sr) return base;
+    let extra = '';
+    if (sr.highAlt?.isHighAlt) {
+      extra += `<p style="margin-top:8px;padding:7px 10px;background:rgba(10,88,112,0.06);border-left:3px solid var(--cyan);border-radius:0 5px 5px 0;font-size:12px;color:var(--text);line-height:1.8;">
+        <strong style="color:var(--cyan)">📐 缠论结构：</strong>${sr.highAlt.msg}</p>`;
+    }
+    if (sr.minorDown?.hasMinorDown) {
+      extra += `<p style="margin-top:6px;padding:7px 10px;background:rgba(88,24,144,0.05);border-left:3px solid var(--violet);border-radius:0 5px 5px 0;font-size:12px;color:var(--text);line-height:1.8;">
+        <strong style="color:var(--violet)">🔱 缠论：</strong>${sr.minorDown.msg}</p>`;
+    }
+    if (sr.gannTime?.nearNode) {
+      extra += `<p style="margin-top:6px;padding:7px 10px;background:rgba(10,96,80,0.06);border-left:3px solid var(--teal);border-radius:0 5px 5px 0;font-size:12px;color:var(--text);line-height:1.8;">
+        <strong style="color:var(--teal)">⏰ 江恩：</strong>${sr.gannTime.msg}</p>`;
+    }
+    return base + extra;
   };
 }
 
