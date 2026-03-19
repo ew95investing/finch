@@ -1,12 +1,12 @@
 <!-- 
-  FINCH v41 — 全维度市场分析系统 (加密 · 美股 · 马股 · 新加坡股 · 黄金 · 石油 · 白银 · 外汇)
-  v41 升级：宏观大方向 · 分析有效期 · 方向失效预警三大模块
+  FINCH v42 — 全维度市场分析系统 (加密 · 黄金 · 白银 · 石油)
+  v42 升级：移除美股/马股/新股，保留 USD/SGD · SGD/MYR 汇率，专注加密 + 贵金属 + 原油实时分析
   GitHub Pages: place this file as index.html in your repo root
   No build step · No npm · No server · Pure HTML/CSS/JS
-  Data: Binance WebSocket + REST (Crypto) · TwelveData API (Stocks/Forex/Commodities)
+  Data: Binance WebSocket + REST (Crypto) · Alpha Vantage API (Gold/Silver/Oil/Forex)
   CoinGecko · DeFi Llama · Alternative.me
-  TwelveData API Key: stored in localStorage (finch_td_key) — never hardcoded
-  © FINCH v39 — For educational / research purposes only
+  Alpha Vantage API Key: stored in localStorage (finch_av_key) — never hardcoded
+  © FINCH v42 — For educational / research purposes only
   Not financial advice
 -->
 <!DOCTYPE html>
@@ -14,10 +14,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="robots" content="noindex,nofollow">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://fonts.googleapis.com https://fonts.gstatic.com https://api.binance.com https://api1.binance.com https://api2.binance.com https://api3.binance.com https://api4.binance.com https://data-api.binance.vision https://data-stream.binance.vision https://fapi.binance.com https://api.alternative.me https://api.coingecko.com https://api.llama.fi https://corsproxy.io https://api.allorigins.win https://thingproxy.freeboard.io https://api.anthropic.com https://api.blockchain.info https://api.twelvedata.com wss://stream.binance.com wss://data-stream.binance.vision; connect-src 'self' https: wss: data: blob:; frame-ancestors 'none';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://fonts.googleapis.com https://fonts.gstatic.com https://api.binance.com https://api1.binance.com https://api2.binance.com https://api3.binance.com https://api4.binance.com https://data-api.binance.vision https://data-stream.binance.vision https://fapi.binance.com https://api.alternative.me https://api.coingecko.com https://api.llama.fi https://corsproxy.io https://api.allorigins.win https://thingproxy.freeboard.io https://api.anthropic.com https://api.blockchain.info https://www.alphavantage.co https://cdn.jsdelivr.net https://open.er-api.com wss://stream.binance.com wss://data-stream.binance.vision; connect-src 'self' https: wss: data: blob:; frame-ancestors 'none';">
 <meta http-equiv="X-Frame-Options" content="DENY">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>FINCH v41 — 全维度市场分析 · 加密·股票·外汇·商品</title>
+<title>FINCH v42 — 全维度市场分析 · 加密·黄金·白银·石油</title>
 
 <!-- ═══ PWA / iOS APP META ═══ -->
 <meta name="mobile-web-app-capable" content="yes">
@@ -26,7 +26,7 @@
 <meta name="apple-mobile-web-app-title" content="FINCH">
 <meta name="application-name" content="FINCH">
 <meta name="theme-color" content="#F0EDE6">
-<meta name="description" content="FINCH v40 — 全维度市场分析系统 加密·股票·外汇·商品">
+<meta name="description" content="FINCH v42 — 全维度市场分析系统 加密·黄金·白银·石油">
 <meta name="format-detection" content="telephone=no">
 
 <!-- iOS Icons (inline SVG-generated, no external file needed) -->
@@ -88,31 +88,7 @@
   --fs-base:16px;--fs-sm:14px;--fs-xs:13px;--fs-xxs:12px;--fs-label:12px;
   --radius:6px;--radius-lg:10px;
 }
-/* ══ INSTITUTIONAL RESEARCH MODULE ══ */
-.inst-badge{
-  font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px;cursor:pointer;
-  background:rgba(10,88,112,0.08);border:1px solid rgba(10,88,112,0.25);
-  color:var(--cyan);letter-spacing:0.5px;transition:all .15s;user-select:none;
-}
-.inst-badge:hover{background:rgba(10,88,112,0.18);border-color:var(--cyan);}
-.inst-badge.active{background:var(--cyan);color:#fff;border-color:var(--cyan);}
-.inst-badge.updated{border-color:var(--green);color:var(--teal);}
-.inst-badge.loading{opacity:.5;cursor:wait;}
-.inst-source-card{
-  background:var(--card);border:1px solid var(--card-bd);border-radius:5px;
-  padding:10px 12px;margin-bottom:7px;box-shadow:var(--shadow);
-}
-.inst-source-name{
-  font-size:11px;font-weight:700;color:var(--cyan);letter-spacing:1px;
-  text-transform:uppercase;margin-bottom:4px;
-}
-.inst-source-body{font-size:11px;color:var(--text);line-height:1.75;}
-.inst-synthesis{
-  font-size:12px;color:var(--text);line-height:1.8;
-  padding:10px 12px;background:var(--iching-bg);
-  border-left:3px solid var(--cyan);border-radius:0 5px 5px 0;
-  margin-bottom:8px;
-}
+/* inst-research CSS removed v41 */
 .inst-tag{
   display:inline-block;font-size:9px;font-weight:700;padding:1px 5px;border-radius:2px;
   margin-right:3px;margin-top:3px;
@@ -1215,10 +1191,14 @@ canvas.main-c{width:100%!important;}
   </div>
 
   <div class="topbar-right">
-    <span style="font-size:9px;color:var(--dim);padding:2px 6px;border:1px solid var(--line2);border-radius:3px;letter-spacing:.5px;">v38</span>
+    <span style="font-size:9px;color:var(--dim);padding:2px 6px;border:1px solid var(--line2);border-radius:3px;letter-spacing:.5px;">v42</span>
     <span class="clock-el" id="clockEl">--:--:-- MYT</span>
     <div class="conn-pill"><div class="conn-dot" id="connDot"></div><span id="connLbl" style="font-size:10px">Connecting</span></div>
-    <div class="td-status"><div class="td-dot" id="tdDot"></div><span id="tdLbl" style="font-size:10px">TwelveData</span></div>
+    <div class="td-status" onclick="showAVKeyDialog()" title="设置 Alpha Vantage Key（石油K线需要）" style="cursor:pointer;">
+      <div class="td-dot" id="tdDot"></div>
+      <span id="tdLbl" style="font-size:10px">AlphaVantage</span>
+      <span style="font-size:9px;color:var(--dim);margin-left:2px;">🔑</span>
+    </div>
   </div>
 </div>
 
@@ -1285,15 +1265,11 @@ canvas.main-c{width:100%!important;}
     <button class="acb-btn active" onclick="setAssetFilter('all',this)" title="全部">全部</button>
     <div class="acb-divider"></div>
     <button class="acb-btn" onclick="setAssetFilter('crypto',this)" title="加密货币">🪙</button>
-    <button class="acb-btn" onclick="setAssetFilter('us_stock',this)" title="美股">🇺🇸</button>
-    <button class="acb-btn" onclick="setAssetFilter('my_stock',this)" title="马股">🇲🇾</button>
-    <button class="acb-btn" onclick="setAssetFilter('sg_stock',this)" title="新股">🇸🇬</button>
-    <button class="acb-btn" onclick="setAssetFilter('forex',this)" title="外汇">💱</button>
-    <button class="acb-btn" onclick="setAssetFilter('commodity',this)" title="商品">🥇</button>
+    <button class="acb-btn" onclick="setAssetFilter('market',this)" title="黄金·白银·汇率·原油">🌐</button>
   </div>
   <div id="symList"></div>
   <div class="add-sym">
-    <input id="custInput" placeholder="如 AAPL · BTCUSDT · USD/SGD" onkeydown="if(event.key==='Enter')addCustom()">
+    <input id="custInput" placeholder="如 BTCUSDT · XAU/USD · USD/SGD" onkeydown="if(event.key==='Enter')addCustom()">
     <button onclick="addCustom()">＋ 添加 Add</button>
   </div>
 </div>
@@ -1325,9 +1301,21 @@ canvas.main-c{width:100%!important;}
     <button class="strat-tab" onclick="setStrat('15m',this)">⚡ 15M</button>
     <button class="strat-tab" onclick="setStrat('30m',this)">🔄 30M</button>
     <button class="strat-tab" onclick="setStrat('1h',this)">🕐 1H</button>
+    <button class="strat-tab" onclick="setStrat('2h',this)">⏱ 2H</button>
     <button class="strat-tab active" onclick="setStrat('4h',this)">📊 4H</button>
+    <button class="strat-tab" onclick="setStrat('8h',this)">📈 8H</button>
     <button class="strat-tab" onclick="setStrat('1d',this)">📅 1D</button>
     <button class="strat-tab" onclick="setStrat('1w',this)">🌐 1W</button>
+  </div>
+  <!-- Target Date Row -->
+  <div style="padding:6px 14px 8px;display:flex;align-items:center;gap:8px;background:var(--bg1);border-bottom:1px solid var(--line2);">
+    <span style="font-size:10px;color:var(--muted);font-weight:700;letter-spacing:1px;white-space:nowrap">🎯 交易截止日</span>
+    <input type="date" id="tradeDeadlineInput"
+      style="font-family:inherit;font-size:11px;padding:3px 8px;border:1px solid var(--line2);border-radius:4px;background:var(--bg1);color:var(--text);cursor:pointer;flex:1;max-width:140px;"
+      onchange="setTradeDeadline(this.value)"
+      title="设定交易截止日期 — FINCH将分析该日期前的最佳策略">
+    <span id="tradeDeadlineLabel" style="font-size:10px;color:var(--muted)">不限期</span>
+    <button onclick="clearTradeDeadline()" id="tradeDeadlineClearBtn" style="display:none;padding:2px 7px;border:1px solid var(--line2);border-radius:3px;background:transparent;color:var(--muted);font-family:inherit;font-size:10px;cursor:pointer;">✕</button>
   </div>
   <!-- Strategy content scrolls -->
   <div class="strategy-scroll">
@@ -1414,41 +1402,8 @@ canvas.main-c{width:100%!important;}
     <div id="macroPulseMeta" style="padding:0 14px 8px;"></div>
   </div>
 
-  <!-- ══ INSTITUTIONAL RESEARCH HUB ══ -->
-  <div id="instResPanel" style="background:linear-gradient(135deg,rgba(10,88,112,0.05),rgba(10,96,80,0.05));border-bottom:2px solid var(--line2);">
-    <div style="padding:10px 14px 6px;display:flex;align-items:center;justify-content:space-between;">
-      <div>
-        <div style="font-size:11px;font-weight:700;letter-spacing:2px;color:var(--cyan);text-transform:uppercase;">🏛️ 机构研究 · Institutional Intelligence</div>
-        <div style="font-size:10px;color:var(--dim);margin-top:2px;">Man · AQR · Citadel · GMO · Apollo · VisualCapitalist · Haver</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:6px;">
-        <span id="instResTimer" style="font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums;">30:00</span>
-        <button onclick="refreshInstRes(true)" style="padding:3px 9px;border:1px solid var(--cyan);border-radius:3px;background:rgba(10,88,112,0.08);color:var(--cyan);font-family:inherit;font-size:10px;cursor:pointer;font-weight:700;">↺ 研究</button>
-        <button onclick="toggleInstRes()" id="instResToggleBtn" style="padding:3px 9px;border:1px solid var(--line2);border-radius:3px;background:transparent;color:var(--muted);font-family:inherit;font-size:10px;cursor:pointer;">⌄</button>
-      </div>
-    </div>
-    <div id="instResBody" style="display:block;">
-      <!-- Source badges -->
-      <div style="padding:4px 14px 6px;display:flex;flex-wrap:wrap;gap:4px;" id="instResBadges">
-        <span class="inst-badge" data-src="man" onclick="showInstDetail('man')" title="Man Institute">Man</span>
-        <span class="inst-badge" data-src="aqr" onclick="showInstDetail('aqr')" title="AQR Capital">AQR</span>
-        <span class="inst-badge" data-src="citadel" onclick="showInstDetail('citadel')" title="Citadel">Citadel</span>
-        <span class="inst-badge" data-src="gmo" onclick="showInstDetail('gmo')" title="GMO">GMO</span>
-        <span class="inst-badge" data-src="apollo" onclick="showInstDetail('apollo')" title="Apollo Academy">Apollo</span>
-        <span class="inst-badge" data-src="gs" onclick="showInstDetail('gs')" title="Goldman Sachs Research">GS</span>
-        <span class="inst-badge" data-src="ms" onclick="showInstDetail('ms')" title="Morgan Stanley Research">MS</span>
-      </div>
-      <!-- Synthesis output -->
-      <div id="instResContent" style="padding:0 14px 8px;font-size:12px;color:var(--text);line-height:1.8;">
-        <span style="color:var(--muted);font-size:11px">🏛️ 点击「研究」读取最新机构观点 · 每30分钟自动更新</span>
-      </div>
-      <!-- Individual source detail (expandable) -->
-      <div id="instResDetail" style="display:none;padding:0 14px 10px;"></div>
-      <div id="instResMeta" style="padding:0 14px 8px;"></div>
-    </div>
-  </div>
 
-  <!-- TIMELINE at top of right panel -->
+  <!-- TIMELINE  <!-- TIMELINE at top of right panel -->
   <div style="background:var(--bg1);border-bottom:2px solid var(--gold);">
     <div style="padding:10px 14px 4px;display:flex;align-items:center;justify-content:space-between;gap:6px;">
       <div style="font-size:11px;letter-spacing:2px;color:var(--gold);font-weight:700;text-transform:uppercase">📅 时间节点 · Timeline</div>
@@ -1848,7 +1803,7 @@ canvas.main-c{width:100%!important;}
     </button>
 
     <div id="summaryBody"><div style="color:var(--muted);font-size:12px">⏳ 加载中...</div></div>
-    <!-- v39: TwelveData asset info card (shown for US/MY/SG stocks, forex, commodities) -->
+    <!-- v42: Alpha Vantage asset info card (forex + commodities) -->
     <div id="tdAssetInfoCard" style="display:none;"></div>
   </div>
 
@@ -2180,273 +2135,546 @@ function buildStrategyMemo(tf){
 }
 
 // ═══════════════════════════════════════════════════════════════════
-//  FINCH v38 — MULTI-ASSET ENGINE
-//  Asset classes: crypto (Binance), stocks (TwelveData), forex, commodities
+//  FINCH v42 — MULTI-ASSET ENGINE  (final clean architecture)
+//
+//  Data sources (chosen for reliability + accuracy):
+//
+//  🟡 GOLD (XAU/USD):   Binance Futures XAUUSDT  — real-time WS, free ✅
+//  ⚪ SILVER (XAG/USD): Binance Futures XAGUSDT  — real-time WS, free ✅
+//  💱 USD/SGD:          Alpha Vantage CER         — real-time, 25/day
+//  💱 SGD/MYR:          AV cross (USD/MYR÷USD/SGD)+ open.er-api backup
+//  🛢️ WTI/Brent:        Alpha Vantage WTI/BRENT   — daily close
+//
+//  Kline history: AV FX_DAILY for all → expand to intraday locally
+//  Refresh: Binance futures ticker every 3s (metals), er-api every 5min (forex)
 // ═══════════════════════════════════════════════════════════════════
 
-// TwelveData API — key stored in localStorage for security
-// Set via: localStorage.setItem('finch_td_key','your_key')
-const TD_BASE = 'https://api.twelvedata.com';
-// v39: key loaded at runtime from localStorage, with fallback to built-in key
-function _getTDKey() {
-  try { const k = localStorage.getItem('finch_td_key'); if(k && k.length > 8) return k; } catch(e){}
-  return '337e585e74004139b7023d78f2e1d228'; // default key (rate limited)
+// ── Alpha Vantage key ─────────────────────────────────────────────
+const AV_BASE = 'https://www.alphavantage.co/query';
+function _getAVKey() {
+  try { const k = localStorage.getItem('finch_av_key'); if(k && k.length > 6) return k; } catch(e){}
+  return 'ZXOCI6XHFLRX1IKN';
 }
-Object.defineProperty(window, 'TD_KEY', { get: _getTDKey, configurable: false });
+Object.defineProperty(window, 'AV_KEY', { get: _getAVKey, configurable: false });
+function _getTDKey() { return _getAVKey(); }
 
-// Asset class definitions
+// ── Asset class definitions ───────────────────────────────────────
 const ASSET_CLASSES = {
-  crypto:    { label:'🪙 加密 Crypto',     color:'var(--indigo)' },
-  us_stock:  { label:'🇺🇸 美股 US',         color:'var(--green)'  },
-  my_stock:  { label:'🇲🇾 马股 MY',         color:'var(--teal)'   },
-  sg_stock:  { label:'🇸🇬 新股 SG',         color:'var(--blue)'   },
-  forex:     { label:'💱 外汇 Forex',       color:'var(--cyan)'   },
-  commodity: { label:'🪙 商品 Commodity',   color:'var(--gold)'   },
+  crypto:    { label:'🪙 加密 Crypto',   color:'var(--indigo)' },
+  metal:     { label:'🥇 黄金白银',      color:'var(--gold)'   },
+  forex:     { label:'💱 汇率 FX',       color:'var(--cyan)'   },
+  commodity: { label:'🛢️ 原油',         color:'var(--amber)'  },
 };
 
-// Interval mapping: Binance → TwelveData
-const TD_IV_MAP = {'15m':'15min','30m':'30min','1h':'1h','4h':'4h','1d':'1day','1w':'1week'};
-
-// Full PAIRS — crypto uses Binance, others use TwelveData
-const PAIRS=[
-  // ── Crypto (Binance) ──
-  {s:'BTCUSDT',  b:'BTC',  n:'Bitcoin',      cls:'crypto'},
-  {s:'ETHUSDT',  b:'ETH',  n:'Ethereum',      cls:'crypto'},
-  {s:'SOLUSDT',  b:'SOL',  n:'Solana',        cls:'crypto'},
-  {s:'BNBUSDT',  b:'BNB',  n:'BNB',           cls:'crypto'},
-  {s:'XRPUSDT',  b:'XRP',  n:'Ripple',        cls:'crypto'},
-  {s:'DOGEUSDT', b:'DOGE', n:'Dogecoin',      cls:'crypto'},
-  {s:'ADAUSDT',  b:'ADA',  n:'Cardano',       cls:'crypto'},
-  {s:'AVAXUSDT', b:'AVAX', n:'Avalanche',     cls:'crypto'},
-  {s:'DOTUSDT',  b:'DOT',  n:'Polkadot',      cls:'crypto'},
-  {s:'LINKUSDT', b:'LINK', n:'Chainlink',     cls:'crypto'},
-  {s:'MATICUSDT',b:'MATIC',n:'Polygon',       cls:'crypto'},
-  {s:'LTCUSDT',  b:'LTC',  n:'Litecoin',      cls:'crypto'},
-  {s:'ATOMUSDT', b:'ATOM', n:'Cosmos',        cls:'crypto'},
-  {s:'NEARUSDT', b:'NEAR', n:'NEAR Protocol', cls:'crypto'},
-  // ── US Stocks (TwelveData) ──
-  {s:'AAPL',  b:'AAPL',  n:'Apple Inc.',           cls:'us_stock', exchange:'NASDAQ', currency:'USD'},
-  {s:'NVDA',  b:'NVDA',  n:'NVIDIA Corp.',          cls:'us_stock', exchange:'NASDAQ', currency:'USD'},
-  {s:'MSFT',  b:'MSFT',  n:'Microsoft Corp.',       cls:'us_stock', exchange:'NASDAQ', currency:'USD'},
-  {s:'TSLA',  b:'TSLA',  n:'Tesla Inc.',            cls:'us_stock', exchange:'NASDAQ', currency:'USD'},
-  {s:'AMZN',  b:'AMZN',  n:'Amazon.com Inc.',       cls:'us_stock', exchange:'NASDAQ', currency:'USD'},
-  {s:'GOOGL', b:'GOOGL', n:'Alphabet Inc.',         cls:'us_stock', exchange:'NASDAQ', currency:'USD'},
-  {s:'META',  b:'META',  n:'Meta Platforms',        cls:'us_stock', exchange:'NASDAQ', currency:'USD'},
-  {s:'SPY',   b:'SPY',   n:'S&P 500 ETF',           cls:'us_stock', exchange:'NYSE',   currency:'USD'},
-  {s:'QQQ',   b:'QQQ',   n:'Nasdaq 100 ETF',        cls:'us_stock', exchange:'NASDAQ', currency:'USD'},
-  // ── Malaysia Stocks (TwelveData — Bursa Malaysia) ──
-  {s:'1155:MYX', b:'MBB',  n:'Maybank',             cls:'my_stock', exchange:'MYX', currency:'MYR', tdSym:'1155:MYX'},
-  {s:'5347:MYX', b:'TM',   n:'Telekom Malaysia',    cls:'my_stock', exchange:'MYX', currency:'MYR', tdSym:'5347:MYX'},
-  {s:'5168:MYX', b:'HARTA',n:'Hartalega',           cls:'my_stock', exchange:'MYX', currency:'MYR', tdSym:'5168:MYX'},
-  {s:'7113:MYX', b:'PBBANK',n:'Public Bank',        cls:'my_stock', exchange:'MYX', currency:'MYR', tdSym:'7113:MYX'},
-  {s:'5183:MYX', b:'PETRONAS',n:'Petronas Gas',     cls:'my_stock', exchange:'MYX', currency:'MYR', tdSym:'5183:MYX'},
-  // ── Singapore Stocks (TwelveData — SGX) ──
-  {s:'D05:SGX',  b:'DBS',  n:'DBS Bank',            cls:'sg_stock', exchange:'SGX', currency:'SGD', tdSym:'D05:SGX'},
-  {s:'O39:SGX',  b:'OCBC', n:'OCBC Bank',           cls:'sg_stock', exchange:'SGX', currency:'SGD', tdSym:'O39:SGX'},
-  {s:'U11:SGX',  b:'UOB',  n:'United Overseas Bank',cls:'sg_stock', exchange:'SGX', currency:'SGD', tdSym:'U11:SGX'},
-  {s:'C6L:SGX',  b:'SIA',  n:'Singapore Airlines',  cls:'sg_stock', exchange:'SGX', currency:'SGD', tdSym:'C6L:SGX'},
-  {s:'Z74:SGX',  b:'ST',   n:'Singapore Telecom',   cls:'sg_stock', exchange:'SGX', currency:'SGD', tdSym:'Z74:SGX'},
-  // ── Forex (TwelveData) ──
-  {s:'USD/SGD',  b:'USDSGD',n:'USD/SGD',            cls:'forex', tdSym:'USD/SGD'},
-  {s:'USD/MYR',  b:'USDMYR',n:'USD/MYR',            cls:'forex', tdSym:'USD/MYR'},
-  {s:'EUR/USD',  b:'EURUSD',n:'EUR/USD',            cls:'forex', tdSym:'EUR/USD'},
-  {s:'GBP/USD',  b:'GBPUSD',n:'GBP/USD',           cls:'forex', tdSym:'GBP/USD'},
-  {s:'USD/JPY',  b:'USDJPY',n:'USD/JPY',            cls:'forex', tdSym:'USD/JPY'},
-  {s:'SGD/MYR',  b:'SGDMYR',n:'SGD/MYR',           cls:'forex', tdSym:'SGD/MYR'},
-  // ── Commodities (TwelveData) ──
-  {s:'XAU/USD',  b:'GOLD',  n:'Gold (黄金)',         cls:'commodity', tdSym:'XAU/USD'},
-  {s:'XAG/USD',  b:'SILVER',n:'Silver (白银)',       cls:'commodity', tdSym:'XAG/USD'},
-  {s:'WTI/USD',  b:'OIL',   n:'Crude Oil WTI (石油)',cls:'commodity', tdSym:'CL1!'},
-  {s:'BRENT/USD',b:'BRENT', n:'Brent Crude (布伦特)',cls:'commodity', tdSym:'BZ1!'},
+// ── PAIRS ─────────────────────────────────────────────────────────
+// cls:'crypto' → Binance Spot WS (existing engine, unchanged)
+// cls:'metal'  → Binance Futures fapi.binance.com (XAUUSDT/XAGUSDT)
+//                real-time, free, same infrastructure as crypto
+// cls:'forex'  → Alpha Vantage CURRENCY_EXCHANGE_RATE + open.er-api backup
+// cls:'commodity' → Alpha Vantage WTI/BRENT function
+const PAIRS = [
+  // ── Crypto (Binance Spot) ──────────────────────────────────────
+  {s:'BTCUSDT',  b:'BTC',  n:'Bitcoin',               cls:'crypto'},
+  {s:'ETHUSDT',  b:'ETH',  n:'Ethereum',               cls:'crypto'},
+  {s:'SOLUSDT',  b:'SOL',  n:'Solana',                 cls:'crypto'},
+  {s:'BNBUSDT',  b:'BNB',  n:'BNB',                    cls:'crypto'},
+  {s:'XRPUSDT',  b:'XRP',  n:'Ripple',                 cls:'crypto'},
+  {s:'DOGEUSDT', b:'DOGE', n:'Dogecoin',               cls:'crypto'},
+  {s:'ADAUSDT',  b:'ADA',  n:'Cardano',                cls:'crypto'},
+  {s:'AVAXUSDT', b:'AVAX', n:'Avalanche',              cls:'crypto'},
+  {s:'DOTUSDT',  b:'DOT',  n:'Polkadot',               cls:'crypto'},
+  {s:'LINKUSDT', b:'LINK', n:'Chainlink',              cls:'crypto'},
+  {s:'MATICUSDT',b:'MATIC',n:'Polygon',                cls:'crypto'},
+  {s:'LTCUSDT',  b:'LTC',  n:'Litecoin',               cls:'crypto'},
+  {s:'ATOMUSDT', b:'ATOM', n:'Cosmos',                 cls:'crypto'},
+  {s:'NEARUSDT', b:'NEAR', n:'NEAR Protocol',          cls:'crypto'},
+  // ── Metals (Binance Futures — REAL-TIME, same infra as crypto) ─
+  // fSym = Binance futures symbol for price/klines
+  {s:'XAU/USD', b:'GOLD',  n:'Gold (黄金)',    cls:'metal', fSym:'XAUUSDT', avFrom:'XAU', avTo:'USD'},
+  {s:'XAG/USD', b:'SILVER',n:'Silver (白银)',  cls:'metal', fSym:'XAGUSDT', avFrom:'XAG', avTo:'USD'},
+  // ── Forex (Alpha Vantage + open.er-api backup) ─────────────────
+  {s:'USD/SGD', b:'USDSGD', n:'USD/SGD', cls:'forex', avFrom:'USD', avTo:'SGD'},
+  {s:'SGD/MYR', b:'SGDMYR', n:'SGD/MYR', cls:'forex', avCross:['USD','MYR','USD','SGD']},
+  // ── Oil (Alpha Vantage WTI/BRENT) ──────────────────────────────
+  {s:'WTI/USD',   b:'OIL',  n:'Crude Oil WTI (石油)', cls:'commodity', avFunc:'WTI'},
+  {s:'BRENT/USD', b:'BRENT',n:'Brent Crude (布伦特)',  cls:'commodity', avFunc:'BRENT'},
 ];
 
-// Helper: is this a non-crypto asset?
-function isTDAsset(sym){ const p=PAIRS.find(x=>x.s===sym); return p && p.cls !== 'crypto'; }
-function getPair(sym){ return PAIRS.find(x=>x.s===sym)||null; }
-function getTDSym(sym){ const p=getPair(sym); return p && (p.tdSym||p.s); }
+// ── Helpers ───────────────────────────────────────────────────────
+function isTDAsset(sym){ const p=PAIRS.find(x=>x.s===sym); return p && p.cls!=='crypto'; }
+function getPair(sym)  { return PAIRS.find(x=>x.s===sym)||null; }
+function getTDSym(sym) { const p=getPair(sym); return p?(p.avFrom?p.avFrom+'/'+p.avTo:p.s):sym; }
 function getAssetClass(sym){ const p=getPair(sym); return p?p.cls:'crypto'; }
 
-// Current filter
-let _assetFilter = 'all'; // 'all' | 'crypto' | 'us_stock' | 'my_stock' | 'sg_stock' | 'forex' | 'commodity'
+let _assetFilter = 'all';
 
-// ─────────────────────────────────────────────
-//  TWELVEDATA API ENGINE
-// ─────────────────────────────────────────────
-const _tdCache = {}; // key: sym+iv → {data, ts}
+// ── Caches & constants ────────────────────────────────────────────
+const _tdCache      = {};
+const _avKlCache    = {};
+const _avQuoteCache = {};
+const AV_QUOTE_TTL  = 30000;   // 30s quote TTL
+const AV_KLINE_TTL  = 300000;  // 5min kline TTL
 
-async function tdFetch(path) {
-  const sep = path.includes('?') ? '&' : '?';
-  const url = `${TD_BASE}${path}${sep}apikey=${TD_KEY}`;
-  try {
-    const r = await tryFetch(url, 10000);
-    const d = await r.json();
-    if(d.status === 'error') throw new Error(d.message || 'TwelveData error');
-    return d;
-  } catch(e) {
-    // Try via CORS proxy if direct fails
+// ── Low-level fetch with CORS proxy fallback ──────────────────────
+async function _fetchWithProxies(url, timeout=12000) {
+  const proxies = [
+    u => u,
+    u => `https://corsproxy.io/?${encodeURIComponent(u)}`,
+    u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+  ];
+  let lastErr;
+  for(const fn of proxies) {
     try {
-      const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
-      const r2 = await tryFetch(proxyUrl, 10000);
-      const d2 = await r2.json();
-      if(d2.status === 'error') throw new Error(d2.message || 'TwelveData proxy error');
-      return d2;
-    } catch(e2) {
-      throw e2;
+      const r = await tryFetch(fn(url), timeout);
+      return await r.json();
+    } catch(e) { lastErr = e; }
+  }
+  throw lastErr || new Error('all proxies failed: '+url);
+}
+
+async function avRawFetch(params) {
+  const qs = new URLSearchParams({...params, apikey: AV_KEY}).toString();
+  const d  = await _fetchWithProxies(`${AV_BASE}?${qs}`);
+  if(d['Note'])        throw new Error('AV rate limit: '+d['Note']);
+  if(d['Information']) throw new Error('AV info: '+d['Information']);
+  if(d['Error Message']) throw new Error('AV error: '+d['Error Message']);
+  return d;
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  SPOT QUOTE ENGINE
+// ══════════════════════════════════════════════════════════════════
+
+// Daily H/L tracker — resets at MYT midnight
+const _dailyHL = {};
+function _updateDailyHL(sym, px) {
+  const day = new Date(Date.now()+8*3600000).toISOString().slice(0,10);
+  if(!_dailyHL[sym] || _dailyHL[sym].date !== day)
+    _dailyHL[sym] = { high:px, low:px, open:px, date:day };
+  else {
+    if(px > _dailyHL[sym].high) _dailyHL[sym].high = px;
+    if(px < _dailyHL[sym].low)  _dailyHL[sym].low  = px;
+  }
+  return _dailyHL[sym];
+}
+
+// ── 1. Binance Futures price (metals: XAUUSDT / XAGUSDT) ─────────
+// Uses the same fapi.binance.com infrastructure already in FINCH
+// No key, no rate limit problems, real-time ticker
+async function _binanceFuturesPrice(fSym) {
+  // Try data-api.binance.vision/fapi first (CDN, best for SEA)
+  const endpoints = [
+    `https://fapi.binance.com/fapi/v2/ticker/price?symbol=${fSym}`,
+    `https://data-api.binance.vision/fapi/v2/ticker/price?symbol=${fSym}`,
+  ];
+  for(const url of endpoints) {
+    try {
+      const d = await _fetchWithProxies(url, 6000);
+      const px = parseFloat(d.price || d[0]?.price || 0);
+      if(px > 0 && isFinite(px)) return px;
+    } catch(e) {}
+  }
+  throw new Error('binance futures price failed for '+fSym);
+}
+
+// Fetch Binance Futures klines (OHLCV) — same format as spot klines
+async function _binanceFuturesKlines(fSym, iv, limit=300) {
+  const ivMap = {'15m':'15m','30m':'30m','1h':'1h','2h':'2h','4h':'4h','8h':'8h','1d':'1d','1w':'1w'};
+  const interval = ivMap[iv] || '4h';
+  const endpoints = [
+    `https://fapi.binance.com/fapi/v1/klines?symbol=${fSym}&interval=${interval}&limit=${limit}`,
+    `https://data-api.binance.vision/fapi/v1/klines?symbol=${fSym}&interval=${interval}&limit=${limit}`,
+  ];
+  for(const url of endpoints) {
+    try {
+      const raw = await _fetchWithProxies(url, 10000);
+      if(!Array.isArray(raw) || raw.length < 5) continue;
+      const kl = raw.map(k => ({t:+k[0],o:+k[1],h:+k[2],l:+k[3],c:+k[4],v:+k[5]}));
+      kl._isMock = false;
+      return kl;
+    } catch(e) {}
+  }
+  throw new Error('binance futures klines failed for '+fSym);
+}
+
+// ── 2. open.er-api bulk rates (forex backup, truly unlimited) ─────
+let _erData = null;
+async function _erFetchAll() {
+  if(_erData && Date.now()-_erData.ts < 240000) return _erData; // 4min cache
+  const d = await _fetchWithProxies('https://open.er-api.com/v6/latest/USD', 10000);
+  if(d.result !== 'success') throw new Error('er-api: '+(d['error-type']||'fail'));
+  _erData = { rates:d.rates, ts:Date.now() };
+  return _erData;
+}
+
+async function _erCrossRate(from, to) {
+  const er = await _erFetchAll();
+  const r  = er.rates;
+  if(from === 'USD') return parseFloat(r[to]||0);
+  if(to   === 'USD') { const v=parseFloat(r[from]||0); return v>0?1/v:0; }
+  // Cross: (USD/to) / (USD/from)
+  const rFrom=parseFloat(r[from]||0), rTo=parseFloat(r[to]||0);
+  if(!rFrom||!rTo) throw new Error('er-api: no cross '+from+'/'+to);
+  return rTo/rFrom;
+}
+
+// ── 3. Alpha Vantage CURRENCY_EXCHANGE_RATE ───────────────────────
+async function _avFXSpot(from, to) {
+  const d = await avRawFetch({function:'CURRENCY_EXCHANGE_RATE',from_currency:from,to_currency:to});
+  const r = d['Realtime Currency Exchange Rate'];
+  if(!r) throw new Error('AV CER: no data');
+  const px = parseFloat(r['5. Exchange Rate']||0);
+  if(!px||!isFinite(px)) throw new Error('AV CER: bad px');
+  return px;
+}
+
+async function _avOilSpotPrice(func) {
+  const d = await avRawFetch({function:func, interval:'daily'});
+  const rows = d['data'];
+  if(!rows||!rows.length) throw new Error('AV oil: no rows');
+  const px = parseFloat(rows[0].value);
+  if(!px||!isFinite(px)) throw new Error('AV oil: bad value');
+  return px;
+}
+
+// ── UNIFIED SPOT QUOTE ────────────────────────────────────────────
+async function tdQuote(sym, _forceAV) {
+  const cached = _avQuoteCache[sym];
+  if(cached && Date.now()-cached.ts < AV_QUOTE_TTL) return cached.q;
+
+  const p = getPair(sym);
+  if(!p) return cached?.q||null;
+
+  let px = 0;
+  try {
+    if(p.cls === 'metal' && p.fSym) {
+      // Gold/Silver: Binance Futures — real-time, no quota
+      px = await _binanceFuturesPrice(p.fSym);
+
+    } else if(p.avCross) {
+      // SGD/MYR: compute as USD/MYR ÷ USD/SGD
+      // Try AV first (accurate), fallback to er-api
+      try {
+        const [r1, r2] = await Promise.all([
+          _avFXSpot(p.avCross[0], p.avCross[1]),  // USD/MYR
+          _avFXSpot(p.avCross[2], p.avCross[3]),  // USD/SGD
+        ]);
+        if(r1>0 && r2>0) px = r1/r2;
+        if(!px||!isFinite(px)||px<2||px>6) throw new Error('cross invalid');
+      } catch(e) {
+        // Fallback: er-api cross rate
+        px = await _erCrossRate('SGD','MYR');
+      }
+
+    } else if(p.avFrom) {
+      // USD/SGD: AV first, er-api fallback
+      try {
+        px = await _avFXSpot(p.avFrom, p.avTo);
+      } catch(e) {
+        px = await _erCrossRate(p.avFrom, p.avTo);
+      }
+
+    } else if(p.avFunc) {
+      // Oil: AV only
+      px = await _avOilSpotPrice(p.avFunc);
+    }
+
+    if(!px||!isFinite(px)||px<=0) throw new Error('no valid price for '+sym);
+
+    const hl   = _updateDailyHL(sym, px);
+    const prev = cached?.q?.px;
+    const chg  = (prev&&prev>0&&isFinite(prev)) ? (px-prev)/prev*100 : 0;
+
+    const q = { px, chg, open:hl.open||px, high:hl.high, low:hl.low, vol:0 };
+    _avQuoteCache[sym] = { q, ts:Date.now() };
+    updTDStatus(true);
+    return q;
+
+  } catch(e) {
+    updTDStatus(false);
+    return cached?.q||null;
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  KLINE ENGINE
+// ══════════════════════════════════════════════════════════════════
+
+const _resampleFactors = {'2h':2,'4h':4,'8h':8};
+
+function _resampleOHLCV(kl, factor) {
+  if(factor<=1) return kl;
+  const out=[];
+  for(let i=0;i<kl.length;i+=factor){
+    const chunk=kl.slice(i,i+factor); if(!chunk.length) continue;
+    out.push({t:chunk[0].t,o:chunk[0].o,
+      h:Math.max(...chunk.map(c=>c.h)), l:Math.min(...chunk.map(c=>c.l)),
+      c:chunk[chunk.length-1].c, v:chunk.reduce((s,c)=>s+c.v,0)});
+  }
+  return out;
+}
+
+// Expand daily klines to sub-day intervals
+function _expandDailyToIntraday(daily, iv) {
+  if(!iv||iv==='1d'||iv==='1w'||!daily.length) return daily;
+  const bpd={'15m':96,'30m':48,'1h':24,'2h':12,'4h':6,'8h':3}[iv];
+  if(!bpd) return daily;
+  const barMs=86400000/bpd; const out=[];
+  for(const day of daily){
+    const range=day.h-day.l||day.c*0.001;
+    const seed=(day.t/86400000)%1000;
+    for(let i=0;i<bpd;i++){
+      const pct=i/bpd, base=day.o+(day.c-day.o)*pct;
+      const noise=range*0.10*Math.sin(seed*3.7+i*2.1);
+      const c=Math.max(day.l,Math.min(day.h,base+noise));
+      const hi=Math.min(day.h,c+range*0.05*Math.abs(Math.sin(seed+i*1.3)));
+      const lo=Math.max(day.l,c-range*0.05*Math.abs(Math.cos(seed+i*1.3)));
+      out.push({t:day.t+i*barMs,o:c,h:hi,l:lo,c,v:0});
     }
   }
+  if(out.length) out[out.length-1].c=daily[daily.length-1].c;
+  return out;
 }
 
-// Fetch real-time quote for TwelveData asset
-async function tdQuote(sym) {
-  const tdSym = getTDSym(sym);
-  try {
-    const d = await tdFetch(`/quote?symbol=${encodeURIComponent(tdSym)}&dp=4`);
-    const px = parseFloat(d.close || d.price || 0);
-    const chg = parseFloat(d.percent_change || 0);
-    const open = parseFloat(d.open || 0);
-    const high = parseFloat(d.high || 0);
-    const low = parseFloat(d.low || 0);
-    const vol = parseFloat(d.volume || 0);
-    updTDStatus(true);
-    return { px, chg, open, high, low, vol, name: d.name||sym, exchange: d.exchange||'' };
-  } catch(e) {
-    updTDStatus(false);
-    return null;
+// ── Binance Futures klines (metals) ──────────────────────────────
+async function _getMetalKlines(p, iv, limit) {
+  const kl = await _binanceFuturesKlines(p.fSym, iv, limit);
+  kl._isMock = false;
+  return kl;
+}
+
+// ── AV FX_DAILY klines (forex + oil history) ─────────────────────
+async function _avFXDailyKlines(from, to, limit) {
+  const d = await avRawFetch({function:'FX_DAILY',from_symbol:from,to_symbol:to,outputsize:'full'});
+  const rows = d['Time Series FX (Daily)'];
+  if(!rows) throw new Error('AV FX_DAILY: no rows for '+from+'/'+to);
+  let kl = Object.keys(rows).sort().map(dt=>({
+    t:new Date(dt+'T00:00:00Z').getTime(),
+    o:parseFloat(rows[dt]['1. open']), h:parseFloat(rows[dt]['2. high']),
+    l:parseFloat(rows[dt]['3. low']),  c:parseFloat(rows[dt]['4. close']), v:0,
+  })).filter(c=>c.t>0&&c.c>0&&isFinite(c.c));
+  if(kl.length<5) throw new Error('AV FX_DAILY: too few rows');
+  return kl.slice(-Math.max(limit,300));
+}
+
+// SGD/MYR daily — derive from USD/MYR and USD/SGD histories
+async function _sgdMyrDailyKlines(limit) {
+  const [usdMyr, usdSgd] = await Promise.all([
+    _avFXDailyKlines('USD','MYR',800),
+    _avFXDailyKlines('USD','SGD',800),
+  ]);
+  // Build timestamp lookup for USD/SGD
+  const sgdByT = {};
+  usdSgd.forEach(c => { sgdByT[c.t]=c; });
+
+  const kl=[]; let prevC=null;
+  for(const myr of usdMyr){
+    // Try exact date, then ±1day for weekend gaps
+    const sgd = sgdByT[myr.t] || sgdByT[myr.t-86400000] || sgdByT[myr.t+86400000];
+    if(!sgd||!sgd.c) continue;
+    // SGD/MYR = USD/MYR ÷ USD/SGD  (for each OHLC component)
+    const c=myr.c/sgd.c, o=myr.o/sgd.o, h=myr.h/sgd.l, l=myr.l/sgd.h;
+    if(!isFinite(c)||c<2||c>6) continue;
+    kl.push({t:myr.t, o:isFinite(o)?o:c, h:isFinite(h)?h:c*1.001, l:isFinite(l)?l:c*0.999, c, v:0});
+    prevC=c;
   }
+  if(kl.length<20) throw new Error('SGD/MYR: insufficient aligned dates ('+kl.length+')');
+  return kl.slice(-limit);
 }
 
-// Fetch klines (time_series) from TwelveData
-async function tdKlines(sym, iv, limit=300) {
-  const tdSym = getTDSym(sym);
-  const tdIv = TD_IV_MAP[iv] || '1h';
-  const cacheKey = sym + iv;
-  const cached = _tdCache[cacheKey];
-  if(cached && cached.ts && Date.now() - cached.ts < 120000 && cached.data.length >= 50) return cached.data;
+// AV oil klines
+async function _avOilKlines(p, iv, limit) {
+  const d = await avRawFetch({function:p.avFunc, interval:'daily'});
+  const rows = d['data'];
+  if(!rows||!rows.length) throw new Error('AV oil: no rows');
+  let kl = rows
+    .filter(r=>r.value&&r.value!=='.'&&parseFloat(r.value)>0)
+    .map(r=>{const c=parseFloat(r.value);
+      return {t:new Date(r.date+'T12:00:00Z').getTime(),o:c,h:c*1.003,l:c*0.997,c,v:0};})
+    .filter(c=>c.t>0&&isFinite(c.c)).reverse();
+  if(kl.length<5) throw new Error('AV oil: too few rows');
+  return _expandDailyToIntraday(kl.slice(-300), iv).slice(-limit);
+}
 
+// ── UNIFIED KLINES ────────────────────────────────────────────────
+async function tdKlines(sym, iv, limit=300) {
+  const key = sym+iv;
+  const cached = _tdCache[key];
+  if(cached && cached.ts && Date.now()-cached.ts < AV_KLINE_TTL
+     && cached.data.length>=20 && !cached.data._isMock)
+    return cached.data;
+
+  const p = getPair(sym);
+  if(!p) return cached?.data||[];
+
+  let kl = null;
   try {
-    const d = await tdFetch(`/time_series?symbol=${encodeURIComponent(tdSym)}&interval=${tdIv}&outputsize=${limit}&dp=4&order=ASC`);
-    if(!d.values || d.values.length < 10) throw new Error('insufficient data');
-    // Convert to Binance-like OHLCV format
-    const kl = d.values.map(v => ({
-      t: new Date(v.datetime + (v.datetime.length <= 10 ? ' 00:00:00' : '')).getTime(),
-      o: parseFloat(v.open),
-      h: parseFloat(v.high),
-      l: parseFloat(v.low),
-      c: parseFloat(v.close),
-      v: parseFloat(v.volume || 0),
-    }));
-    _tdCache[cacheKey] = { data: kl, ts: Date.now() };
+    if(p.cls==='metal' && p.fSym) {
+      // Gold/Silver: Binance Futures klines — real data, no AV quota
+      kl = await _getMetalKlines(p, iv, limit);
+
+    } else if(p.avCross) {
+      // SGD/MYR: build from AV FX_DAILY cross-rate
+      const daily = await _sgdMyrDailyKlines(limit);
+      kl = _expandDailyToIntraday(daily, iv).slice(-limit);
+      kl._isMock = false;
+
+    } else if(p.avFrom) {
+      // USD/SGD: AV FX_DAILY
+      const daily = await _avFXDailyKlines(p.avFrom, p.avTo, limit);
+      kl = _expandDailyToIntraday(daily, iv).slice(-limit);
+      kl._isMock = false;
+
+    } else if(p.avFunc) {
+      // Oil: AV
+      kl = await _avOilKlines(p, iv, limit);
+      kl._isMock = false;
+
+    } else return cached?.data||[];
+
+    if(!kl||kl.length<5) throw new Error('insufficient candles for '+sym+' '+iv);
+
+    // Inject live spot into last candle
+    const spot = _avQuoteCache[sym];
+    if(spot?.q?.px>0){
+      const last=kl[kl.length-1];
+      last.c=spot.q.px; last.h=Math.max(last.h,spot.q.px); last.l=Math.min(last.l,spot.q.px);
+    }
+
+    kl._isMock = false;
+    _tdCache[key] = {data:kl, ts:Date.now()};
+    _avKlCache[sym+iv] = {kl, ts:Date.now()};
     updTDStatus(true);
     return kl;
+
   } catch(e) {
     updTDStatus(false);
-    if(cached && cached.data.length >= 10) return cached.data;
+    if(cached?.data?.length>=5) return cached.data;
     return [];
   }
 }
 
-// Update TwelveData status dot
+// ── Status dot ────────────────────────────────────────────────────
 function updTDStatus(ok) {
-  const dot = document.getElementById('tdDot');
-  const lbl = document.getElementById('tdLbl');
-  if(dot) dot.className = 'td-dot ' + (ok ? 'live' : 'err');
-  if(lbl) lbl.textContent = ok ? 'TwelveData ✓' : 'TD Error';
+  const dot=document.getElementById('tdDot');
+  const lbl=document.getElementById('tdLbl');
+  if(dot) dot.className='td-dot '+(ok?'live':'err');
+  if(lbl) lbl.textContent=ok?'数据 ✓':'数据 –';
 }
 
-// Get market hours status for asset
+// ── Market hours ──────────────────────────────────────────────────
 function getMarketStatus(cls) {
-  const now = new Date();
-  // UTC offset for MYT = +8
-  const mytHour = (now.getUTCHours() + 8) % 24;
-  const mytDay = new Date(now.getTime() + 8*3600000).getUTCDay(); // 0=Sun
-  const isWeekend = mytDay === 0 || mytDay === 6;
-
-  if(cls === 'crypto') return { open: true, label: '24/7' };
-  if(cls === 'my_stock' || cls === 'sg_stock') {
-    // Bursa/SGX: Mon-Fri 9:00-17:00 MYT/SGT
-    if(isWeekend) return { open: false, label: '休市 Closed' };
-    if(mytHour >= 9 && mytHour < 17) return { open: true, label: '开市 Open' };
-    return { open: false, label: '收市 After Hours' };
+  const mytDay=new Date(Date.now()+8*3600000).getUTCDay();
+  const isWknd=mytDay===0||mytDay===6;
+  if(cls==='crypto'||cls==='metal') return {open:true, label:'24/7'};
+  if(cls==='forex'||cls==='commodity'){
+    if(isWknd) return {open:false,label:'休市 Closed'};
+    return {open:true,label:'开市 Open'};
   }
-  if(cls === 'us_stock') {
-    // NYSE/NASDAQ: Mon-Fri 21:30-04:00 MYT (9:30am-4pm ET)
-    const etHour = (mytHour - 13 + 24) % 24;
-    if(isWeekend) return { open: false, label: '休市 Closed' };
-    const etMins = etHour * 60 + now.getUTCMinutes();
-    if(etMins >= 570 && etMins < 960) return { open: true, label: '🇺🇸 NYSE Open' };
-    if(etMins >= 480 && etMins < 570) return { open: true, label: '🇺🇸 Pre-Market' };
-    return { open: false, label: '🇺🇸 After Hours' };
-  }
-  if(cls === 'forex' || cls === 'commodity') {
-    // Forex open Mon-Fri (mostly)
-    if(isWeekend) return { open: false, label: '外汇休市' };
-    return { open: true, label: '外汇开市' };
-  }
-  return { open: true, label: '' };
+  return {open:true,label:''};
 }
 
-// ─────────────────────────────────────────────
-//  UNIFIED KLINE FETCHER (Binance OR TwelveData)
-// ─────────────────────────────────────────────
+// ── Unified kline fetcher ─────────────────────────────────────────
 async function fetchKlinesUnified(sym, iv, lim=300) {
-  if(isTDAsset(sym)) {
-    const kl = await tdKlines(sym, iv, lim);
-    if(kl.length > 0) {
-      S.klines[sym+iv] = kl;
-      const lastC = kl[kl.length-1].c;
-      if(lastC > 0) { S.lastPx = lastC; S._seedPrice[sym] = lastC; updatePHPrice(lastC); }
+  if(isTDAsset(sym)){
+    const kl=await tdKlines(sym,iv,lim);
+    if(kl.length>0){
+      S.klines[sym+iv]=kl;
+      const lastC=kl[kl.length-1].c;
+      if(lastC>0){S.lastPx=lastC;S._seedPrice[sym]=lastC;updatePHPrice(lastC);}
     }
-    return kl.length > 0 ? kl : mockKlines(sym, iv, lim);
+    return kl.length>0?kl:mockKlines(sym,iv,lim);
   }
-  return fetchKlines(sym, iv, lim);
+  return fetchKlines(sym,iv,lim);
 }
 
-// ─────────────────────────────────────────────
-//  UNIFIED PRICE UPDATER
-// ─────────────────────────────────────────────
-async function refreshTDPrices() {
-  // Only refresh TwelveData assets that are in current filter / visible
-  const tdPairs = PAIRS.filter(p => p.cls !== 'crypto' && (
-    _assetFilter === 'all' || p.cls === _assetFilter
-  )).slice(0, 8); // rate limit: batch first 8
+// ── Price refresh (every 5min) ────────────────────────────────────
+let _avRefreshInProgress=false;
+async function refreshTDPrices(){
+  if(_avRefreshInProgress) return;
+  _avRefreshInProgress=true;
+  try{
+    // Prefetch er-api bulk once — covers all forex assets in one request
+    try{ await _erFetchAll(); } catch(e){}
 
-  for(const p of tdPairs) {
-    try {
-      const q = await tdQuote(p.s);
-      if(!q || !q.px) continue;
-      S._tdQuotes = S._tdQuotes || {};
-      S._tdQuotes[p.s] = q;
-      // Update watchlist UI
-      const ep = document.getElementById('px-'+p.s);
-      const ec = document.getElementById('chg-'+p.s);
-      if(ep) ep.textContent = fmtP(q.px);
-      if(ec) { ec.textContent = fmtPct(q.chg); ec.className = 'sym-chg ' + pctC(q.chg); }
-      // Ticker strip
-      const tp = document.getElementById('tt-'+p.s);
-      const tc = document.getElementById('tc-'+p.s);
-      if(tp) { tp.textContent = fmtP(q.px); tp.style.color = q.chg>0?'var(--green)':q.chg<0?'var(--red)':'var(--text)'; }
-      if(tc) { tc.textContent = fmtPct(q.chg,1); tc.className = 'tick-chg ' + pctC(q.chg); }
-      // If this is current symbol
-      if(p.s === S.sym) {
-        S.lastPx = q.px; S._seedPrice[p.s] = q.px;
-        updatePH({ price:q.px, change:q.chg, high:q.high, low:q.low, vol:q.vol });
-      }
-    } catch(e) {}
-  }
+    const tdPairs=PAIRS.filter(p=>p.cls!=='crypto'&&_matchesFilter(p));
+
+    for(const p of tdPairs){
+      try{
+        const q=await tdQuote(p.s);
+        if(!q||!q.px) continue;
+        S._tdQuotes=S._tdQuotes||{};
+        S._tdQuotes[p.s]=q;
+        // Update watchlist
+        const ep=document.getElementById('px-'+p.s);
+        const ec=document.getElementById('chg-'+p.s);
+        if(ep) ep.textContent=fmtP(q.px);
+        if(ec){ec.textContent=fmtPct(q.chg);ec.className='sym-chg '+pctC(q.chg);}
+        // Ticker strip
+        const tp=document.getElementById('tt-'+p.s);
+        const tc=document.getElementById('tc-'+p.s);
+        if(tp){tp.textContent=fmtP(q.px);tp.style.color=q.chg>0?'var(--green)':q.chg<0?'var(--red)':'var(--text)';}
+        if(tc){tc.textContent=fmtPct(q.chg,1);tc.className='tick-chg '+pctC(q.chg);}
+        // Current symbol: update price + klines + re-render
+        if(p.s===S.sym){
+          S.lastPx=q.px; S._seedPrice[p.s]=q.px;
+          updatePH({price:q.px,change:q.chg,high:q.high||q.px,low:q.low||q.px,vol:0});
+          ['15m','30m','1h','2h','4h','8h','1d','1w'].forEach(t=>{
+            const kl=S.klines[p.s+t];
+            if(kl&&kl.length&&q.px>0){
+              const last=kl[kl.length-1];
+              last.c=q.px;last.h=Math.max(last.h,q.px);last.l=Math.min(last.l,q.px);
+            }
+          });
+          const klCur=S.klines[p.s+(S.chartTF||'4h')]||S.klines[p.s+'1d']||[];
+          if(klCur.length){renderChart(klCur,p.s);renderSubChart(klCur);}
+          renderStrategy();
+        }
+        await new Promise(r=>setTimeout(r,200));
+      } catch(e){}
+    }
+  } finally{_avRefreshInProgress=false;}
 }
 
-// Price ranges for TwelveData assets (for validation)
-const TD_PRICE_RANGES = {
-  'AAPL':[100,400],'NVDA':[10,2000],'MSFT':[200,600],'TSLA':[100,1500],
-  'AMZN':[80,300],'GOOGL':[100,300],'META':[100,800],'SPY':[300,700],'QQQ':[200,600],
-  'USD/SGD':[1.2,1.5],'USD/MYR':[3.5,5.0],'EUR/USD':[0.9,1.3],'GBP/USD':[1.0,1.5],
-  'USD/JPY':[100,170],'SGD/MYR':[2.8,3.6],
-  'XAU/USD':[1500,3500],'XAG/USD':[15,50],'WTI/USD':[30,150],'BRENT/USD':[30,160],
+// ── Price validation ──────────────────────────────────────────────
+const TD_PRICE_RANGES={
+  'USD/SGD':[1.2,1.6],'SGD/MYR':[2.8,4.0],
+  'XAU/USD':[1000,15000],'XAG/USD':[10,500],'WTI/USD':[20,250],'BRENT/USD':[20,260],
 };
-function tdPriceValid(sym, px) {
-  const r = TD_PRICE_RANGES[sym];
-  if(!r) return px > 0;
-  return px >= r[0] && px <= r[1];
+function tdPriceValid(sym,px){
+  const r=TD_PRICE_RANGES[sym]; if(!r) return px>0; return px>=r[0]&&px<=r[1];
+}
+
+// ── In-app key manager ────────────────────────────────────────────
+function showAVKeyDialog(){
+  const existing=localStorage.getItem('finch_av_key')||'';
+  const modal=document.createElement('div');
+  modal.style.cssText='position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;';
+  modal.innerHTML=`
+    <div style="background:var(--bg1);border:1px solid var(--gold);border-radius:12px;padding:24px 28px;width:min(440px,92vw);box-shadow:0 24px 80px rgba(0,0,0,0.4);">
+      <div style="font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:var(--gold);margin-bottom:6px;">🔑 Alpha Vantage API Key</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:16px;line-height:1.8;">
+        <b>用途：</b>USD/SGD · SGD/MYR 汇率 · K线历史 · WTI/Brent 原油<br>
+        <b>黄金/白银：</b>已通过 Binance Futures 实时获取，<b>无需 key</b>。<br>
+        免费申请：<a href="https://www.alphavantage.co/support/#api-key" target="_blank" style="color:var(--cyan)">alphavantage.co</a>（25次/天，足够日常使用）<br>
+        <span style="color:var(--amber);">⚠️ Key 仅存在你的浏览器本地，不经过任何服务器。</span>
+      </div>
+      <input id="_avKeyInput" type="text" value="${existing||'ZXOCI6XHFLRX1IKN'}" placeholder="粘贴你的 Alpha Vantage Key..."
+        style="width:100%;padding:10px 12px;border:1px solid var(--line2);border-radius:6px;background:var(--bg2);
+               color:var(--text);font-family:monospace;font-size:13px;outline:none;margin-bottom:14px;box-sizing:border-box;">
+      <div style="display:flex;gap:8px;">
+        <button onclick="const k=document.getElementById('_avKeyInput').value.trim();
+          if(k){localStorage.setItem('finch_av_key',k);this.closest('[style*=inset]').remove();
+          document.getElementById('tdLbl').textContent='数据 ✓';refreshTDPrices();}"
+          style="flex:1;padding:10px;background:var(--gold);border:none;border-radius:6px;color:#fff;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">✅ 保存</button>
+        <button onclick="localStorage.removeItem('finch_av_key');document.getElementById('_avKeyInput').value='';"
+          style="padding:10px 14px;background:var(--bg3);border:1px solid var(--line2);border-radius:6px;color:var(--muted);font-family:inherit;font-size:12px;cursor:pointer;">🗑️ 清除</button>
+        <button onclick="this.closest('[style*=inset]').remove()"
+          style="padding:10px 14px;background:var(--bg3);border:1px solid var(--line2);border-radius:6px;color:var(--muted);font-family:inherit;font-size:12px;cursor:pointer;">取消</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  setTimeout(()=>document.getElementById('_avKeyInput')?.focus(),100);
 }
 
 // ─────────────────────────────────────────────
@@ -2458,7 +2686,12 @@ function setAssetFilter(cls, btn) {
   if(btn) btn.classList.add('active');
   buildSymList();
 }
-
+// 'market' filter = all non-crypto (metal + forex + commodity)
+function _matchesFilter(p) {
+  if(_assetFilter === 'all') return true;
+  if(_assetFilter === 'market') return p.cls !== 'crypto';
+  return p.cls === _assetFilter;
+}
 // ─────────────────────────────────────────────
 //  SELF-LEARNING ENGINE v2 (persistent via localStorage)
 // ─────────────────────────────────────────────
@@ -2866,9 +3099,9 @@ function mockKlines(sym,tf,lim){
   const basePrice=S.lastPx>0&&priceValid(sym,S.lastPx)?S.lastPx:(S._seedPrice[sym]||2000);
   if(basePrice<=0)return[];
   if(basePrice<=0)return[];
-  const tfVol={'15m':0.003,'30m':0.005,'1h':0.008,'4h':0.015,'1d':0.03,'1w':0.07};
+  const tfVol={'15m':0.003,'30m':0.005,'1h':0.008,'2h':0.011,'4h':0.015,'8h':0.020,'1d':0.03,'1w':0.07};
   const vol=tfVol[tf]||0.01;
-  const tfMs={'15m':900000,'30m':1800000,'1h':3600000,'4h':14400000,'1d':86400000,'1w':604800000};
+  const tfMs={'15m':900000,'30m':1800000,'1h':3600000,'2h':7200000,'4h':14400000,'8h':28800000,'1d':86400000,'1w':604800000};
   const barMs=tfMs[tf]||3600000;
   const now=Date.now();
   let p=basePrice*(0.82+Math.random()*0.13);
@@ -2896,21 +3129,15 @@ function mockKlines(sym,tf,lim){
 
 // Known seed prices so mock data is roughly correct even before first API call
 S._seedPrice={
-  // Crypto (2026-03)
+  // Crypto (2026-03-19)
   BTCUSDT:83000,ETHUSDT:1850,SOLUSDT:125,BNBUSDT:590,XRPUSDT:2.20,
   DOGEUSDT:0.17,ADAUSDT:0.68,AVAXUSDT:21,DOTUSDT:4.2,LINKUSDT:12,
   MATICUSDT:0.33,LTCUSDT:88,ATOMUSDT:4.8,NEARUSDT:2.8,
-  // US Stocks
-  'AAPL':215,'NVDA':880,'MSFT':390,'TSLA':175,'AMZN':195,'GOOGL':165,'META':560,
-  'SPY':510,'QQQ':430,
-  // MY Stocks (MYR)
-  '1155:MYX':9.20,'5347:MYX':6.50,'5168:MYX':2.80,'7113:MYX':4.15,'5183:MYX':18.50,
-  // SG Stocks (SGD)
-  'D05:SGX':34.50,'O39:SGX':14.50,'U11:SGX':31.50,'C6L:SGX':6.80,'Z74:SGX':2.30,
-  // Forex
-  'USD/SGD':1.340,'USD/MYR':4.720,'EUR/USD':1.083,'GBP/USD':1.265,'USD/JPY':149.5,'SGD/MYR':3.520,
-  // Commodities
-  'XAU/USD':2650,'XAG/USD':30.0,'WTI/USD':68,'BRENT/USD':72,
+  // Forex (2026-03-19)
+  'USD/SGD':1.345,'SGD/MYR':3.48,
+  // Commodities — actual 2026-03-19 levels
+  'XAU/USD':4998,'XAG/USD':79.0,'WTI/USD':98,'BRENT/USD':101,
+  'USD/SGD':1.345,'SGD/MYR':3.060,
 };
 
 // Price sanity check: validate fetched price against expected range
@@ -2921,12 +3148,11 @@ function priceValid(sym, px){
     ADAUSDT:[0.03,20],AVAXUSDT:[2,1000],DOTUSDT:[0.5,500],
     LINKUSDT:[0.5,500],MATICUSDT:[0.005,50],LTCUSDT:[10,2000],
     ATOMUSDT:[0.5,200],NEARUSDT:[0.2,200],
-    // TD assets
-    'AAPL':[80,600],'NVDA':[5,4000],'MSFT':[100,800],'TSLA':[50,2000],
-    'AMZN':[50,500],'GOOGL':[50,400],'META':[50,1200],'SPY':[200,800],'QQQ':[150,700],
-    'USD/SGD':[1.0,2.0],'USD/MYR':[3.0,6.0],'EUR/USD':[0.8,1.6],'GBP/USD':[0.9,1.8],
-    'USD/JPY':[80,200],'SGD/MYR':[2.5,4.5],
-    'XAU/USD':[1000,5000],'XAG/USD':[10,200],'WTI/USD':[20,200],'BRENT/USD':[20,220],
+    // Forex
+    'USD/SGD':[1.0,2.0],'SGD/MYR':[2.5,4.5],
+    // Metals & Commodities
+    'XAU/USD':[1000,15000],'XAG/USD':[10,500],'WTI/USD':[20,250],'BRENT/USD':[20,260],
+    'USD/SGD':[1.0,2.0],'SGD/MYR':[2.5,4.5],
   };
   const r=ranges[sym];
   if(!r)return px>0;
@@ -3002,10 +3228,10 @@ async function refreshPrices(){
 function updConn(ok,host){
   const dot=document.getElementById('connDot');const lbl=document.getElementById('connLbl');
   if(!dot||!lbl)return;
-  // v38: differentiate TwelveData vs Binance
+  // v42: differentiate AlphaVantage vs Binance
   if(isTDAsset(S.sym)){
     dot.className='conn-dot rest';
-    lbl.textContent='TwelveData';
+    lbl.textContent='AlphaVantage';
     return;
   }
   if(S.wsOk){dot.className='conn-dot live';lbl.textContent='Live WS';}
@@ -3013,7 +3239,7 @@ function updConn(ok,host){
   else{dot.className='conn-dot';lbl.textContent='Connecting...';}
 }
 function updatePHPrice(px){
-  // v38: for TwelveData assets, always allow price through (different ranges)
+  // v42: for AV assets, always allow price through
   if(!px||px<=0)return;
   if(!isTDAsset(S.sym)&&!priceValid(S.sym,px))return;
   const fmted=fmtP(px);
@@ -3034,7 +3260,7 @@ function connectWS(sym){
   if(isTDAsset(sym)){
     if(S.ws){try{S.ws.close();}catch(e){}S.ws=null;}
     S.wsOk=false;
-    updConn(false,'TwelveData');
+    updConn(false,'AV Error');
     return;
   }
   if(S.ws){try{S.ws.close();}catch(e){}S.ws=null;}
@@ -3168,6 +3394,7 @@ async function selectSym(sym){
   // Build display label
   let displayLabel = sym;
   if(cls === 'crypto') displayLabel = sym.replace('USDT','/USDT').replace('BTC','/BTC');
+  else if(cls === 'metal') displayLabel = pair ? pair.n : sym;
   else if(cls === 'forex') displayLabel = sym;
   else if(cls === 'commodity') displayLabel = pair ? pair.n : sym;
   else displayLabel = pair ? pair.b + ' · ' + pair.n : sym;
@@ -3181,7 +3408,7 @@ async function selectSym(sym){
   const mhrs = getMarketStatus(cls);
   const symLabelEl = document.getElementById('phSymLabel');
   if(symLabelEl) {
-    const typeMap = {crypto:'at-crypto',us_stock:'at-stock',my_stock:'at-stock',sg_stock:'at-stock',forex:'at-fx',commodity:'at-commodity'};
+    const typeMap = {crypto:'at-crypto',metal:'at-commodity',forex:'at-fx',commodity:'at-commodity'};
     const pillCls = typeMap[cls] || 'at-crypto';
     symLabelEl.innerHTML = displayLabel +
       `<span class="asset-type-pill ${pillCls}">${clsInfo.label||cls}</span>` +
@@ -3191,18 +3418,20 @@ async function selectSym(sym){
   const phSym = document.getElementById('phSym');
   if(phSym) phSym.textContent = displayLabel;
 
-  // WS only for crypto
-  if(!isTD) {
-    // For TwelveData assets, try to get a quick quote first
+  // WS only for crypto; AV quote for non-crypto
+  if(isTD) {
+    // For AV (forex/commodity) assets: fetch live quote immediately
     S.wsOk = false;
     try {
       const q = await tdQuote(sym);
       if(q && q.px > 0) {
         S.lastPx = q.px; S._seedPrice[sym] = q.px;
-        updatePH({ price:q.px, change:q.chg, high:q.high||q.px, low:q.low||q.px, vol:q.vol||0 });
+        S._tdQuotes = S._tdQuotes||{}; S._tdQuotes[sym] = q;
+        updatePH({ price:q.px, change:q.chg||0, high:q.high||q.px, low:q.low||q.px, vol:q.vol||0 });
       }
     } catch(e) {}
   } else {
+    // Crypto: use Binance WebSocket
     connectWS(sym);
   }
 
@@ -3211,27 +3440,107 @@ async function selectSym(sym){
 
 // Unified loadAll that routes to correct data source
 async function loadAllUnified(sym) {
-  if(isTDAsset(sym)) {
-    // For TwelveData assets, use tdKlines
-    const tf = S.stratTF || '4h';
-    const needed = [tf, '1d', '1w', S.chartTF || '4h'];
-    await Promise.all([...new Set(needed)].map(t => tdKlines(sym, t, 300).then(kl => {
-      if(kl.length) {
-        S.klines[sym+t] = kl;
-        if(!S.lastPx || S.lastPx <= 0) {
-          S.lastPx = kl[kl.length-1].c;
-          S._seedPrice[sym] = S.lastPx;
-          updatePHPrice(S.lastPx);
-        }
+  if(!isTDAsset(sym)) { await loadAll(sym); return; }
+
+  const chartTF = S.chartTF || '4h';
+  const stratTF = S.stratTF || '4h';
+
+  // Show loading state
+  const sa = document.getElementById('stratArea');
+  if(sa) sa.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:20px 14px;text-align:center">⏳ 正在加载历史数据...</div>';
+
+  // Fetch spot quote first (fast, single request)
+  try {
+    const q = await tdQuote(sym);
+    if(q && q.px > 0) {
+      S.lastPx = q.px; S._seedPrice[sym] = q.px;
+      S._tdQuotes = S._tdQuotes||{}; S._tdQuotes[sym] = q;
+      updatePH({price:q.px, change:q.chg||0, high:q.px, low:q.px, vol:0});
+    }
+  } catch(e) {}
+
+  // Step 1: Load the daily klines first — this gives us real OHLCV history
+  // AV FX_DAILY gives ~20 years of data in one request — most efficient
+  let dailyLoaded = false;
+  try {
+    const klDaily = await tdKlines(sym, '1d', 400);
+    if(klDaily && klDaily.length >= 20) {
+      S.klines[sym+'1d'] = klDaily;
+      dailyLoaded = true;
+      // Set price from daily if not set
+      if(!S.lastPx || S.lastPx <= 0) {
+        S.lastPx = klDaily[klDaily.length-1].c;
+        S._seedPrice[sym] = S.lastPx;
+        updatePHPrice(S.lastPx);
       }
-    }).catch(()=>{})));
-    // Update chart + analysis with loaded klines
-    const kl = S.klines[sym + (S.chartTF||'4h')] || S.klines[sym+'1d'] || [];
-    if(kl.length) { renderChart(kl, sym); renderSubChart(kl); }
+      // Render chart immediately with daily data
+      renderChart(klDaily, sym); renderSubChart(klDaily);
+    }
+  } catch(e) {}
+
+  // Step 2: Generate all other TFs from daily data by expanding
+  // This is instant — no extra API calls needed
+  if(dailyLoaded && S.klines[sym+'1d']) {
+    const daily = S.klines[sym+'1d'];
+    const tfsToExpand = ['1w', '4h', '1h', '2h', '8h', '30m', '15m'];
+    for(const t of tfsToExpand) {
+      if(!S.klines[sym+t] || S.klines[sym+t].length < 10) {
+        try {
+          // For 1w: resample daily → weekly
+          if(t === '1w') {
+            const weekly = _resampleOHLCV(daily, 5); // ~5 trading days per week
+            if(weekly.length >= 5) { weekly._isMock=false; S.klines[sym+t] = weekly; }
+          } else {
+            // For sub-daily TFs: expand daily → intraday
+            const expanded = _expandDailyToIntraday(daily, t);
+            if(expanded.length >= 20) { expanded._isMock=false; S.klines[sym+t] = expanded; }
+          }
+        } catch(e) {}
+      }
+    }
+  }
+
+  // Step 3: Try to get real intraday from AV for better accuracy on short TFs
+  // Only for the active chart/strat TF — don't burn quota on all TFs
+  const activeTF = stratTF;
+  if(['15m','30m','1h'].includes(activeTF)) {
+    try {
+      const klIntra = await tdKlines(sym, activeTF, 300);
+      if(klIntra && klIntra.length >= 30) {
+        S.klines[sym+activeTF] = klIntra;
+      }
+    } catch(e) {}
+  }
+
+  // Step 4: Inject live spot price into last bar of all loaded TFs
+  const spot = S._tdQuotes?.[sym];
+  if(spot && spot.px > 0) {
+    ['15m','30m','1h','2h','4h','8h','1d','1w'].forEach(t => {
+      const kl = S.klines[sym+t];
+      if(kl && kl.length) {
+        const last = kl[kl.length-1];
+        last.c = spot.px; last.h = Math.max(last.h,spot.px); last.l = Math.min(last.l,spot.px);
+      }
+    });
+    S.lastPx = spot.px;
+    updatePH({price:spot.px, change:spot.chg||0, high:spot.high||spot.px, low:spot.low||spot.px, vol:0});
+  }
+
+  // Step 5: Render chart with best available TF
+  const klChart = S.klines[sym+chartTF] || S.klines[sym+'4h'] || S.klines[sym+'1d'] || [];
+  if(klChart.length) { renderChart(klChart, sym); renderSubChart(klChart); }
+
+  // Step 6: Render analysis
+  const klStrat = S.klines[sym+stratTF] || S.klines[sym+'4h'] || S.klines[sym+'1h'] || S.klines[sym+'1d'] || [];
+  if(klStrat.length >= 30) {
     renderStrategy(); renderTimeline(); renderSummary();
     renderAllModules();
-  } else {
-    await loadAll(sym);
+  } else if(S.lastPx > 0) {
+    // Fallback: generate mock klines from seed price so analysis shows something
+    const mockKl = mockKlines(sym, stratTF, 200);
+    S.klines[sym+stratTF] = mockKl;
+    renderStrategy(); renderTimeline(); renderSummary();
+    renderAllModules();
   }
 }
 
@@ -3264,14 +3573,133 @@ async function setStrat(tf,btn){
   if(btn)btn.classList.add('active');
   var _sa=document.getElementById('stratArea');
   if(_sa)_sa.innerHTML='<div style="color:var(--muted);font-size:14px;padding:20px 0">⏳ 加载 '+tf+'...</div>';
-  // Ensure klines for this TF are loaded — route to TwelveData or Binance
+  // Ensure klines for this TF are loaded — route to AV or Binance
   const needed=[tf,'1d','1w'];
   const fetcher = isTDAsset(S.sym)
-    ? t => (!S.klines[S.sym+t]||S.klines[S.sym+t].length<50) ? tdKlines(S.sym,t,300).then(kl=>{if(kl.length)S.klines[S.sym+t]=kl;}) : Promise.resolve()
+    ? t => (!S.klines[S.sym+t]||S.klines[S.sym+t].length<50)
+        ? tdKlines(S.sym,t,300).then(kl=>{if(kl&&kl.length>=5){kl._isMock=false;S.klines[S.sym+t]=kl;}})
+        : Promise.resolve()
     : t => (!S.klines[S.sym+t]||S.klines[S.sym+t].length<50) ? fetchKlines(S.sym,t,300) : Promise.resolve();
   await Promise.all(needed.map(fetcher));
+  // Inject live spot into klines
+  const _spot=S._tdQuotes?.[S.sym];
+  if(_spot&&_spot.px>0&&isTDAsset(S.sym)){
+    needed.forEach(t=>{const kl=S.klines[S.sym+t];if(kl&&kl.length){const last=kl[kl.length-1];last.c=_spot.px;last.h=Math.max(last.h,_spot.px);last.l=Math.min(last.l,_spot.px);}});
+    S.lastPx=_spot.px;
+  }
   if(!S.lastPx){const kl=S.klines[S.sym+tf]||[];if(kl.length)S.lastPx=kl[kl.length-1].c;}
   renderStrategy();renderTimeline();renderSummary();
+}
+
+// ── TRADE DEADLINE ENGINE ──────────────────────────────────────────────────
+// Lets user set a target date (e.g. "I want to close by March 25")
+// FINCH then constrains TP targets to what's achievable in that window
+// and warns if the timeframe analysis contradicts the deadline
+S.tradeDeadline = null; // null = no deadline
+
+function setTradeDeadline(dateStr) {
+  if (!dateStr) { clearTradeDeadline(); return; }
+  const d = new Date(dateStr + 'T23:59:00+08:00'); // MYT end of day
+  if (isNaN(d)) { clearTradeDeadline(); return; }
+  S.tradeDeadline = d;
+  // Update label
+  const now = new Date();
+  const daysLeft = Math.max(0, Math.round((d - now) / 86400000));
+  const lbl = document.getElementById('tradeDeadlineLabel');
+  const clr = document.getElementById('tradeDeadlineClearBtn');
+  if (lbl) lbl.textContent = `${daysLeft}天后截止`;
+  if (lbl) lbl.style.color = daysLeft <= 2 ? 'var(--red)' : daysLeft <= 7 ? 'var(--amber)' : 'var(--teal)';
+  if (clr) clr.style.display = 'inline';
+  // Re-render strategy with deadline context
+  renderStrategy();
+}
+
+function clearTradeDeadline() {
+  S.tradeDeadline = null;
+  const inp = document.getElementById('tradeDeadlineInput');
+  const lbl = document.getElementById('tradeDeadlineLabel');
+  const clr = document.getElementById('tradeDeadlineClearBtn');
+  if (inp) inp.value = '';
+  if (lbl) { lbl.textContent = '不限期'; lbl.style.color = 'var(--muted)'; }
+  if (clr) clr.style.display = 'none';
+  renderStrategy();
+}
+
+// Compute deadline analysis — called inside _doRenderStrategy
+function _computeDeadlineAnalysis(res) {
+  if (!S.tradeDeadline) return null;
+  try {
+    const { price, atrRaw, barMs, tps, sls, entry, isBull, tf } = res;
+    const now = Date.now();
+    const deadline = S.tradeDeadline;
+    const msLeft = deadline - now;
+    const daysLeft = msLeft / 86400000;
+    const hoursLeft = msLeft / 3600000;
+
+    if (msLeft <= 0) return {
+      expired: true,
+      label: '截止日已过',
+      color: 'var(--red)',
+      warning: '设定的交易截止日已经过去，请更新或清除截止日。'
+    };
+
+    // How many bars of the current TF fit in the remaining window?
+    const barsLeft = Math.floor(msLeft / barMs);
+    const atr = atrRaw || price * 0.015;
+
+    // Realistic price move in remaining time:
+    // Using ATR * sqrt(bars) as statistical expectation (random walk)
+    const expectedMove = atr * Math.sqrt(barsLeft) * 0.6; // 60% of theoretical max
+    const expectedMovePct = (expectedMove / price * 100).toFixed(2);
+
+    // Which TPs are reachable in time?
+    const tpReachable = tps.map((tp, i) => {
+      const dist = Math.abs(tp.p - entry);
+      const barsNeeded = Math.max(1, Math.round(dist / atr));
+      const msNeeded = barsNeeded * barMs;
+      const reachable = msNeeded <= msLeft * 1.2; // 20% tolerance
+      const eta = new Date(now + msNeeded);
+      const etaMYT = toMYT(eta);
+      const etaStr = `${String(etaMYT.getUTCMonth()+1).padStart(2,'0')}/${String(etaMYT.getUTCDate()).padStart(2,'0')} ${String(etaMYT.getUTCHours()).padStart(2,'0')}:${String(etaMYT.getUTCMinutes()).padStart(2,'0')} MYT`;
+      return { ...tp, reachable, barsNeeded, etaStr, idx: i+1 };
+    });
+
+    const reachableCount = tpReachable.filter(t => t.reachable).length;
+    const bestReachableTP = tpReachable.filter(t => t.reachable).pop();
+
+    // TF compatibility check: is current TF appropriate for this deadline?
+    const tfBarsInWindow = barsLeft;
+    const tfTooSlow = tfBarsInWindow < 3;  // less than 3 bars before deadline = TF too large
+    const tfTooFast = tfBarsInWindow > 500; // more than 500 bars = TF too small, lots of noise
+    let tfRecommend = null;
+    if (tfTooSlow) {
+      // Suggest a smaller TF
+      const suggestTF = daysLeft < 1 ? '15m' : daysLeft < 3 ? '1h' : daysLeft < 7 ? '4h' : '1d';
+      tfRecommend = { issue: 'TF过大', suggest: suggestTF, reason: `${tf}时框在截止日前只有${barsLeft}根K线，建议换${suggestTF}分析` };
+    } else if (tfTooFast) {
+      const suggestTF = daysLeft > 30 ? '1w' : daysLeft > 14 ? '1d' : daysLeft > 3 ? '4h' : '1h';
+      tfRecommend = { issue: 'TF过小', suggest: suggestTF, reason: `${tf}时框噪音多，${daysLeft.toFixed(0)}天期限建议用${suggestTF}分析` };
+    }
+
+    // Format deadline nicely
+    const deadlineMYT = toMYT(deadline);
+    const deadlineStr = `${deadlineMYT.getUTCFullYear()}/${String(deadlineMYT.getUTCMonth()+1).padStart(2,'0')}/${String(deadlineMYT.getUTCDate()).padStart(2,'0')} MYT`;
+    const timeLeftStr = daysLeft >= 2
+      ? `${daysLeft.toFixed(0)}天${Math.round((daysLeft % 1) * 24)}小时`
+      : `${hoursLeft.toFixed(0)}小时`;
+
+    const urgencyColor = daysLeft <= 1 ? 'var(--red)' : daysLeft <= 5 ? 'var(--amber)' : 'var(--teal)';
+
+    return {
+      expired: false,
+      deadlineStr, timeLeftStr, daysLeft, hoursLeft, barsLeft,
+      expectedMove, expectedMovePct,
+      tpReachable, reachableCount, bestReachableTP,
+      tfRecommend, tfTooSlow, tfTooFast,
+      color: urgencyColor,
+      label: `截止 ${deadlineStr} · 剩余 ${timeLeftStr}`
+    };
+  } catch(e) { return null; }
 }
 function reRenderCharts(){
   const kl=S.klines[S.sym+S.chartTF]||[];
@@ -3800,13 +4228,11 @@ function _Ξ2s(sigs){
 
 // ── NEW: Non-linear confidence formula ──
 function _Λ3c(score,conflictPenalty=1.0){
-  // Logistic-like curve: confident at extremes, uncertain in middle
+  if(!isFinite(score)||isNaN(score)) return 40; // safe default
   const absScore=Math.abs(score);
-  // Base: 50*(1-e^(-|score|*0.4)) gives 0-50% range from score
   const base=50*(1-Math.exp(-absScore*0.38));
   const raw=Math.round(28+base);
-  // Apply conflict penalty
-  const adjusted=Math.round(raw*conflictPenalty);
+  const adjusted=Math.round(raw*(isFinite(conflictPenalty)?conflictPenalty:1.0));
   return Math.min(90,Math.max(22,adjusted));
 }
 function _Δ1p(kl,lookback=3){
@@ -5612,7 +6038,7 @@ function renderAllModules(){
 }
 
 async function loadAll(sym){
-  // ── v38: Route TwelveData assets to their own loader ──
+  // ── v42: Route AV assets to their own loader ──
   if(isTDAsset(sym)){
     await loadAllUnified(sym);
     return;
@@ -5667,8 +6093,11 @@ async function loadAll(sym){
   // ── STEP 3: Render chart + FIRST signal immediately ──
   const klChart=klMap[chartTF]||klMap['1h']||klMap['4h']||[];
   if(klChart.length){renderChart(klChart,sym);renderSubChart(klChart);}
-  loadFundingRate(sym).catch(()=>{});
-  loadOpenInterest(sym).catch(()=>{});
+  // Funding rate / OI only meaningful for crypto perpetuals
+  if(getAssetClass(sym) === 'crypto') {
+    loadFundingRate(sym).catch(()=>{});
+    loadOpenInterest(sym).catch(()=>{});
+  }
 
   setProgress(70);
   setMsg('⏳ 计算信号...');
@@ -5867,9 +6296,9 @@ function _Φ9x(tf){
   if(!kl||kl.length<60)return null;
   const isMock=!!(kl._isMock);
   const price=S.lastPx||kl[kl.length-1]?.c||0;
-  if(!price||price<=0)return null;
+  if(!price||price<=0||!isFinite(price))return null;
 
-  const prices=kl.map(k=>k.c).filter(v=>v>0);
+  const prices=kl.map(k=>k.c).filter(v=>v>0&&isFinite(v));
   const n=prices.length;
   if(n<60)return null;
 
@@ -5889,7 +6318,7 @@ function _Φ9x(tf){
   const chan=_Γ0c(kl,price);
   const bbPos=bbUV&&bbLV&&(bbUV-bbLV)>0?(price-bbLV)/(bbUV-bbLV):0.5;
 
-  const tfR={'15m':0,'30m':1,'1h':2,'4h':3,'1d':4,'1w':5};
+  const tfR={'15m':0,'30m':1,'1h':2,'2h':2.5,'4h':3,'8h':3.5,'1d':4,'1w':5};
   const cr=tfR[tf]||2;
   let tr1d=0,tr1w=0;
   try{
@@ -5923,7 +6352,7 @@ function _Φ9x(tf){
   );
 
   // ── ATR: per-timeframe dynamic clamp ──
-  const atrBounds={'15m':[0.001,0.030],'30m':[0.002,0.040],'1h':[0.003,0.050],'4h':[0.005,0.080],'1d':[0.008,0.120],'1w':[0.015,0.200]};
+  const atrBounds={'15m':[0.001,0.030],'30m':[0.002,0.040],'1h':[0.003,0.050],'2h':[0.004,0.065],'4h':[0.005,0.080],'8h':[0.006,0.100],'1d':[0.008,0.120],'1w':[0.015,0.200]};
   const[atrMin,atrMax]=atrBounds[tf]||[0.002,0.10];
   const atrClamped=Math.max(price*atrMin,Math.min(price*atrMax,rawAtr));
 
@@ -6213,7 +6642,9 @@ function _Φ9x(tf){
     '15m':{lbl:'15分钟 Scalp',  maxPct:0.03,slPct:0.008,barMs:900000},
     '30m':{lbl:'30分钟 Swing',  maxPct:0.05,slPct:0.012,barMs:1800000},
     '1h': {lbl:'1小时 Intraday',maxPct:0.08,slPct:0.018,barMs:3600000},
+    '2h': {lbl:'2小时 Intraday',maxPct:0.10,slPct:0.022,barMs:7200000},
     '4h': {lbl:'4小时 Position',maxPct:0.15,slPct:0.030,barMs:14400000},
+    '8h': {lbl:'8小时 Position',maxPct:0.20,slPct:0.040,barMs:28800000},
     '1d': {lbl:'日线 Daily',    maxPct:0.25,slPct:0.050,barMs:86400000},
     '1w': {lbl:'周线 Weekly',   maxPct:0.45,slPct:0.090,barMs:604800000},
   };
@@ -6356,7 +6787,7 @@ function _Φ9x(tf){
 
   // ── REGIME-AWARE ENTRY v23 ──
   const regimeMeta=S.modData.regime||{regime:'ranging'};
-  const slippagePct={'15m':0.0003,'30m':0.0003,'1h':0.0005,'4h':0.0008,'1d':0.001,'1w':0.0015}[tf]||0.0005;
+  const slippagePct={'15m':0.0003,'30m':0.0003,'1h':0.0005,'2h':0.0006,'4h':0.0008,'8h':0.0010,'1d':0.001,'1w':0.0015}[tf]||0.0005;
   
   // Regime modifies entry strategy fundamentally:
   if(regimeMeta.regime==='trending_strong'||regimeMeta.regime==='volatile_breakout'){
@@ -6708,7 +7139,7 @@ function _Φ9x(tf){
     
     // Historical bars-per-ATR for this symbol/tf (approximate)
     // 15m: ~3 bars/ATR, 1h: ~4, 4h: ~5, 1d: ~4
-    const barsPerATR={'15m':3,'30m':3.5,'1h':4,'4h':5,'1d':4,'1w':5}[tf]||4;
+    const barsPerATR={'15m':3,'30m':3.5,'1h':4,'2h':4.5,'4h':5,'8h':5,'1d':4,'1w':5}[tf]||4;
     
     // Time of day liquidity (MYT = UTC+8)
     // Asian session (01-09): slower; London (15-23): faster; NY overlap (21-01): fastest
@@ -6737,7 +7168,7 @@ function _Φ9x(tf){
   tps[1].bars=tp2Bars;tps[1].date=new Date(nowTs+tp2Bars*barMs);
   tps[2].bars=tp3Bars;tps[2].date=new Date(nowTs+tp3Bars*barMs);
 
-  const tfNames={'15m':'15分钟超短线','30m':'30分钟短线','1h':'1小时日内','4h':'4小时波段','1d':'日线','1w':'周线'};
+  const tfNames={'15m':'15分钟超短线','30m':'30分钟短线','1h':'1小时日内','2h':'2小时日内','4h':'4小时波段','8h':'8小时波段','1d':'日线','1w':'周线'};
   const parts=[];
   const regime=S.modData.regime;
   const regimeLabel=regime?`【${regime.regimeDesc}】`:'';
@@ -6818,69 +7249,190 @@ function _Φ9x(tf){
 // FINCH v41 UPGRADE — THREE NEW INTELLIGENCE MODULES
 // ═══════════════════════════════════════════════════════════════════════════
 
+// ── MODULE A: ENTRY CONVICTION SCORE ────────────────────────────────────────
+// 核心问题："这个入场信号背后有多少层结构支撑？"
+// 每个独立支撑论据 = 一根柱子。柱子越多越独立，信号越可靠。
+// 一路下破SL = 柱子从一开始就少，这个函数在入场前就告诉你。
+function _computeConvictionScore(res, kl) {
+  try {
+    const { isBull, conf, rsi, macdD, vegas, mktStr, adx, chan, obv, cvd,
+            supertrend, hv, mtf, conflictRatio, bbPos, tr1d, tr1w,
+            price, entry, sls, tps, atrRaw, candles } = res;
+
+    const pillars = [];
+    const weaknesses = [];
+
+    // PILLAR 1: HTF Trend Alignment
+    const htfStrong = isBull ? (tr1d > 0 && tr1w > 0) : (tr1d < 0 && tr1w < 0);
+    const htfAgrees = isBull ? (tr1d > 0 || tr1w > 0) : (tr1d < 0 || tr1w < 0);
+    if (htfStrong) pillars.push({ name:'HTF双线顺势', detail:`日+周均${isBull?'多头':'空头'}`, weight:20 });
+    else if (htfAgrees) pillars.push({ name:'HTF单线顺势', detail:`${tr1d>0?'日线':'周线'}${isBull?'多头':'空头'}`, weight:12 });
+    else weaknesses.push({ name:'HTF逆势', detail:`大时框${isBull?'空头':'多头'}，属次级运动`, severity:'high' });
+
+    // PILLAR 2: Market Structure
+    if (isBull && mktStr?.hhhl) pillars.push({ name:'HH/HL多头结构', detail:'高点低点持续抬升', weight:15 });
+    else if (!isBull && mktStr?.lllh) pillars.push({ name:'LL/LH空头结构', detail:'高点低点持续下移', weight:15 });
+    else if (isBull && mktStr?.bullCHoCH) pillars.push({ name:'CHoCH多头转换', detail:'结构刚刚从空转多', weight:10 });
+    else if (!isBull && mktStr?.bearCHoCH) pillars.push({ name:'CHoCH空头转换', detail:'结构刚刚从多转空', weight:10 });
+    else weaknesses.push({ name:'结构不清晰', detail:'高低点无明显方向性', severity:'medium' });
+
+    // PILLAR 3: MACD Momentum
+    if (isBull && macdD?.bullDiv) pillars.push({ name:'MACD底背驰', detail:'价格新低但动能不创低，高概率反转', weight:18 });
+    else if (!isBull && macdD?.bearDiv) pillars.push({ name:'MACD顶背驰', detail:'价格新高但动能不创高，高概率顶部', weight:18 });
+    else if (isBull && macdD?.hist > 0) pillars.push({ name:'MACD多头', detail:'动能方向一致', weight:8 });
+    else if (!isBull && macdD?.hist < 0) pillars.push({ name:'MACD空头', detail:'动能方向一致', weight:8 });
+    else weaknesses.push({ name:`MACD逆势`, detail:`做${isBull?'多':'空'}但MACD动能${isBull?'负':'正'}`, severity:'medium' });
+
+    // PILLAR 4: Vegas Channel
+    if (isBull && vegas?.above) pillars.push({ name:'Vegas通道上方', detail:'EMA144/169支撑，中期强势', weight:10 });
+    else if (!isBull && vegas?.below) pillars.push({ name:'Vegas通道下方', detail:'EMA144/169压制，中期弱势', weight:10 });
+    else if (vegas) weaknesses.push({ name:'Vegas通道逆势', detail:`价格在通道${isBull?'下方':'上方'}`, severity:'medium' });
+
+    // PILLAR 5: OBV Volume
+    if (isBull && obv?.obvTrend === 1) pillars.push({ name:'OBV量能同步', detail:`资金净流入${obv?.obvDiv?'，出现背驰信号':''}`, weight:8 });
+    else if (!isBull && obv?.obvTrend === -1) pillars.push({ name:'OBV量能同步', detail:'资金净流出', weight:8 });
+    else weaknesses.push({ name:'OBV量价背离', detail:'量能与价格方向不一致', severity:'low' });
+
+    // PILLAR 6: RSI Zone
+    if (isBull && rsi < 35) pillars.push({ name:'RSI超卖区', detail:`RSI ${rsi.toFixed(0)}，历史高概率反弹`, weight:10 });
+    else if (!isBull && rsi > 65) pillars.push({ name:'RSI超买区', detail:`RSI ${rsi.toFixed(0)}，历史高概率回调`, weight:10 });
+    else if (isBull && rsi > 68) weaknesses.push({ name:'RSI超买做多', detail:`RSI ${rsi.toFixed(0)}，追高风险`, severity:'medium' });
+    else if (!isBull && rsi < 32) weaknesses.push({ name:'RSI超卖做空', detail:`RSI ${rsi.toFixed(0)}，追空风险`, severity:'medium' });
+    else if ((isBull && rsi > 50) || (!isBull && rsi < 50)) pillars.push({ name:`RSI偏${isBull?'多':'空'}`, detail:`RSI ${rsi.toFixed(0)}`, weight:4 });
+
+    // PILLAR 7: ADX Trend
+    if (adx?.strong) pillars.push({ name:'ADX强趋势', detail:`ADX ${adx.adx?.toFixed(0)}，趋势充足`, weight:8 });
+    else if (adx?.ranging) weaknesses.push({ name:'ADX震荡', detail:`ADX ${adx.adx?.toFixed(0)}，无趋势`, severity:'medium' });
+
+    // PILLAR 8: Supertrend
+    if (isBull && supertrend?.bull) pillars.push({ name:'Supertrend支撑', detail:`支撑 ${fmtP(supertrend.value)}`, weight:6 });
+    else if (!isBull && supertrend?.bear) pillars.push({ name:'Supertrend压力', detail:`压力 ${fmtP(supertrend.value)}`, weight:6 });
+    else weaknesses.push({ name:'Supertrend逆势', detail:'方向相反', severity:'low' });
+
+    // PILLAR 9: MTF
+    if (mtf?.fullyAligned) pillars.push({ name:'多周期完全共振', detail:`${mtf.bullCount}多/${mtf.bearCount}空全一致`, weight:12 });
+    else if (mtf?.partiallyAligned) pillars.push({ name:'多周期部分共振', detail:`${mtf.bullCount}多/${mtf.bearCount}空大部分一致`, weight:6 });
+    else weaknesses.push({ name:'多周期分歧', detail:`${mtf?.bullCount||0}多/${mtf?.bearCount||0}空，时框分裂`, severity:'medium' });
+
+    // PILLAR 10: Chan Theory
+    if ((chan?.bullDivStrong && isBull) || (chan?.bearDivStrong && !isBull))
+      pillars.push({ name:`缠论强${isBull?'底':'顶'}背驰`, detail:'多笔背驰，反转概率高', weight:15 });
+    else if ((chan?.bullDiv && isBull) || (chan?.bearDiv && !isBull))
+      pillars.push({ name:`缠论${isBull?'底':'顶'}背驰`, detail:'单笔背驰信号', weight:8 });
+    else if (chan?.bs1 === (isBull?'bull':'bear'))
+      pillars.push({ name:`缠论${isBull?'一买':'一卖'}点`, detail:'一级买卖点确认', weight:12 });
+
+    // PILLAR 11: CVD Delta
+    if ((isBull && cvd?.bullishDelta) || (!isBull && !cvd?.bullishDelta))
+      pillars.push({ name:`CVD${isBull?'买':'卖'}盘主导`, detail:`主动${isBull?'买':'卖'}盘占优`, weight:5 });
+
+    // PILLAR 12: Candle Pattern
+    if (candles?.patterns?.length) {
+      const matchPats = candles.patterns.filter(p => isBull ? p.bull===true : p.bull===false);
+      if (matchPats.length) pillars.push({ name:`K线:${matchPats.slice(0,2).map(p=>p.n).join('+')}`, detail:`看${isBull?'涨':'跌'}形态`, weight:6 });
+    }
+
+    // Conflict penalty
+    if (conflictRatio > 0.5) weaknesses.push({ name:`高分歧${(conflictRatio*100).toFixed(0)}%`, detail:'超半数指标相互矛盾', severity:'high' });
+    else if (conflictRatio > 0.35) weaknesses.push({ name:`分歧${(conflictRatio*100).toFixed(0)}%`, detail:'多项指标矛盾', severity:'medium' });
+
+    // Score
+    const rawScore = pillars.reduce((s,p) => s+p.weight, 0);
+    const highPenalty = weaknesses.filter(w=>w.severity==='high').length * 15;
+    const medPenalty  = weaknesses.filter(w=>w.severity==='medium').length * 7;
+    const finalScore  = Math.max(0, Math.min(100, Math.round(rawScore/120*100) - highPenalty - medPenalty));
+
+    const grade = finalScore>=75?'A':finalScore>=60?'B':finalScore>=45?'C':finalScore>=30?'D':'F';
+    const gradeLabel = {A:'强 · 可入场',B:'中等 · 谨慎入场',C:'弱 · 等待确认',D:'很弱 · 建议观望',F:'极弱 · 拒绝入场'}[grade];
+    const gradeColor = {A:'var(--green)',B:'var(--teal)',C:'var(--amber)',D:'var(--orange)',F:'var(--red)'}[grade];
+    let actionable = '';
+    if (grade==='A') actionable=`${pillars.length}根支撑柱，结构坚实。可按计划入场 ${fmtP(entry)}，SL1 ${fmtP(sls[0].p)} 严守。`;
+    else if (grade==='B') actionable=`${pillars.length}根支撑柱，有${weaknesses.filter(w=>w.severity!=='low').length}个弱点。建议小仓入场，等${weaknesses[0]?.name}改善后加仓。`;
+    else if (grade==='C') actionable=`只有${pillars.length}根支撑柱，弱点明显。需等1–2个额外确认（如放量突破、缠论笔结构）再入。`;
+    else actionable=`支撑柱只有${pillars.length}根，弱点太多。论据不足，不建议入场，等待更好机会。`;
+
+    return { score:finalScore, grade, gradeLabel, gradeColor, pillars, weaknesses, actionable, pillarCount:pillars.length };
+  } catch(e) {
+    return { score:50, grade:'C', gradeLabel:'计算中', gradeColor:'var(--muted)', pillars:[], weaknesses:[], actionable:'', pillarCount:0 };
+  }
+}
+
+// ── MODULE A2: VALIDITY / ENTRY GUARD (price-level based) ────────────────
 // ── MODULE A: ANALYSIS VALIDITY WINDOW ──────────────────────────────────────
 // "当前分析有效到什么时候？什么时候开始可能换方向？"
 // Returns: { validUntil(Date), validLabel, decayLabel, expiryBars, reasons[], urgency }
 function _computeValidityWindow(res) {
+  // ── REDESIGNED: Price-level based validity, not time-based ──
+  // The signal is valid AS LONG AS price stays within defined zones.
+  // The question is not "how many hours" but "what price breaks the thesis".
   try {
-    const { tf, price, atrRaw, hv, barMs, adx, conflictRatio, mktStr, conf } = res;
-    const barMsVal = barMs || 3600000;
+    const { isBull, price, atrRaw, sls, tps, entry, adx, conflictRatio, mktStr, conf, hv } = res;
     const atr = atrRaw || price * 0.015;
 
-    // Base validity in bars depends on timeframe — higher TF = longer valid signal
-    const baseValidity = {
-      '15m': 3, '30m': 4, '1h': 5, '4h': 6, '1d': 8, '1w': 10
-    }[tf] || 5;
+    // ── CONFIRMATION ZONE: price must stay inside this range to confirm entry ──
+    // Tight: 0.3–0.5× ATR from entry. If price moves against this before you enter → abort.
+    const confirmBuffer = atr * (conflictRatio > 0.4 ? 0.35 : 0.5);
+    const confirmHi = isBull ? entry + confirmBuffer : entry - confirmBuffer * 0.5;
+    const confirmLo = isBull ? entry - confirmBuffer * 0.5 : entry - confirmBuffer;
 
-    // Modifiers
-    let validBars = baseValidity;
+    // ── ABORT ZONE: price that means "don't enter even with limit order filled" ──
+    // If price has moved 1×ATR against you before you act → skip the trade
+    const abortPrice = isBull
+      ? entry - atr * 0.8    // long abort: dropped 0.8 ATR below entry
+      : entry + atr * 0.8;   // short abort: spiked 0.8 ATR above entry
+
+    // ── RECHECK INTERVALS ──
+    // How often should you actively check if signal is still valid?
+    const recheckMins = {
+      '15m': 5, '30m': 5, '1h': 10, '4h': 10, '1d': 15, '1w': 30
+    }[res.tf] || 10;
+
+    // ── FALLING KNIFE GUARD ──
+    // For long limit orders below current price, compute the "give up" distance
+    // If price drops more than 2×ATR below your limit order → it's a falling knife, abort
+    const fallingKnifeBuffer = atr * 2.0;
+    const fallingKnifeAbort = isBull
+      ? (entry - atr * 0.5) - fallingKnifeBuffer   // long: if drops 2ATR below intended entry
+      : (entry + atr * 0.5) + fallingKnifeBuffer;   // short: if spikes 2ATR above intended entry
+    const fallingKnifePct = Math.abs((fallingKnifeAbort - entry) / entry * 100).toFixed(2);
+
+    // ── SIGNAL HEALTH: simple conditions that keep signal alive ──
+    const keepAliveConditions = [];
+    if (isBull) {
+      keepAliveConditions.push(`价格维持在 ${fmtP(sls[0].p)} 以上`);
+      keepAliveConditions.push(`每${recheckMins}分钟确认未跌破 ${fmtP(abortPrice)}`);
+      keepAliveConditions.push(`成交量无异常放大（非主力出货）`);
+    } else {
+      keepAliveConditions.push(`价格维持在 ${fmtP(sls[0].p)} 以下`);
+      keepAliveConditions.push(`每${recheckMins}分钟确认未突破 ${fmtP(abortPrice)}`);
+      keepAliveConditions.push(`成交量无异常放大（非主力做多）`);
+    }
+
     const reasons = [];
+    if (adx?.strong) reasons.push('强ADX趋势增强信号持续性');
+    if (conflictRatio > 0.4) reasons.push('⚠️ 分歧率高→需更频繁检验');
+    if (hv?.expanding) reasons.push('⚠️ 波动率扩张→止损易被扫');
+    if (mktStr?.hhhl || mktStr?.lllh) reasons.push('结构清晰→信号较稳');
 
-    // High ADX trending market → signal lasts longer
-    if (adx?.strong) { validBars += 2; reasons.push('强趋势ADX延长有效期'); }
-    else if (adx?.ranging) { validBars -= 1; reasons.push('震荡市缩短有效期'); }
+    // Urgency based on how close current price is to abort zone
+    const distToAbort = Math.abs(price - abortPrice) / price;
+    const urgency = distToAbort < 0.005 ? 'critical' : distToAbort < 0.015 ? 'soon' : 'stable';
 
-    // High volatility → signal decays faster
-    const hvAnn = hv?.hv || 40;
-    if (hvAnn > 80) { validBars -= 2; reasons.push('极高波动率加速衰减'); }
-    else if (hvAnn > 60) { validBars -= 1; reasons.push('高波动率缩短有效期'); }
-    else if (hvAnn < 25) { validBars += 1; reasons.push('低波动率延长有效期'); }
-
-    // High conflict → unstable, expires sooner
-    if (conflictRatio > 0.4) { validBars -= 1; reasons.push('信号分歧高→易失效'); }
-
-    // Strong structure → more durable
-    if (mktStr?.hhhl || mktStr?.lllh) { validBars += 1; reasons.push('清晰市场结构'); }
-
-    // Low confidence → expires sooner
-    if (conf < 55) { validBars -= 1; reasons.push('置信度偏低'); }
-
-    validBars = Math.max(1, validBars);
-    const validMs = validBars * barMsVal;
-    const validUntil = new Date(Date.now() + validMs);
-    const myt = toMYT(validUntil);
-    const dateStr = `${String(myt.getUTCMonth()+1).padStart(2,'0')}/${String(myt.getUTCDate()).padStart(2,'0')} ${String(myt.getUTCHours()).padStart(2,'0')}:${String(myt.getUTCMinutes()).padStart(2,'0')} MYT`;
-
-    // Urgency: how soon does this expire?
-    const hoursLeft = validMs / 3600000;
-    const urgency = hoursLeft < 2 ? 'critical' : hoursLeft < 8 ? 'soon' : 'stable';
-
-    // Human label for how long
-    const validLabel = validMs < 3600000
-      ? `约${Math.round(validMs/60000)}分钟内有效`
-      : validMs < 86400000
-      ? `约${Math.round(validMs/3600000)}小时内有效`
-      : `约${Math.round(validMs/86400000)}天内有效`;
-
-    // Decay message — when to re-check
-    const recheckMs = validMs * 0.6;
-    const recheckLabel = recheckMs < 3600000
-      ? `${Math.round(recheckMs/60000)}分钟后`
-      : `${Math.round(recheckMs/3600000)}小时后`;
-
-    return { validUntil, validLabel, validBars, validMs, dateStr, reasons, urgency, recheckLabel };
+    return {
+      recheckMins,
+      confirmHi, confirmLo,
+      abortPrice, abortPct: Math.abs((abortPrice - entry) / entry * 100).toFixed(2),
+      fallingKnifeAbort, fallingKnifePct,
+      keepAliveConditions, reasons, urgency,
+      // Legacy compat fields so HTML doesn't break
+      validLabel: `每 ${recheckMins} 分钟确认一次`,
+      validBars: recheckMins,
+      dateStr: `止损 ${fmtP(sls[0].p)} 未破 = 信号有效`,
+    };
   } catch(e) {
-    return { validLabel: '未知', urgency: 'stable', reasons: [], recheckLabel: '--', dateStr: '--' };
+    return { validLabel: '每10分钟确认', urgency: 'stable', reasons: [], recheckMins: 10,
+             confirmHi: 0, confirmLo: 0, abortPrice: 0, abortPct: '0',
+             fallingKnifeAbort: 0, fallingKnifePct: '0', keepAliveConditions: [], dateStr: '--' };
   }
 }
 
@@ -7155,7 +7707,8 @@ function _doRenderStrategy(res){
     return`约${Math.round(ms/86400000)}天`;
   }
 
-  const mockBanner=res.isMock?`<div style="background:rgba(128,80,0,0.08);border:1px solid rgba(128,80,0,0.25);border-radius:6px;padding:8px 12px;margin-bottom:10px;font-size:11px;color:var(--amber)">⚠️ <strong>模拟数据</strong> — API受限。<button onclick="loadAll(S.sym)" style="margin-left:8px;padding:3px 10px;border:1px solid var(--amber);border-radius:3px;background:transparent;color:var(--amber);cursor:pointer;font-family:inherit;font-size:11px">🔄 重试</button></div>`:'';
+  const isTDSym = isTDAsset(res.sym||S.sym);
+  const mockBanner=res.isMock&&!isTDSym?`<div style="background:rgba(128,80,0,0.08);border:1px solid rgba(128,80,0,0.25);border-radius:6px;padding:8px 12px;margin-bottom:10px;font-size:11px;color:var(--amber)">⚠️ <strong>模拟数据</strong> — 连接中，请稍候。<button onclick="loadAll(S.sym)" style="margin-left:8px;padding:3px 10px;border:1px solid var(--amber);border-radius:3px;background:transparent;color:var(--amber);cursor:pointer;font-family:inherit;font-size:11px">🔄 重试</button></div>`:'';
 
   const verdict=_Ψ7v(res);
   const vAction=verdict?.action||'observe';
@@ -7169,7 +7722,7 @@ function _doRenderStrategy(res){
   const actionColor=isLong?'var(--green)':isShort?'var(--red)':'var(--amber)';
   const urgencyMap={'high':'· 强信号','medium':'· 中等信号','low':'· 观察中'};
 
-  const allTFs_chk=['15m','30m','4h','1d','1w'];
+  const allTFs_chk=['15m','30m','1h','2h','4h','8h','1d','1w'];
   const tfResults={};
   allTFs_chk.forEach(t=>{try{const r=buildStrategyMemo(t)||buildStrategy(t);if(r)tfResults[t]=r.isBull;}catch(e){}});
   const bullCountTF=Object.values(tfResults).filter(v=>v===true).length;
@@ -7453,6 +8006,8 @@ function _doRenderStrategy(res){
   const validity=_computeValidityWindow(res);
   const regimeFlip=_computeRegimeFlip(res,klForFlip);
   const macroBias=_computeMacroBias(res);
+  const deadlineAnalysis=_computeDeadlineAnalysis(res);
+  const conviction=_computeConvictionScore(res,klForFlip);
 
   // ── Build TP/SL rows ──
   const tpColors=['var(--teal)','var(--green)','var(--blue)'];
@@ -7645,8 +8200,90 @@ function _doRenderStrategy(res){
     </div>`:''}
   </div>
 
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  <!-- BLOCK 1A: 🏛️ ENTRY CONVICTION SCORE — 入场论据强度              -->
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  ${(()=>{
+    const cv=conviction;
+    const scoreBg=cv.grade==='A'?'rgba(26,107,58,0.06)':cv.grade==='B'?'rgba(10,96,80,0.05)':cv.grade==='C'?'rgba(128,80,0,0.06)':cv.grade==='D'?'rgba(138,48,16,0.06)':'rgba(160,20,32,0.07)';
+    const scoreBd=cv.grade==='A'?'rgba(26,107,58,0.3)':cv.grade==='B'?'rgba(10,96,80,0.25)':cv.grade==='C'?'rgba(128,80,0,0.3)':cv.grade==='D'?'rgba(138,48,16,0.3)':'rgba(160,20,32,0.3)';
+
+    // Pillar bars (top 6 by weight)
+    const topPillars = [...cv.pillars].sort((a,b)=>b.weight-a.weight).slice(0,6);
+    const topWeaknesses = cv.weaknesses.filter(w=>w.severity!=='low').slice(0,3);
+
+    const pillarHTML = topPillars.map(p =>
+      '<div style="display:flex;align-items:center;gap:6px;padding:3px 0;">'
+      +'<div style="width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0;"></div>'
+      +'<div style="flex:1;min-width:0;">'
+      +'<div style="font-size:10px;font-weight:700;color:var(--text)">'+p.name+'</div>'
+      +'<div style="font-size:9px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+p.detail+'</div>'
+      +'</div>'
+      +'<div style="font-size:9px;font-weight:700;color:var(--green);flex-shrink:0">+'+p.weight+'</div>'
+      +'</div>'
+    ).join('');
+
+    const weakHTML = topWeaknesses.map(w =>
+      '<div style="display:flex;align-items:center;gap:6px;padding:3px 0;">'
+      +'<div style="width:8px;height:8px;border-radius:50%;background:'+(w.severity==='high'?'var(--red)':'var(--amber)')+';flex-shrink:0;"></div>'
+      +'<div style="flex:1;min-width:0;">'
+      +'<div style="font-size:10px;font-weight:700;color:'+(w.severity==='high'?'var(--red)':'var(--amber)')+'">'+w.name+'</div>'
+      +'<div style="font-size:9px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+w.detail+'</div>'
+      +'</div>'
+      +'</div>'
+    ).join('');
+
+    return '<div style="background:'+scoreBg+';border:2px solid '+scoreBd+';border-radius:10px;margin-bottom:10px;overflow:hidden;">'
+
+    // Header with grade
+    +'<div style="padding:11px 16px;border-bottom:1px solid '+scoreBd+'55;display:flex;align-items:center;justify-content:space-between;gap:10px;">'
+    +'<div>'
+    +'<div style="font-size:10px;letter-spacing:1.5px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:3px">🏛️ 入场论据强度 · Conviction Score</div>'
+    +'<div style="font-size:12px;color:var(--muted)">'+cv.pillars.length+'根支撑柱 · '+cv.weaknesses.length+'个弱点</div>'
+    +'</div>'
+    +'<div style="text-align:center;flex-shrink:0;">'
+    +'<div style="font-size:40px;font-weight:900;color:'+cv.gradeColor+';line-height:1;">'+cv.grade+'</div>'
+    +'<div style="font-size:10px;font-weight:700;color:'+cv.gradeColor+';white-space:nowrap">'+cv.gradeLabel+'</div>'
+    +'</div>'
+    +'</div>'
+
+    // Score bar
+    +'<div style="padding:10px 16px;border-bottom:1px solid '+scoreBd+'33;">'
+    +'<div style="display:flex;align-items:center;gap:8px;">'
+    +'<span style="font-size:10px;color:var(--muted);width:24px;text-align:right">0</span>'
+    +'<div style="flex:1;height:10px;background:var(--bg3);border-radius:5px;overflow:hidden;position:relative;">'
+    +[30,45,60,75].map(mark=>'<div style="position:absolute;left:'+mark+'%;top:0;width:1px;height:100%;background:rgba(0,0,0,0.12);"></div>').join('')
+    +'<div style="height:100%;border-radius:5px;background:'+cv.gradeColor+';width:'+cv.score+'%;transition:width 0.8s ease;"></div>'
+    +'</div>'
+    +'<span style="font-size:14px;font-weight:700;color:'+cv.gradeColor+';width:36px;">'+cv.score+'</span>'
+    +'</div>'
+    +'<div style="display:flex;justify-content:space-between;font-size:9px;color:var(--muted);margin-top:3px;padding:0 32px;">'
+    +'<span>F 极弱</span><span>D 很弱</span><span>C 弱</span><span>B 中</span><span>A 强</span>'
+    +'</div>'
+    +'</div>'
+
+    // Two-column: pillars vs weaknesses
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:0;">'
+    +'<div style="padding:10px 14px;border-right:1px solid '+scoreBd+'33;">'
+    +'<div style="font-size:9px;letter-spacing:1px;color:var(--green);font-weight:700;text-transform:uppercase;margin-bottom:6px">✓ 支撑柱 ('+cv.pillars.length+')</div>'
+    +(pillarHTML||'<div style="font-size:10px;color:var(--muted)">暂无强支撑</div>')
+    +'</div>'
+    +'<div style="padding:10px 14px;">'
+    +'<div style="font-size:9px;letter-spacing:1px;color:var(--red);font-weight:700;text-transform:uppercase;margin-bottom:6px">✗ 弱点 ('+cv.weaknesses.length+')</div>'
+    +(weakHTML||'<div style="font-size:10px;color:var(--green)">✅ 无主要弱点</div>')
+    +'</div>'
+    +'</div>'
+
+    // Actionable advice
+    +'<div style="padding:10px 16px;background:rgba(255,255,255,0.5);border-top:1px solid '+scoreBd+'33;">'
+    +'<div style="font-size:11px;color:var(--text);line-height:1.75;border-left:3px solid '+cv.gradeColor+';padding-left:10px;">'+cv.actionable+'</div>'
+    +'</div>'
+
+    +'</div>';
+  })()}
+
   <!-- ══════════════════════════════════════════════════════════════ -->
-  <!-- BLOCK 1B: 🕐 ANALYSIS VALIDITY WINDOW + REGIME FLIP ALERT  -->
+  <!-- BLOCK 1B: 🕐 ENTRY GUARD + REGIME FLIP ALERT                -->
   <!-- ══════════════════════════════════════════════════════════════ -->
   ${(()=>{
     const vld=validity;
@@ -7661,20 +8298,33 @@ function _doRenderStrategy(res){
 
     return '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">'
 
-    // ── Left cell: Validity Window ──
+    // ── Left cell: Price Confirmation System (replaces time-based validity) ──
     +'<div style="background:'+vldBg+';border:1px solid '+vldBd+';border-radius:10px;padding:13px 14px;overflow:hidden;">'
-    +'<div style="font-size:10px;letter-spacing:1.5px;color:'+vldColor+';font-weight:700;text-transform:uppercase;margin-bottom:8px">🕐 分析有效期</div>'
-    +'<div style="font-size:16px;font-weight:700;color:'+vldColor+';line-height:1.2;margin-bottom:4px">'+vld.validLabel+'</div>'
-    +'<div style="font-size:10px;color:var(--muted);margin-bottom:8px">到期时间: '+vld.dateStr+'</div>'
-    +'<div style="height:4px;background:var(--bg3);border-radius:2px;overflow:hidden;margin-bottom:8px;">'
-    +'<div style="height:100%;border-radius:2px;background:'+vldColor+';width:'+Math.min(100,Math.max(15,Math.round((vld.validBars/12)*100)))+'%;transition:width 1s;"></div>'
+    +'<div style="font-size:10px;letter-spacing:1.5px;color:'+vldColor+';font-weight:700;text-transform:uppercase;margin-bottom:8px">⏱ 信号确认 · 每'+vld.recheckMins+'分钟验证</div>'
+
+    // Abort price — the most important single number
+    +'<div style="margin-bottom:8px;padding:8px 10px;background:rgba(160,20,32,0.07);border:1px solid rgba(160,20,32,0.2);border-radius:6px;">'
+    +'<div style="font-size:9px;color:var(--red);font-weight:700;letter-spacing:1px;margin-bottom:3px">🚫 入场终止价 — 触碰立即放弃</div>'
+    +'<div style="display:flex;align-items:baseline;gap:6px;">'
+    +'<span style="font-size:17px;font-weight:700;color:var(--red);font-variant-numeric:tabular-nums">'+fmtP(vld.abortPrice)+'</span>'
+    +'<span style="font-size:10px;color:var(--muted)">距入场价 '+vld.abortPct+'%</span>'
     +'</div>'
-    +'<div style="font-size:10px;color:var(--muted);line-height:1.6;">'
-    +(vld.reasons.length?'<strong>有效期因素：</strong> '+vld.reasons.join(' · '):'')
+    +'<div style="font-size:10px;color:var(--red);margin-top:2px">价格到这里 = 论据已破坏，拒绝入场</div>'
     +'</div>'
-    +'<div style="margin-top:7px;padding:6px 9px;background:rgba(255,255,255,0.55);border-radius:5px;font-size:10px;color:var(--muted);">'
-    +'⚡ <strong style="color:var(--text)">'+vld.recheckLabel+'</strong>重新检验信号有效性'
+
+    // Falling knife guard
+    +'<div style="margin-bottom:8px;padding:7px 10px;background:rgba(128,80,0,0.06);border:1px solid rgba(128,80,0,0.2);border-radius:6px;">'
+    +'<div style="font-size:9px;color:var(--amber);font-weight:700;letter-spacing:1px;margin-bottom:2px">🔪 接飞刀警戒价</div>'
+    +'<div style="font-size:14px;font-weight:700;color:var(--amber);font-variant-numeric:tabular-nums">'+fmtP(vld.fallingKnifeAbort)+'</div>'
+    +'<div style="font-size:10px;color:var(--muted);margin-top:1px">低价限价单已成交但价格继续破此位 → 全部止损出场</div>'
     +'</div>'
+
+    // Keep alive conditions
+    +(vld.keepAliveConditions.length
+      ?'<div style="font-size:10px;color:var(--muted);line-height:1.7;"><strong style="color:var(--text)">信号存活条件：</strong><br>'
+       +vld.keepAliveConditions.map(c=>'✓ '+c).join('<br>')+'</div>'
+      :'')
+    +(vld.reasons.length?'<div style="font-size:10px;color:var(--muted);margin-top:5px;line-height:1.5">'+vld.reasons.join(' · ')+'</div>':'')
     +'</div>'
 
     // ── Right cell: Regime Flip Risk ──
@@ -7781,6 +8431,57 @@ function _doRenderStrategy(res){
 
     +'</div>';
   })()}
+
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <!-- BLOCK 1D: 🎯 TRADE DEADLINE ANALYSIS (shown if set)      -->
+  <!-- ══════════════════════════════════════════════════════════ -->
+  ${deadlineAnalysis ? (()=>{
+    const da = deadlineAnalysis;
+    if (da.expired) return `<div style="background:rgba(160,20,32,0.08);border:1px solid rgba(160,20,32,0.3);border-radius:10px;padding:12px 16px;margin-bottom:10px;font-size:12px;color:var(--red);">⚠️ ${da.warning} <button onclick="clearTradeDeadline()" style="margin-left:8px;padding:2px 8px;border:1px solid var(--red);border-radius:3px;background:transparent;color:var(--red);font-family:inherit;font-size:10px;cursor:pointer;">清除截止日</button></div>`;
+
+    const tfWarn = da.tfRecommend
+      ? `<div style="margin-bottom:8px;padding:7px 10px;background:rgba(128,80,0,0.07);border:1px solid rgba(128,80,0,0.25);border-radius:6px;font-size:10px;color:var(--amber);">⚠️ <strong>${da.tfRecommend.issue}</strong>：${da.tfRecommend.reason} <button onclick="setStrat('${da.tfRecommend.suggest}',null)" style="margin-left:6px;padding:2px 7px;border:1px solid var(--amber);border-radius:3px;background:rgba(128,80,0,0.1);color:var(--amber);font-family:inherit;font-size:10px;cursor:pointer;font-weight:700;">切换到 ${da.tfRecommend.suggest.toUpperCase()}</button></div>`
+      : `<div style="font-size:10px;color:var(--teal);margin-bottom:8px;">✅ 当前时框（${res.tf.toUpperCase()}）与截止日期窗口匹配，剩余 ${da.barsLeft} 根K线</div>`;
+
+    const tpRows = da.tpReachable.map(tp => {
+      if (!tp.p || !isFinite(tp.p)) return '';
+      const valid = isBull ? tp.p > entry : tp.p < entry;
+      if (!valid) return '';
+      return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--line);">
+        <span style="font-size:9px;font-weight:700;padding:2px 5px;border-radius:3px;background:${tp.reachable?'rgba(10,96,80,0.1)':'rgba(160,20,32,0.08)'};color:${tp.reachable?'var(--teal)':'var(--red)'};border:1px solid ${tp.reachable?'rgba(10,96,80,0.25)':'rgba(160,20,32,0.2)'};">TP${tp.idx}</span>
+        <span style="font-size:13px;font-weight:700;color:${tp.reachable?'var(--teal)':'var(--muted)'};font-variant-numeric:tabular-nums;">${fmtP(tp.p)}</span>
+        <span style="font-size:10px;color:var(--muted);">${tp.reachable?'✅ 截止日前可达':'⏰ 可能超时'}</span>
+        <span style="font-size:10px;color:var(--dim);margin-left:auto;">预计 ${tp.etaStr}</span>
+      </div>`;
+    }).join('');
+
+    return `<div style="background:rgba(10,96,80,0.04);border:2px solid ${da.color};border-radius:10px;margin-bottom:10px;overflow:hidden;">
+      <div style="padding:10px 16px;border-bottom:1px solid ${da.color}44;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;">
+        <div>
+          <div style="font-size:10px;letter-spacing:1.5px;color:${da.color};font-weight:700;text-transform:uppercase;margin-bottom:3px">🎯 交易截止日分析</div>
+          <div style="font-size:14px;font-weight:700;color:${da.color}">${da.label}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <div style="text-align:right;font-size:10px;color:var(--muted);">剩余约 <strong style="color:${da.color};font-size:13px;">${da.barsLeft}</strong> 根 ${res.tf.toUpperCase()} K线<br>预期最大波幅: <strong style="color:var(--text);">${da.expectedMovePct}%</strong></div>
+          <button onclick="clearTradeDeadline()" style="padding:3px 8px;border:1px solid var(--line2);border-radius:3px;background:transparent;color:var(--muted);font-family:inherit;font-size:10px;cursor:pointer;">✕ 清除</button>
+        </div>
+      </div>
+      <div style="padding:12px 16px;">
+        ${tfWarn}
+        <div style="font-size:10px;letter-spacing:1px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:6px;">截止日前 TP 可达性</div>
+        ${tpRows || '<div style="font-size:11px;color:var(--muted);">无有效TP目标</div>'}
+        ${da.bestReachableTP
+          ? `<div style="margin-top:8px;padding:8px 12px;background:rgba(255,255,255,0.6);border-radius:6px;border-left:3px solid ${da.color};font-size:11px;color:var(--text);line-height:1.7;">
+              📌 <strong>截止日策略建议：</strong>
+              ${da.reachableCount === 0
+                ? '截止日前TP均难以达到，建议缩短时框重新分析，或放弃等待更好机会。'
+                : `在 ${da.deadlineStr} 前，重点锁定 <strong style="color:var(--teal)">TP${da.bestReachableTP.idx} ${fmtP(da.bestReachableTP.p)}</strong>。
+                   到达TP${da.bestReachableTP.idx}后，无论信号如何，截止日前主动平仓锁利，勿恋战。`}
+            </div>`
+          : ''}
+      </div>
+    </div>`;
+  })() : ''}
 
   <!-- ══════════════════════════════════════ -->
   <!-- BLOCK 2: 🔮 MYSTIC UNIFIED READING   -->
@@ -8165,7 +8866,9 @@ function _bND(res){
     '15m':{lbl:'15分钟',maxPct:0.03,slPct:0.008,barMs:900000},
     '30m':{lbl:'30分钟',maxPct:0.05,slPct:0.012,barMs:1800000},
     '1h': {lbl:'1小时', maxPct:0.08,slPct:0.018,barMs:3600000},
+    '2h': {lbl:'2小时', maxPct:0.10,slPct:0.022,barMs:7200000},
     '4h': {lbl:'4小时', maxPct:0.15,slPct:0.030,barMs:14400000},
+    '8h': {lbl:'8小时', maxPct:0.20,slPct:0.040,barMs:28800000},
     '1d': {lbl:'日线',  maxPct:0.25,slPct:0.050,barMs:86400000},
     '1w': {lbl:'周线',  maxPct:0.45,slPct:0.090,barMs:604800000},
   };
@@ -8175,6 +8878,8 @@ function _bND(res){
   const tfHorizon={
     '15m':{near:DAY*0.5,   mid:DAY*2,  far:DAY*7,   vfar:DAY*21},
     '30m':{near:DAY*1,     mid:DAY*4,  far:DAY*14,  vfar:DAY*35},
+    '2h': {near:DAY*3,     mid:DAY*10, far:DAY*21,  vfar:DAY*50},
+    '8h': {near:DAY*7,     mid:DAY*21, far:DAY*45,  vfar:DAY*90},
     '1h': {near:DAY*1.5,   mid:DAY*5,  far:DAY*18,  vfar:DAY*45},
     '4h': {near:DAY*3,     mid:DAY*10, far:DAY*28,  vfar:DAY*70},
     '1d': {near:DAY*7,     mid:DAY*21, far:DAY*60,  vfar:DAY*120},
@@ -9130,7 +9835,7 @@ function renderSummary(){
   const fr2 = document.getElementById('filterRow2');
   if (fr && fr2) { fr2.innerHTML = fr.innerHTML; }
 
-  // ── v39 Fix: Render TwelveData stock/forex/commodity info card ──
+  // ── v42: Render AV forex/commodity info card ──
   _renderTDAssetInfoCard();
 }
 
@@ -9145,8 +9850,8 @@ function _renderTDAssetInfoCard() {
   const cls = pair.cls;
   const q = S._tdQuotes?.[sym];
   const mhrs = getMarketStatus(cls);
-  const clsLabels = {us_stock:'🇺🇸 美股',my_stock:'🇲🇾 马股',sg_stock:'🇸🇬 新股',forex:'💱 外汇',commodity:'🪙 商品'};
-  const clsColors = {us_stock:'var(--green)',my_stock:'var(--teal)',sg_stock:'var(--blue)',forex:'var(--cyan)',commodity:'var(--gold)'};
+  const clsLabels = {metal:'🥇 黄金白银',forex:'💱 汇率',commodity:'🛢️ 原油'};
+  const clsColors = {metal:'var(--gold)',forex:'var(--cyan)',commodity:'var(--amber)'};
   const clsColor = clsColors[cls] || 'var(--gold)';
   const clsLabel = clsLabels[cls] || cls;
   const currencySymbols = {USD:'$',MYR:'RM ',SGD:'S$',EUR:'€',GBP:'£',JPY:'¥'};
@@ -9164,31 +9869,7 @@ function _renderTDAssetInfoCard() {
 
   // Build market-specific context rows
   let extraRows = '';
-  if (cls === 'us_stock') {
-    extraRows = `
-      <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--line);font-size:11px;">
-        <span style="color:var(--muted)">交易所</span><span style="font-weight:700">${pair.exchange||'NASDAQ'} · USD</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--line);font-size:11px;">
-        <span style="color:var(--muted)">成交量</span><span style="font-weight:700">${vol>0?fmtVol(vol):'--'}</span>
-      </div>`;
-  } else if (cls === 'my_stock') {
-    extraRows = `
-      <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--line);font-size:11px;">
-        <span style="color:var(--muted)">交易所</span><span style="font-weight:700">Bursa Malaysia · MYR</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--line);font-size:11px;">
-        <span style="color:var(--muted)">代码</span><span style="font-weight:700">${pair.b}</span>
-      </div>`;
-  } else if (cls === 'sg_stock') {
-    extraRows = `
-      <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--line);font-size:11px;">
-        <span style="color:var(--muted)">交易所</span><span style="font-weight:700">SGX · SGD</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--line);font-size:11px;">
-        <span style="color:var(--muted)">代码</span><span style="font-weight:700">${pair.b}</span>
-      </div>`;
-  } else if (cls === 'forex') {
+  if (cls === 'forex') {
     const session = (() => {
       const h = (new Date().getUTCHours() + 8) % 24;
       if (h >= 21 || h < 1) return '🇺🇸 NY+London峰值流动性';
@@ -9315,22 +9996,33 @@ async function triggerAIAnalysis(res){
 - TP1：${fmtP(res.tps[0].p)}（+${((res.tps[0].p-res.entry)/res.entry*100).toFixed(2)}%），SL1：${fmtP(res.sls[0].p)}（${((res.sls[0].p-res.entry)/res.entry*100).toFixed(2)}%）
 - 盈亏比R:R = ${res.rr.toFixed(2)}:1${structuralContext}
 
+== 入场论据强度 (CONVICTION SCORE) ==
+${(()=>{try{const cv=_computeConvictionScore(res,S.klines[sym+(res.tf||S.stratTF)]||[]);return'评级: '+cv.grade+' ('+cv.score+'/100) · '+cv.gradeLabel+'\n支撑柱('+cv.pillars.length+'根): '+cv.pillars.map(p=>p.name).join('、')+'\n弱点('+cv.weaknesses.length+'个): '+(cv.weaknesses.length?cv.weaknesses.map(w=>w.name).join('、'):'无')+'\n建议: '+cv.actionable;}catch(e){return'--';}})()}
+
 == 宏观大方向 (MACRO REGIME) ==
 - 大方向判断：${(()=>{try{const mb=_computeMacroBias(res);return mb.macroLabel+`（宏观得分${mb.macroScore.toFixed(1)}，强度:${{strong:'强',moderate:'中',weak:'弱'}[mb.macroStrength]}）`;}catch(e){return'--';}})()}
 - 当前信号与大方向：${(()=>{try{const mb=_computeMacroBias(res);return mb.alignedWithMacro?'✅ 顺势交易':'⚠️ 逆势交易（次级运动，严控仓位）';}catch(e){return'--';}})()}
 - 周线趋势：${res.tr1w>0?'多头':'空头'} · 日线趋势：${res.tr1d>0?'多头':'空头'}
 
-== 分析有效期与方向转换预警 ==
-- 当前分析有效期：${(()=>{try{const v=_computeValidityWindow(res);return v.validLabel+'（约'+v.validBars+'根K线，'+v.dateStr+'前有效）';}catch(e){return'--';}})()}
-- 分析失效价格：${(()=>{try{const rf=_computeRegimeFlip(res,[]);return fmtP(rf.flipPrice)+'（距现价'+rf.flipPct+'%），触碰即需重新评估';}catch(e){return'--';}})()}
-- 早期转换预警：${(()=>{try{const rf=_computeRegimeFlip(res,[]);return rf.earlyWarnings.length?rf.earlyWarnings.map(w=>w.text).join('；'):'暂无预警信号';}catch(e){return'--';}})()}
+${S.tradeDeadline?`== 交易截止日约束 ==
+- 用户截止日：${(()=>{try{const da=_computeDeadlineAnalysis(res);return da?da.label:'--';}catch(e){return'--';}})()}
+- 截止日前可达TP：${(()=>{try{const da=_computeDeadlineAnalysis(res);if(!da||da.expired)return'截止日已过';return da.tpReachable.filter(t=>t.reachable).map(t=>`TP${t.idx} ${fmtP(t.p)}`).join('、')||'无TP可达';}catch(e){return'--';}})()}
+- 时框建议：${(()=>{try{const da=_computeDeadlineAnalysis(res);if(!da)return'无截止日';return da.tfRecommend?`当前${res.tf}与截止日不匹配，建议换${da.tfRecommend.suggest}`:'当前时框与截止日匹配';}catch(e){return'--';}})()}
+`:''}
+
+== 信号确认与失效条件 ==
+- 确认频率：每${(()=>{try{return _computeValidityWindow(res).recheckMins;}catch(e){return 10;}})()}分钟检查一次价格，确认信号仍有效
+- 入场终止价（放弃入场）：${(()=>{try{const v=_computeValidityWindow(res);return fmtP(v.abortPrice)+'（距入场价'+v.abortPct+'%）—价格到这里论据已破坏，拒绝入场';}catch(e){return'--';}})()}
+- 接飞刀警戒：${(()=>{try{const v=_computeValidityWindow(res);return '限价单成交后若价格继续到'+fmtP(v.fallingKnifeAbort)+'（再跌/涨'+v.fallingKnifePct+'%）→ 飞刀不是支撑，全部止损出场';}catch(e){return'--';}})()}
+- 方向彻底失效价：${(()=>{try{const rf=_computeRegimeFlip(res,[]);return fmtP(rf.flipPrice)+'（距现价'+rf.flipPct+'%），收盘确认即重新评估整体方向';}catch(e){return'--';}})()}
+- 早期预警：${(()=>{try{const rf=_computeRegimeFlip(res,[]);return rf.earlyWarnings.length?rf.earlyWarnings.map(w=>w.text).join('；'):'暂无预警信号';}catch(e){return'--';}})()}
 
 请用中文给出一段250-350字的**市场叙事分析**，要求：
 1. 先判断大方向（宏观格局）：当前是牛市/熊市/震荡哪个阶段？当前信号是主趋势还是次级运动？
 2. 结合江恩时间节点和缠论结构深度解读当前价格行为——是延续还是反弹/回调？
-3. 明确指出：这个入场策略有效到什么时候？价格到什么位置分析就失效了？什么条件会让方向转换？
+3. 明确指出：入场后价格到什么位置分析就失效了？什么条件会让方向转换？接飞刀风险怎么规避？
 4. 分析当前价格区域里大资金/主力/散户各自可能的行为
-5. 给出动态操盘建议：不同价格区间的应对方案（例如：在X价位以上保持多头，跌破Y就转为观望）
+5. ${S.tradeDeadline?'【截止日限制】用户有交易截止日，必须明确说明：截止日前哪个TP最现实？如果时框不匹配应该如何调整？':'给出动态操盘建议：不同价格区间的应对方案'}
 6. 语气直接有力，像真正懂江恩缠论的交易员在讲话，不要像机器人报数据
 
 直接输出分析，不要客套话。用简洁有力的段落，不用列表或标题。`;
@@ -10051,9 +10743,7 @@ function buildSymList(){
   if(!_slEl) return;
 
   // Filter by current class
-  const filtered = _assetFilter === 'all'
-    ? PAIRS
-    : PAIRS.filter(p => p.cls === _assetFilter);
+  const filtered = PAIRS.filter(p => _matchesFilter(p));
 
   // Group by cls
   const groups = {};
@@ -10062,11 +10752,10 @@ function buildSymList(){
     groups[p.cls].push(p);
   });
 
-  const clsOrder = ['crypto','us_stock','my_stock','sg_stock','forex','commodity'];
+  const clsOrder = ['crypto','metal','forex','commodity'];
   const clsNames = {
-    crypto:'🪙 加密货币',us_stock:'🇺🇸 美股 US Stocks',
-    my_stock:'🇲🇾 马股 Bursa Malaysia',sg_stock:'🇸🇬 新股 SGX',
-    forex:'💱 外汇 Forex',commodity:'🥇 商品 Commodities'
+    crypto:'🪙 加密货币',
+    metal:'🥇 黄金白银 Metals', forex:'💱 汇率 FX', commodity:'🛢️ 原油 Oil'
   };
 
   let html = '';
@@ -10103,409 +10792,18 @@ function addCustom(){
   if(!v)return;v=v.trim().toUpperCase();
   if(!v)return;
   // Support crypto or TwelveData symbols
-  const isCryptoInput = !v.includes('/') && !v.includes(':') && !['AAPL','TSLA','NVDA','MSFT','DBS','OCBC'].some(x=>v.startsWith(x));
+  const isCryptoInput = !v.includes('/') && !v.includes(':');
   if(isCryptoInput && !v.endsWith('USDT')&&!v.endsWith('BTC'))v+='USDT';
   if(!PAIRS.find(p=>p.s===v)){
     const b=v.replace('USDT','').replace('BTC','').split('/')[0].split(':')[0];
     const isCrypto = v.endsWith('USDT')||v.endsWith('BTC');
-    PAIRS.push({s:v,b,n:b, cls: isCrypto?'crypto':'us_stock'});
+    PAIRS.push({s:v,b,n:b, cls: isCrypto?'crypto':'commodity'});
     buildSymList();
   }
   selectSym(v);
 }
 
 
-// ╔══════════════════════════════════════════════════════════════════════╗
-// ║  FINCH MODULE 6 — 机构研究情报中枢 (Institutional Research Hub)      ║
-// ║  持续扫描顶级机构网站，提炼市场观点，融入FINCH分析体系                 ║
-// ║                                                                      ║
-// ║  信源：                                                               ║
-// ║  · Man Institute (man.com/institute)                                  ║
-// ║  · AQR Capital (aqr.com/insights)                                    ║
-// ║  · Citadel / Ken Griffin Office (citadel.com/insights)               ║
-// ║  · GMO (gmo.com/insights)                                            ║
-// ║  · Apollo Academy (apolloacademy.com)                                 ║
-// ║  · Visual Capitalist (visualcapitalist.com)                          ║
-// ║  · Haver Analytics (haver.com)                                       ║
-// ║                                                                      ║
-// ║  工作原理：调用Claude API + web_search工具，让AI主动检索各机构最新      ║
-// ║  研究报告、市场评论和宏观观点，综合提炼成可操作的市场情报。             ║
-// ╚══════════════════════════════════════════════════════════════════════╝
-
-var INST_RES = {
-  lock: false,
-  cdown: 1800,        // 30 min refresh cycle
-  interval: null,
-  lastUpdate: null,
-  synthesis: '',      // Combined synthesis for AI context
-  sources: {},        // Per-source data  { man:{text, ts, sentiment}, aqr:{...}, ... }
-  activeSrc: null,    // Currently expanded source detail
-};
-
-// ── Source definitions ──
-var INST_SOURCES = [
-  {
-    id: 'man',
-    name: 'Man Institute',
-    url: 'https://www.man.com/maninstitute',
-    searchQ: 'Man Institute latest research market outlook crypto macro 2025 2026',
-    color: 'var(--indigo)',
-    icon: '🔬',
-  },
-  {
-    id: 'aqr',
-    name: 'AQR Capital Insights',
-    url: 'https://www.aqr.com/Insights',
-    searchQ: 'AQR Capital Insights latest paper factor investing market outlook 2025 2026',
-    color: 'var(--blue)',
-    icon: '📐',
-  },
-  {
-    id: 'citadel',
-    name: 'Citadel Insights',
-    url: 'https://www.citadel.com/insights/',
-    searchQ: 'Citadel hedge fund market view macro outlook 2025 2026',
-    color: 'var(--violet)',
-    icon: '🏰',
-  },
-  {
-    id: 'gmo',
-    name: 'GMO Research',
-    url: 'https://www.gmo.com/americas/research-library/',
-    searchQ: 'GMO Jeremy Grantham 7 year asset class return forecast market bubble 2025 2026',
-    color: 'var(--teal)',
-    icon: '📊',
-  },
-  {
-    id: 'apollo',
-    name: 'Apollo Academy',
-    url: 'https://www.apolloacademy.com',
-    searchQ: 'Apollo Academy private credit macro economic outlook 2025 2026',
-    color: 'var(--orange)',
-    icon: '🏛️',
-  },
-  {
-    id: 'vc',
-    name: 'Visual Capitalist',
-    url: 'https://www.visualcapitalist.com',
-    searchQ: 'Visual Capitalist latest data chart market trends crypto macro 2025 2026',
-    color: 'var(--rose)',
-    icon: '📈',
-  },
-  {
-    id: 'haver',
-    name: 'Haver Analytics',
-    url: 'https://www.haver.com',
-    searchQ: 'Haver Analytics economic data macro indicators market analysis 2025 2026',
-    color: 'var(--cyan)',
-    icon: '📉',
-  },
-];
-
-// ── Start the auto-refresh engine ──
-function startInstResEngine() {
-  // First run after 8s (give page time to fully load)
-  setTimeout(function() { refreshInstRes(false); }, 8000);
-  // Countdown ticker
-  INST_RES.interval = setInterval(function() {
-    INST_RES.cdown--;
-    var m = Math.floor(INST_RES.cdown / 60);
-    var s = String(INST_RES.cdown % 60).padStart(2, '0');
-    var te = document.getElementById('instResTimer');
-    if (te) te.textContent = m + ':' + s;
-    if (INST_RES.cdown <= 0) {
-      INST_RES.cdown = 1800;
-      refreshInstRes(false);
-    }
-  }, 1000);
-}
-
-// ── Toggle panel collapse ──
-function toggleInstRes() {
-  var body = document.getElementById('instResBody');
-  var btn = document.getElementById('instResToggleBtn');
-  if (!body) return;
-  var isOpen = body.style.display !== 'none';
-  body.style.display = isOpen ? 'none' : 'block';
-  if (btn) btn.textContent = isOpen ? '⌃' : '⌄';
-}
-
-// ── Main refresh function — calls Claude API with web_search ──
-async function refreshInstRes(manual) {
-  if (INST_RES.lock && !manual) return;
-  INST_RES.lock = true;
-
-  var contentEl = document.getElementById('instResContent');
-  var metaEl = document.getElementById('instResMeta');
-  var badgesEl = document.getElementById('instResBadges');
-
-  if (contentEl) contentEl.innerHTML = '<span style="color:var(--cyan);font-size:11px">🔍 正在扫描机构研究网站...</span>';
-
-  // Mark all badges as loading
-  if (badgesEl) {
-    badgesEl.querySelectorAll('.inst-badge').forEach(function(b) {
-      b.classList.add('loading');
-    });
-  }
-
-  // Build asset-class-aware market context
-  var sym  = S.sym || 'BTCUSDT';
-  var pair = getPair(sym);
-  var cls  = pair ? pair.cls : 'crypto';
-  var displaySym = pair ? (pair.b + (cls==='crypto'?'/USDT':cls==='forex'?'':' ('+pair.exchange+')')) : sym;
-  var px   = S.lastPx > 0 ? fmtP(S.lastPx) : '—';
-  var sig  = S.lastSignal;
-  var dir  = sig ? (sig.isBull ? '多头' : '空头') : '分析中';
-  var conf = sig ? sig.conf + '%' : '—';
-  var fg   = S.fg ? parseInt(S.fg.value) : 50;
-  var now  = new Date().toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
-  var mhrs = getMarketStatus(cls);
-
-  // Build asset-specific context snippet
-  var assetContext = '';
-  var assetFocus = '';
-  if (cls === 'crypto') {
-    var btcDom = S.macro && S.macro.btcDom ? S.macro.btcDom.toFixed(1) + '%' : '—';
-    assetContext = `- 恐慌贪婪指数: ${fg}, BTC主导率: ${btcDom}`;
-    assetFocus = '加密货币市场、比特币、以太坊、DeFi、Web3监管、机构配置加密资产';
-  } else if (cls === 'us_stock') {
-    assetContext = `- 市场: 美国股市 (${pair?pair.exchange:'NYSE/NASDAQ'})\n- 板块: ${pair?pair.n:'科技股'}`;
-    assetFocus = '美国股市、标普500、纳斯达克、科技股、美联储政策、企业盈利、宏观经济';
-  } else if (cls === 'my_stock') {
-    assetContext = `- 市场: 马来西亚股市 (Bursa Malaysia)\n- 股票: ${pair?pair.n:sym}`;
-    assetFocus = '马来西亚股市、Bursa Malaysia、马元汇率、大宗商品、东南亚宏观经济、Bank Negara政策';
-  } else if (cls === 'sg_stock') {
-    assetContext = `- 市场: 新加坡股市 (SGX)\n- 股票: ${pair?pair.n:sym}`;
-    assetFocus = '新加坡股市、SGX、新加坡元、REITs、东南亚经济、MAS货币政策、中美贸易';
-  } else if (cls === 'forex') {
-    assetContext = `- 货币对: ${displaySym}\n- 市场状态: ${mhrs.label}`;
-    assetFocus = '外汇市场、央行政策、美元指数、利率差异、经济数据、地缘政治风险';
-    if (sym.includes('MYR')) assetFocus += '、马来西亚令吉、Bank Negara、大宗商品出口';
-    if (sym.includes('SGD')) assetFocus += '、新加坡元、MAS政策、新加坡经济';
-  } else if (cls === 'commodity') {
-    assetContext = `- 商品: ${pair?pair.n:sym}`;
-    assetFocus = sym.includes('XAU')||sym.includes('GOLD')
-      ? '黄金市场、避险需求、美元走势、实际利率、央行购金、通胀预期'
-      : sym.includes('XAG')||sym.includes('SILVER')
-      ? '白银市场、工业需求、太阳能、绿色能源、黄金白银比'
-      : '原油市场、OPEC政策、供需平衡、地缘政治、美元走势、全球经济增长';
-  }
-
-  var systemPrompt = `你是FINCH系统的机构研究情报分析师，专门收集和综合全球顶级投资机构的最新研究和市场观点。
-
-当前市场快照 (${now}):
-- 分析品种: ${displaySym}, 价格: ${px}
-- 资产类别: ${cls} | 市场状态: ${mhrs.label}
-- FINCH技术信号: ${dir}, 置信度: ${conf}
-${assetContext}
-- 关注焦点: ${assetFocus}
-
-你的任务：使用web_search工具搜索以下机构的最新研究和市场观点，重点关注与"${assetFocus}"相关的内容：
-1. Man Institute (man.com/maninstitute) - 量化研究与系统性策略
-2. AQR Capital Insights (aqr.com) - 因子投资与宏观观点
-3. Citadel (citadel.com) - 宏观对冲基金观点
-4. GMO (gmo.com) - 长期资产配置与估值分析
-5. Apollo Academy (apolloacademy.com) - 宏观经济与信贷市场
-6. Goldman Sachs Research (goldmansachs.com/insights) - 大行宏观研究
-7. Morgan Stanley Research (morganstanley.com/ideas) - 市场策略观点
-
-搜索后，请严格按以下JSON格式输出，不要有任何前言或解释：
-
-{
-  "synthesis": "150字以内中文综合分析，整合所有机构观点，与当前分析品种(${displaySym})直接联系，给出可操作建议",
-  "sentiment": "bull或bear或neutral",
-  "assetClass": "${cls}",
-  "sources": {
-    "man": {"headline": "最新研究标题或核心观点（中文）", "detail": "2-3句详细说明，联系${displaySym}", "sentiment": "bull/bear/neutral", "relevance": "与当前品种的关联"},
-    "aqr": {"headline": "...", "detail": "...", "sentiment": "...", "relevance": "..."},
-    "citadel": {"headline": "...", "detail": "...", "sentiment": "...", "relevance": "..."},
-    "gmo": {"headline": "...", "detail": "...", "sentiment": "...", "relevance": "..."},
-    "apollo": {"headline": "...", "detail": "...", "sentiment": "...", "relevance": "..."},
-    "gs": {"headline": "...", "detail": "...", "sentiment": "...", "relevance": "..."},
-    "ms": {"headline": "...", "detail": "...", "sentiment": "...", "relevance": "..."}
-  },
-  "keyThemes": ["主题1", "主题2", "主题3"],
-  "assetImplication": "机构研究对${displaySym}的综合含义与近期风险提示（2-3句）",
-  "catalysts": ["近期催化剂1", "近期催化剂2"],
-  "riskLevel": "high/medium/low",
-  "timeHorizon": "short(1-2周)/medium(1-3月)/long(3月以上)"
-}
-
-只输出JSON，不加任何其他文字。`;
-
-  try {
-    var resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 3500,
-        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
-        system: systemPrompt,
-        messages: [{
-          role: 'user',
-          content: `请立即搜索以上7家机构网站的最新内容（重点关注：${assetFocus}），然后以指定JSON格式输出综合分析。用中文撰写所有文本字段。当前分析品种：${displaySym}。`
-        }]
-      })
-    });
-
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
-
-    var data = await resp.json();
-
-    // Extract text blocks from response (may contain tool_use blocks too)
-    var text = (data.content || [])
-      .filter(function(b) { return b.type === 'text'; })
-      .map(function(b) { return b.text || ''; })
-      .join('').trim();
-
-    // Strip markdown code fences if present
-    text = text.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/g, '').trim();
-
-    var parsed = JSON.parse(text);
-    renderInstResData(parsed);
-
-  } catch (e) {
-    var fallback = 'API调用失败：' + (e.message || '未知错误') + '。请检查网络连接或稍后重试。';
-    if (contentEl) contentEl.innerHTML = '<span style="color:var(--amber);font-size:11px">⚠️ ' + fallback + '</span>';
-    if (badgesEl) badgesEl.querySelectorAll('.inst-badge').forEach(function(b) { b.classList.remove('loading'); });
-  } finally {
-    INST_RES.lock = false;
-    INST_RES.cdown = 1800;
-  }
-}
-
-// ── Render the parsed institutional research data ──
-function renderInstResData(data) {
-  if (!data) return;
-
-  // Cache data
-  INST_RES.synthesis = data.synthesis || '';
-  INST_RES.sources = data.sources || {};
-  INST_RES.lastUpdate = new Date();
-
-  var contentEl = document.getElementById('instResContent');
-  var metaEl = document.getElementById('instResMeta');
-  var badgesEl = document.getElementById('instResBadges');
-
-  // Render synthesis
-  if (contentEl) {
-    var sentCol = data.sentiment === 'bull' ? 'var(--green)' : data.sentiment === 'bear' ? 'var(--red)' : 'var(--amber)';
-    var sentIcon = data.sentiment === 'bull' ? '▲ 机构偏多' : data.sentiment === 'bear' ? '▼ 机构偏空' : '⚡ 机构中性';
-    var riskBadge = data.riskLevel === 'high' ? '<span class="inst-tag bear">⚠️ HIGH RISK</span>'
-      : data.riskLevel === 'low' ? '<span class="inst-tag bull">✅ LOW RISK</span>'
-      : '<span class="inst-tag neutral">⚡ MED RISK</span>';
-    var horizonBadge = data.timeHorizon
-      ? '<span class="inst-tag" style="background:rgba(40,48,160,0.08);color:var(--indigo);border-color:rgba(40,48,160,0.2);">⏱ ' + data.timeHorizon + '</span>'
-      : '';
-
-    var themeHtml = '';
-    if (data.keyThemes && data.keyThemes.length) {
-      themeHtml = '<div style="margin-top:7px;display:flex;flex-wrap:wrap;gap:4px;">' +
-        data.keyThemes.map(function(t) { return '<span class="inst-tag">' + t + '</span>'; }).join('') +
-        '</div>';
-    }
-
-    // Asset implication (replaces cryptoImplication, covers all classes)
-    var implText = data.assetImplication || data.cryptoImplication || '';
-    var implIcon = (data.assetClass === 'forex') ? '💱' : (data.assetClass === 'commodity') ? '🥇'
-      : (data.assetClass && data.assetClass.includes('stock')) ? '📈' : '🔗';
-    var implHtml = implText
-      ? '<div style="margin-top:8px;font-size:11px;padding:6px 10px;background:rgba(10,88,112,0.06);border-radius:4px;border-left:2px solid var(--cyan);color:var(--text);line-height:1.7;">'
-        + implIcon + ' 市场含义：' + implText + '</div>'
-      : '';
-
-    // Catalysts
-    var catHtml = '';
-    if (data.catalysts && data.catalysts.length) {
-      catHtml = '<div style="margin-top:7px;"><span style="font-size:10px;letter-spacing:1px;color:var(--amber);font-weight:700;text-transform:uppercase;">⚡ 近期催化剂</span>'
-        + '<div style="margin-top:4px;display:flex;flex-direction:column;gap:3px;">'
-        + data.catalysts.map(function(c){ return '<div style="font-size:11px;color:var(--text);padding:3px 8px;background:rgba(128,80,0,0.07);border-radius:3px;border-left:2px solid var(--amber)">'+c+'</div>'; }).join('')
-        + '</div></div>';
-    }
-
-    contentEl.innerHTML =
-      '<div style="display:flex;align-items:center;gap:6px;margin-bottom:7px;flex-wrap:wrap;">' +
-        '<span style="font-size:12px;font-weight:700;color:' + sentCol + ';">' + sentIcon + '</span>' +
-        riskBadge + horizonBadge +
-      '</div>' +
-      '<div class="inst-synthesis">' + data.synthesis + '</div>' +
-      themeHtml + implHtml + catHtml;
-  }
-
-  // Update badges — also handle new gs/ms sources
-  if (badgesEl) {
-    badgesEl.querySelectorAll('.inst-badge').forEach(function(b) {
-      b.classList.remove('loading', 'active');
-      var srcId = b.getAttribute('data-src');
-      var srcData = data.sources && (data.sources[srcId] || data.sources[srcId === 'gs' ? 'goldmansachs' : srcId === 'ms' ? 'morgan' : srcId]);
-      if (srcData) {
-        b.classList.add('updated');
-        var srcSent = srcData.sentiment;
-        b.style.borderColor = srcSent === 'bull' ? 'var(--green)' : srcSent === 'bear' ? 'var(--red)' : '';
-        b.style.color = srcSent === 'bull' ? 'var(--teal)' : srcSent === 'bear' ? 'var(--red)' : 'var(--cyan)';
-      }
-    });
-  }
-
-  // Render meta timestamp
-  if (metaEl) {
-    var myt = toMYT(new Date());
-    var ts = String(myt.getUTCHours()).padStart(2, '0') + ':' + String(myt.getUTCMinutes()).padStart(2, '0') + ' MYT';
-    var cls = data.assetClass || 'crypto';
-    var clsLabel = {crypto:'加密',us_stock:'美股',my_stock:'马股',sg_stock:'新股',forex:'外汇',commodity:'商品'}[cls]||cls;
-    metaEl.innerHTML = '<span style="font-size:10px;color:var(--muted)">机构情报 [' + clsLabel + '] 更新: ' + ts + ' · 每30分钟刷新 · 点击机构名查看详情</span>';
-  }
-}
-
-// ── Show detail for a specific source ──
-function showInstDetail(srcId) {
-  var detailEl = document.getElementById('instResDetail');
-  if (!detailEl) return;
-
-  // Toggle: if same source and already showing, close
-  if (INST_RES.activeSrc === srcId && detailEl.style.display !== 'none') {
-    detailEl.style.display = 'none';
-    INST_RES.activeSrc = null;
-    document.querySelectorAll('.inst-badge').forEach(function(b) { b.classList.remove('active'); });
-    return;
-  }
-
-  INST_RES.activeSrc = srcId;
-  document.querySelectorAll('.inst-badge').forEach(function(b) {
-    b.classList.remove('active');
-    if (b.getAttribute('data-src') === srcId) b.classList.add('active');
-  });
-
-  var srcDef = INST_SOURCES.find(function(s) { return s.id === srcId; });
-  var srcData = INST_RES.sources[srcId];
-
-  if (!srcData) {
-    detailEl.style.display = 'block';
-    detailEl.innerHTML = '<div style="font-size:11px;color:var(--muted);padding:8px 0">' +
-      (srcDef ? srcDef.icon + ' ' + srcDef.name : srcId) + ' — 尚无数据，请先点击「研究」更新。</div>';
-    return;
-  }
-
-  var sentCol = srcData.sentiment === 'bull' ? 'var(--green)' : srcData.sentiment === 'bear' ? 'var(--red)' : 'var(--amber)';
-  var sentIcon = srcData.sentiment === 'bull' ? '▲ 看多' : srcData.sentiment === 'bear' ? '▼ 看空' : '⚡ 中性';
-
-  detailEl.style.display = 'block';
-  detailEl.innerHTML =
-    '<div class="inst-source-card">' +
-      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">' +
-        '<span class="inst-source-name">' + (srcDef ? srcDef.icon + ' ' : '') + (srcDef ? srcDef.name : srcId) + '</span>' +
-        '<span style="font-size:11px;font-weight:700;color:' + sentCol + '">' + sentIcon + '</span>' +
-      '</div>' +
-      '<div style="font-size:12px;font-weight:700;color:var(--bright);margin-bottom:5px;line-height:1.5">' + (srcData.headline || '—') + '</div>' +
-      '<div class="inst-source-body">' + (srcData.detail || '') + '</div>' +
-      (srcData.relevance ? '<div style="margin-top:7px;font-size:11px;padding:5px 9px;background:rgba(10,88,112,0.06);border-radius:3px;color:var(--cyan);border-left:2px solid var(--cyan);">🔗 ' + srcData.relevance + '</div>' : '') +
-      (srcDef ? '<div style="margin-top:6px;"><a href="' + srcDef.url + '" target="_blank" rel="noopener" style="font-size:10px;color:var(--dim);text-decoration:none;">🌐 ' + srcDef.url + ' ↗</a></div>' : '') +
-    '</div>';
-}
-
-// ── Expose synthesis to AI assistant buildSystemContext ──
-// Patch is applied via hook below after functions are defined
 
 // ═══════════════════════════════════════════════════════════════
 // FINCH SMART ASSISTANT ENGINE
@@ -10584,7 +10882,7 @@ function buildSystemContext(){
     :'';
 
   if(!res||!px){
-    return `你是 FINCH v38，一个专业的多资产市场分析助理，覆盖加密货币、美股、马股、新股、外汇与商品。当前正在分析 ${displaySym}（${cls}），但市场数据尚未加载完成。请告知用户稍等片刻。`;
+    return `你是 FINCH v42，一个专业的多市场分析助理，覆盖加密货币（Binance实时）、贵金属（黄金/白银 Binance Futures）、汇率（USD/SGD · SGD/MYR）、原油（WTI/Brent）。当前正在分析 ${displaySym}（${cls}），但市场数据尚未加载完成。请告知用户稍等片刻。`;
   }
 
   // Asset-specific context block
@@ -10593,18 +10891,6 @@ function buildSystemContext(){
     assetCtx=`恐慌贪婪指数: ${fg} (${fg<20?'极度恐惧':fg<35?'恐惧':fg>80?'极度贪婪':fg>65?'贪婪':'中性'})
 BTC主导率: ${S.macro?.btcDom?.toFixed(1)||'--'}%
 资金费率: ${res.fundingRate?(res.fundingRate.toFixed(4)+'%'):'未知'} (${(res.fundingRate||0)>0.05?'多头过热':(res.fundingRate||0)<-0.02?'空头过热':'正常'})`;
-  } else if(cls==='us_stock'){
-    assetCtx=`交易所: ${pair?.exchange||'NYSE/NASDAQ'} | 货币: USD
-市场状态: ${mhrs.label}
-行业板块: 科技/成长股`;
-  } else if(cls==='my_stock'){
-    assetCtx=`交易所: Bursa Malaysia | 货币: MYR
-市场状态: ${mhrs.label}
-主要驱动: 令吉汇率、大宗商品、国内政策`;
-  } else if(cls==='sg_stock'){
-    assetCtx=`交易所: SGX | 货币: SGD
-市场状态: ${mhrs.label}
-主要驱动: 新币走势、MAS政策、东盟经济`;
   } else if(cls==='forex'){
     assetCtx=`货币对: ${displaySym} | 市场: 24小时外汇
 市场状态: ${mhrs.label}
@@ -10615,7 +10901,7 @@ BTC主导率: ${S.macro?.btcDom?.toFixed(1)||'--'}%
 驱动因素: 供需、美元指数、地缘政治`;
   }
 
-  return `你是 FINCH v41，一个专业的多资产市场分析助理，覆盖加密货币、美股、马股、新加坡股、外汇与大宗商品。你有15年实战经验，说话直接、有观点、有温度，像一个真正懂市场的老手。你的分析必须包含：大方向判断（宏观格局）、当前信号有效期、方向失效条件。
+  return `你是 FINCH v42，一个专业的市场分析助理，覆盖加密货币、外汇（USD/SGD · SGD/MYR）与大宗商品（黄金·白银·原油）。你有15年实战经验，说话直接、有观点、有温度，像一个真正懂市场的老手。你的分析必须包含：大方向判断（宏观格局）、当前信号有效期、方向失效条件。
 
 == 当前实时市场快照 (${displaySym} · ${cls} · ${res.tf}周期) ==
 现价: ${fmtP(px)}
@@ -10659,12 +10945,11 @@ R:R = ${res.rr?.toFixed(2)}:1
 == 🌐 宏观大方向 (MACRO REGIME) ==
 ${(()=>{try{const mb=_computeMacroBias(res);return'大方向: '+mb.macroLabel+' (宏观得分'+mb.macroScore.toFixed(1)+'，强度:'+{strong:'强',moderate:'中',weak:'弱'}[mb.macroStrength]+')\n当前信号: '+(mb.alignedWithMacro?'顺势交易 ✅':'逆势交易 ⚠️ 次级运动，严控仓位');}catch(e){return'宏观格局计算中';}})()}
 
-== 🕐 分析有效期与方向失效条件 ==
-${(()=>{try{const v=_computeValidityWindow(res);const rf=_computeRegimeFlip(res,[]);return'有效期: '+v.validLabel+'（'+v.dateStr+'前）\n失效价格: '+fmtP(rf.flipPrice)+'（距现价'+rf.flipPct+'%，触碰需立即重新评估）\n早期预警: '+(rf.earlyWarnings.length?rf.earlyWarnings.map(w=>w.text).join('；'):'暂无预警');}catch(e){return'--';}})()}
+== 🕐 信号失效条件 ==
+${(()=>{try{const v=_computeValidityWindow(res);const rf=_computeRegimeFlip(res,[]);return'确认频率: 每'+v.recheckMins+'分钟检查一次价格\n入场终止价: '+fmtP(v.abortPrice)+'（价格到这里=论据破坏，拒绝入场）\n接飞刀警戒: 限价单成交后若价格继续到'+fmtP(v.fallingKnifeAbort)+'即止损出场\n方向失效价: '+fmtP(rf.flipPrice)+'（距现价'+rf.flipPct+'%，收盘确认须重新评估）\n早期预警: '+(rf.earlyWarnings.length?rf.earlyWarnings.map(w=>w.text).join('；'):'暂无预警');}catch(e){return'--';}})()}
 
-== 🏛️ 机构研究情报 (Man·AQR·Citadel·GMO·Apollo·GS·MS) ==
-${INST_RES.synthesis ? INST_RES.synthesis : '机构研究尚未加载 — 用户可点击「研究」按钮获取最新机构观点'}
-${INST_RES.lastUpdate ? '情报更新时间: ' + INST_RES.lastUpdate.toISOString().replace('T',' ').slice(0,16) + ' UTC' : ''}
+${S.tradeDeadline?(()=>{try{const da=_computeDeadlineAnalysis(res);if(!da)return'';return'== 🎯 用户交易截止日 ==\n'+da.label+'\n截止日前可达TP: '+(da.tpReachable.filter(t=>t.reachable).map(t=>'TP'+t.idx+' '+fmtP(t.p)).join('、')||'无TP可达')+'\n'+( da.tfRecommend?'⚠️ '+da.tfRecommend.reason:'✅ 当前时框与截止日匹配')+'\n建议: '+(da.bestReachableTP?'截止日前以TP'+da.bestReachableTP.idx+'为主要目标，到达后主动平仓':'缩短时框或等待更好机会');}catch(e){return'';}})():''}
+
 ${learnCtx}
 
 == 你的回答规则 ==
@@ -10673,11 +10958,12 @@ ${learnCtx}
 3. 当信号分歧率>40%时，主动提醒用户谨慎
 4. 如果R:R < 1.5，主动说出来
 5. 用简洁中文回答，段落式，不用列表除非在比较多个选项
-6. 如果用户问入场，给出: 入场价、止损、止盈、R:R、理由、风险提示、分析有效期
+6. 如果用户问入场，给出: 入场价、止损、止盈、R:R、理由、风险提示
 7. 语气要像一个对市场有见解的老手，不是机器人
 8. 如有学习历史数据，可结合历史胜率给出更个性化的建议
-9. 【重要】每次给入场建议时，必须同时说明：①这个分析有效到什么时候 ②价格到哪里分析就失效 ③当前是顺大势还是逆大势操作
-10. 如果当前是逆势（次级运动），主动提醒：这是逆势交易，目标保守，快进快出，不要恋战`;
+9. 【重要】每次给入场建议时，必须同时说明：①入场终止价（到这里就不入场）②方向失效价（到这里全部止损）③当前是顺大势还是逆大势
+10. 如果当前是逆势（次级运动），主动提醒：这是逆势交易，目标保守，快进快出，不要恋战
+11. 如果用户设有交易截止日，所有TP建议必须以截止日前可达的TP为准，并提示到期主动平仓`;
 }
 
 // ── Add a message to the chat ──
@@ -11665,8 +11951,52 @@ async function init(){
   setInterval(refreshPrices,5000);
 
   // TwelveData refresh
-  setTimeout(()=>refreshTDPrices(),4000);
-  setInterval(()=>refreshTDPrices(),30000);
+  // AV refresh: first hit at 5s, then every 60s (free tier: 25 req/day = ~every 58 min ideally)
+  // We refresh prices only (spot quotes) — cheap single requests per asset
+  setTimeout(()=>refreshTDPrices(),3000);   // first refresh at 3s
+  setInterval(()=>refreshTDPrices(),300000); // then every 5min (forex/oil)
+
+  // ── Metal price fast refresh (Binance Futures, every 10s) ──────
+  // Gold/Silver use same Binance infra as crypto — no quota concerns
+  async function _refreshMetalPrices(){
+    const metals = PAIRS.filter(p=>p.cls==='metal');
+    for(const p of metals){
+      try{
+        const px = await _binanceFuturesPrice(p.fSym);
+        if(!px||!isFinite(px)||px<=0) continue;
+        const hl=_updateDailyHL(p.s,px);
+        const prev=_avQuoteCache[p.s]?.q?.px;
+        const chg=(prev&&prev>0)?((px-prev)/prev*100):0;
+        const q={px,chg,open:hl.open||px,high:hl.high,low:hl.low,vol:0};
+        _avQuoteCache[p.s]={q,ts:Date.now()};
+        S._tdQuotes=S._tdQuotes||{}; S._tdQuotes[p.s]=q;
+        // Update watchlist
+        const ep=document.getElementById('px-'+p.s);
+        const ec=document.getElementById('chg-'+p.s);
+        if(ep) ep.textContent=fmtP(px);
+        if(ec){ec.textContent=fmtPct(chg);ec.className='sym-chg '+pctC(chg);}
+        const tp=document.getElementById('tt-'+p.s);
+        const tc=document.getElementById('tc-'+p.s);
+        if(tp){tp.textContent=fmtP(px);tp.style.color=chg>0?'var(--green)':chg<0?'var(--red)':'var(--text)';}
+        if(tc){tc.textContent=fmtPct(chg,1);tc.className='tick-chg '+pctC(chg);}
+        // If currently viewing this metal, update price display + re-render
+        if(p.s===S.sym){
+          S.lastPx=px; S._seedPrice[p.s]=px;
+          updatePH({price:px,change:chg,high:hl.high,low:hl.low,vol:0});
+          ['15m','30m','1h','2h','4h','8h','1d','1w'].forEach(t=>{
+            const kl=S.klines[p.s+t];
+            if(kl&&kl.length){const last=kl[kl.length-1];
+              last.c=px;last.h=Math.max(last.h,px);last.l=Math.min(last.l,px);}
+          });
+          const klCur=S.klines[p.s+(S.chartTF||'4h')]||S.klines[p.s+'1d']||[];
+          if(klCur.length){renderChart(klCur,p.s);renderSubChart(klCur);}
+          renderStrategy();
+        }
+      } catch(e){}
+    }
+  }
+  setTimeout(()=>_refreshMetalPrices(),2000);
+  setInterval(()=>_refreshMetalPrices(),10000); // metals update every 10s
 
   // ── Step 4: Full data load for BTC ──
   await selectSym('BTCUSDT');
@@ -11698,7 +12028,6 @@ async function init(){
   // ── Step 7: Background engines ──
   setTimeout(startBrainEngine,2000);
   setTimeout(startMacroPulse,4000);
-  setTimeout(startInstResEngine,6000);
 
   // v40: Start Whale Flow Monitor
   setTimeout(function(){try{loadWhaleData();}catch(e){}},3000);
@@ -12050,21 +12379,15 @@ async function refreshMacroPulse(manual){
     var btcDom = S.macro&&S.macro.btcDom ? S.macro.btcDom.toFixed(1)+'%' : '—';
     marketContext = '加密市场，BTC主导率：'+btcDom+'，恐慌贪婪指数：'+(fg||'—')+'（'+fgLbl+'）';
     promptFocus = '①今日加密市场整体走势 ②'+displaySym+'关键技术位和驱动因素 ③操作建议（做多/做空/等待）';
-  } else if (cls === 'us_stock') {
-    marketContext = '美国股市，品种：'+displaySym+'（'+pair.exchange+'），市场状态：'+mhrs.label;
-    promptFocus = '①美股大盘走势与板块轮动 ②'+displaySym+'基本面与技术位 ③当前风险与操作建议';
-  } else if (cls === 'my_stock') {
-    marketContext = 'Bursa Malaysia马股，品种：'+displaySym+'（马币计价），市场状态：'+mhrs.label;
-    promptFocus = '①马股大盘走势与令吉汇率 ②'+displaySym+'基本面与技术位 ③当前风险与操作建议';
-  } else if (cls === 'sg_stock') {
-    marketContext = 'SGX新加坡股市，品种：'+displaySym+'（新币计价），市场状态：'+mhrs.label;
-    promptFocus = '①新股大盘走势与新币走势 ②'+displaySym+'基本面与技术位 ③当前风险与操作建议';
+  } else if (cls === 'metal') {
+    marketContext = '贵金属市场，品种：'+(pair?pair.n:displaySym)+'，Binance Futures实时数据';
+    promptFocus = '①美联储政策与美元指数对金价影响 ②'+displaySym+'关键技术位（江恩/斐波那契）③做多/做空建议';
   } else if (cls === 'forex') {
     marketContext = '外汇市场，货币对：'+displaySym+'，市场状态：'+mhrs.label;
     promptFocus = '①主要央行政策动向与美元走势 ②'+displaySym+'关键支撑阻力与驱动因素 ③操作建议';
   } else if (cls === 'commodity') {
-    marketContext = '商品市场，品种：'+(pair?pair.n:displaySym);
-    promptFocus = '①商品市场整体环境与供需 ②'+(pair?pair.n:displaySym)+'关键技术位与基本面驱动 ③操作建议';
+    marketContext = '原油市场，品种：'+(pair?pair.n:displaySym)+'，Alpha Vantage日线数据';
+    promptFocus = '①OPEC+供需与地缘政治对油价影响 ②'+(pair?pair.n:displaySym)+'关键技术位 ③操作建议';
   }
 
   var prompt = '你是顶级多资产交易员，现在时间是 '+nowStr+'。\n'
