@@ -1384,6 +1384,48 @@ canvas.main-c{width:100%!important;}
 <!-- ══ RIGHT — MODULES + SUMMARY ══ -->
 <div class="right-panel" id="rightPanel">
 
+  <!-- ══ v44: RISK PROFILE BAR ══ -->
+  <div id="finchRiskBar">
+    <span class="risk-profile-label">风险偏好</span>
+    <button class="risk-btn" data-risk="1" onclick="v44SetRisk(1,this)" style="--risk-col:#1A6B3A">🛡️ 保守</button>
+    <button class="risk-btn" data-risk="2" onclick="v44SetRisk(2,this)" style="--risk-col:#0A5870">⚖️ 稳健</button>
+    <button class="risk-btn active" data-risk="3" onclick="v44SetRisk(3,this)" style="--risk-col:#8B6914">📈 成长</button>
+    <button class="risk-btn" data-risk="4" onclick="v44SetRisk(4,this)" style="--risk-col:#A07820">⚡ 进取</button>
+    <button class="risk-btn" data-risk="5" onclick="v44SetRisk(5,this)" style="--risk-col:#A01420">🔥 激进</button>
+    <span class="risk-badge-pill" id="riskBadge" onclick="v44ToggleRiskPanel()" title="点击展开配置">⚙️ 成长型 | R:R≥2.0</span>
+  </div>
+
+  <!-- ══ v44: RISK CONFIG PANEL ══ -->
+  <div id="riskConfigPanel">
+    <div class="rcp-inner">
+      <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;color:var(--gold);text-transform:uppercase;margin-bottom:8px;">⚙️ 交易参数配置</div>
+      <div class="rcp-grid">
+        <div class="rcp-field">
+          <div class="rcp-label">最高杠杆倍数</div>
+          <input class="rcp-input" type="number" id="rcp-maxLev" value="3" min="1" max="50" step="1">
+        </div>
+        <div class="rcp-field">
+          <div class="rcp-label">单笔最大仓位 %</div>
+          <input class="rcp-input" type="number" id="rcp-maxPos" value="15" min="1" max="50" step="1">
+        </div>
+        <div class="rcp-field">
+          <div class="rcp-label">最低 R:R 要求</div>
+          <input class="rcp-input" type="number" id="rcp-minRR" value="2.0" min="1.0" max="5.0" step="0.1">
+        </div>
+        <div class="rcp-field">
+          <div class="rcp-label">信号有效期因子</div>
+          <select class="rcp-input" id="rcp-validity">
+            <option value="0.5">保守 ×0.5 (减半)</option>
+            <option value="1" selected>标准 ×1.0</option>
+            <option value="1.5">进取 ×1.5 (+50%)</option>
+          </select>
+        </div>
+      </div>
+      <div class="rcp-desc" id="rcpDesc">成长型：TP=ATR×2.2 · SL=ATR×1.5 · 最高3倍杠杆 · 适合中等风险承受</div>
+      <button class="rcp-apply-btn" onclick="v44ApplyRiskConfig()">✅ 应用配置</button>
+    </div>
+  </div>
+
   <!-- ══ MACRO PULSE — 5-min market snapshot ══ -->
   <div id="macroPulsePanel" style="background:linear-gradient(135deg,rgba(26,58,138,0.04),rgba(88,24,144,0.04));border-bottom:2px solid var(--line2);">
     <div style="padding:10px 14px 6px;display:flex;align-items:center;justify-content:space-between;">
@@ -15686,6 +15728,1918 @@ switchMobileModTab = function(tab, btn) {
     </div>
   </div>
 </div>
+
+
+<!-- ╔══════════════════════════════════════════════════════════════════════╗
+     ║  FINCH v44 UPGRADE ENGINE — 风险管理 · 入场有效期 · 多源数据校准      ║
+     ╚══════════════════════════════════════════════════════════════════════╝ -->
+<style>
+/* ══ FINCH v44 RISK PROFILE SELECTOR ══ */
+#finchRiskBar{
+  display:flex;align-items:center;gap:6px;padding:5px 14px;
+  background:linear-gradient(90deg,var(--bg2),var(--bg1));
+  border-bottom:1px solid var(--line2);flex-wrap:wrap;
+}
+.risk-profile-label{font-size:10px;font-weight:700;letter-spacing:1.5px;color:var(--gold);text-transform:uppercase;white-space:nowrap;margin-right:2px;}
+.risk-btn{
+  padding:3px 9px;border-radius:12px;border:1px solid var(--line2);
+  background:transparent;color:var(--dim);font-family:inherit;font-size:10px;
+  cursor:pointer;transition:all .15s;white-space:nowrap;font-weight:600;
+}
+.risk-btn:hover{border-color:var(--gold);color:var(--gold);}
+.risk-btn.active{background:var(--risk-col,var(--gold));color:#fff;border-color:transparent;box-shadow:0 1px 6px rgba(0,0,0,0.15);}
+.risk-badge-pill{
+  margin-left:auto;font-size:9px;padding:2px 8px;border-radius:8px;
+  background:rgba(139,105,20,0.12);color:var(--gold);border:1px solid rgba(139,105,20,0.25);
+  font-weight:700;white-space:nowrap;cursor:pointer;
+}
+.risk-badge-pill:hover{background:rgba(139,105,20,0.22);}
+/* ══ SIGNAL VALIDITY INDICATOR ══ */
+.sig-validity{
+  display:inline-flex;align-items:center;gap:4px;
+  font-size:10px;padding:2px 7px;border-radius:10px;
+  border:1px solid var(--line2);color:var(--muted);font-weight:600;
+}
+.sig-validity.valid{background:rgba(26,107,58,0.09);color:var(--green);border-color:rgba(26,107,58,0.22);}
+.sig-validity.expiring{background:rgba(128,80,0,0.09);color:var(--amber);border-color:rgba(128,80,0,0.22);}
+.sig-validity.expired{background:rgba(160,20,32,0.07);color:var(--red);border-color:rgba(160,20,32,0.2);}
+/* ══ RISK CONFIG PANEL ══ */
+#riskConfigPanel{background:var(--bg1);border-bottom:2px solid var(--line2);display:none;}
+#riskConfigPanel.open{display:block;}
+.rcp-inner{padding:12px 14px;}
+.rcp-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;}
+.rcp-field{display:flex;flex-direction:column;gap:3px;}
+.rcp-label{font-size:10px;color:var(--dim);font-weight:600;letter-spacing:.5px;}
+.rcp-input{
+  padding:5px 8px;border:1px solid var(--line2);border-radius:4px;
+  background:var(--bg);color:var(--text);font-family:inherit;font-size:12px;
+  width:100%;box-sizing:border-box;
+}
+.rcp-input:focus{outline:none;border-color:var(--gold);}
+.rcp-desc{font-size:10px;color:var(--dim);line-height:1.6;margin-top:8px;padding:7px 9px;background:var(--bg2);border-radius:4px;border-left:2px solid var(--gold);}
+.rcp-apply-btn{
+  margin-top:10px;width:100%;padding:8px;border:none;border-radius:5px;
+  background:var(--gold);color:#fff;font-family:inherit;font-size:12px;
+  font-weight:700;cursor:pointer;letter-spacing:.5px;
+}
+.rcp-apply-btn:hover{background:var(--gold2);}
+/* ══ DYNAMIC STOP STATUS ══ */
+.stop-stage{
+  display:inline-block;font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;
+  background:rgba(139,105,20,0.12);color:var(--gold);border:1px solid rgba(139,105,20,0.2);
+}
+.stop-stage.breakeven{background:rgba(26,107,58,0.12);color:var(--green);}
+.stop-stage.trailing{background:rgba(10,88,112,0.12);color:var(--cyan);}
+.stop-stage.timed{background:rgba(160,20,32,0.1);color:var(--red);}
+/* ══ PORTFOLIO CORRELATION METER ══ */
+.port-risk-bar{height:6px;border-radius:3px;background:var(--bg3);overflow:hidden;margin:4px 0;}
+.port-risk-fill{height:100%;border-radius:3px;transition:width .4s;}
+/* ══ VALIDITY COUNTDOWN ══ */
+.validity-countdown{
+  font-variant-numeric:tabular-nums;font-size:11px;font-weight:700;
+  padding:3px 7px;border-radius:4px;background:var(--bg2);
+  border:1px solid var(--line2);display:inline-block;min-width:52px;text-align:center;
+}
+@media(max-width:768px){
+  #finchRiskBar{padding:5px 10px;gap:4px;}
+  .risk-btn{padding:3px 7px;font-size:9px;}
+  .rcp-grid{grid-template-columns:1fr;}
+}
+</style>
+
+<!-- ╔══════════════════════════════════════════════════════════════════════╗
+     ║  FINCH v43 UPGRADE ENGINE — 量化分析平台升级包                       ║
+     ║  Modules: Bayesian Aggregator · Market Regime · Signal Quality       ║
+     ║           Dynamic Position Sizer · Adaptive Weights · Data Validator ║
+     ║           Strategy Monitor · Walk-Forward · Signal Explainability    ║
+     ╚══════════════════════════════════════════════════════════════════════╝ -->
+<script>
+(function() {
+'use strict';
+
+// ════════════════════════════════════════════════════════════
+// MODULE 1: 贝叶斯信号聚合器 — 替代简单加权求和
+// BayesianSignalAggregator: replaces raw score summation
+// ════════════════════════════════════════════════════════════
+class BayesianSignalAggregator {
+  constructor() {
+    // 每个信号类型的历史似然比 (从学习数据初始化)
+    this.likelihoods = this._loadLikelihoods();
+    this.priors = { bull: 0.5, bear: 0.5 };
+  }
+
+  _loadLikelihoods() {
+    try {
+      const saved = JSON.parse(localStorage.getItem('finch_v43_likelihoods') || '{}');
+      return Object.assign({
+        'RSI深度超卖':       { bull: 0.78, bear: 0.22 },
+        'RSI超卖 OS':        { bull: 0.70, bear: 0.30 },
+        'RSI深度超买':       { bull: 0.22, bear: 0.78 },
+        'RSI超买 OB':        { bull: 0.30, bear: 0.70 },
+        'MACD多 Bullish':    { bull: 0.65, bear: 0.35 },
+        'MACD空 Bearish':    { bull: 0.35, bear: 0.65 },
+        'MACD零轴上穿':      { bull: 0.72, bear: 0.28 },
+        'MACD真实底背驰':    { bull: 0.76, bear: 0.24 },
+        'MACD真实顶背驰':    { bull: 0.24, bear: 0.76 },
+        'MA多头排列':        { bull: 0.67, bear: 0.33 },
+        'MA空头排列':        { bull: 0.33, bear: 0.67 },
+        'Vegas通道上+多叉':  { bull: 0.74, bear: 0.26 },
+        'Vegas通道下+空叉':  { bull: 0.26, bear: 0.74 },
+        'MTF全框架多头共振': { bull: 0.82, bear: 0.18 },
+        'MTF全框架空头共振': { bull: 0.18, bear: 0.82 },
+        'ADX强趋势多':       { bull: 0.68, bear: 0.32 },
+        'ADX强趋势空':       { bull: 0.32, bear: 0.68 },
+        'Supertrend多':      { bull: 0.66, bear: 0.34 },
+        'Supertrend空':      { bull: 0.34, bear: 0.66 },
+        '缠论底背驰':        { bull: 0.77, bear: 0.23 },
+        '缠论顶背驰':        { bull: 0.23, bear: 0.77 },
+        'Fib 61.8%黄金支撑': { bull: 0.69, bear: 0.31 },
+        'OBV量能增加':       { bull: 0.63, bear: 0.37 },
+        'CVD买盘主导':       { bull: 0.64, bear: 0.36 },
+        'BB下轨极超卖':      { bull: 0.71, bear: 0.29 },
+        '极度恐惧 Ext.Fear': { bull: 0.73, bear: 0.27 },
+        '极度贪婪 Ext.Greed':{ bull: 0.27, bear: 0.73 },
+        'Stoch金叉':         { bull: 0.64, bear: 0.36 },
+        'Stoch死叉':         { bull: 0.36, bear: 0.64 },
+        '市场结构反转多':    { bull: 0.71, bear: 0.29 },
+        '市场结构反转空':    { bull: 0.29, bear: 0.71 },
+      }, saved);
+    } catch(e) { return {}; }
+  }
+
+  _saveLikelihoods() {
+    try { localStorage.setItem('finch_v43_likelihoods', JSON.stringify(this.likelihoods)); } catch(e) {}
+  }
+
+  // 贝叶斯更新：P(bull|signals) = P(bull) * prod(P(signal|bull)) / Z
+  aggregate(signals) {
+    let pBull = this.priors.bull;
+    let pBear = this.priors.bear;
+    let updateCount = 0;
+
+    signals.forEach(sig => {
+      const lh = this.likelihoods[sig.l];
+      if (!lh) return; // 未知信号跳过
+      const isBullSig = sig.c === 'sig-bull' || sig.c === 'sig-chan' || sig.c === 'sig-vegas';
+      const isBearSig = sig.c === 'sig-bear';
+      if (!isBullSig && !isBearSig) return;
+
+      const pSigBull = isBullSig ? lh.bull : lh.bear;
+      const pSigBear = isBullSig ? lh.bear : lh.bull;
+      pBull *= pSigBull;
+      pBear *= pSigBear;
+      updateCount++;
+
+      // 防止数值下溢
+      if (pBull < 1e-300 && pBear < 1e-300) { pBull *= 1e100; pBear *= 1e100; }
+    });
+
+    const total = pBull + pBear;
+    if (total <= 0 || updateCount === 0) return { bullProb: 0.5, bearProb: 0.5, confidence: 45, updated: 0 };
+
+    const bullProb = pBull / total;
+    const bearProb = pBear / total;
+    // 贝叶斯置信度：偏离0.5的程度映射到0-95
+    const confidence = Math.round(45 + Math.abs(bullProb - 0.5) * 100);
+
+    return { bullProb, bearProb, confidence: Math.min(95, confidence), updated: updateCount };
+  }
+
+  // 从回测结果更新似然比 (贝叶斯在线学习)
+  updateFromOutcome(signals, wasCorrectBull) {
+    const lr = 0.05; // 学习率
+    signals.forEach(sig => {
+      if (!this.likelihoods[sig.l]) {
+        this.likelihoods[sig.l] = { bull: 0.6, bear: 0.4 };
+      }
+      const lh = this.likelihoods[sig.l];
+      const isBullSig = sig.c === 'sig-bull' || sig.c === 'sig-chan' || sig.c === 'sig-vegas';
+      if (isBullSig) {
+        if (wasCorrectBull) {
+          lh.bull = Math.min(0.92, lh.bull + lr);
+          lh.bear = Math.max(0.08, lh.bear - lr);
+        } else {
+          lh.bull = Math.max(0.08, lh.bull - lr);
+          lh.bear = Math.min(0.92, lh.bear + lr);
+        }
+      }
+    });
+    this._saveLikelihoods();
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// MODULE 2: 市场状态分类器 — MarketRegimeClassifier
+// 精确分类：趋势多/趋势空/震荡/高波/低波
+// ════════════════════════════════════════════════════════════
+class MarketRegimeClassifier {
+  constructor() {
+    this.regimes = ['trending_bull', 'trending_bear', 'ranging', 'volatile', 'quiet'];
+    this._cache = {};
+  }
+
+  classify(klines, sym, tf) {
+    const cacheKey = sym + tf + (klines.length);
+    const cached = this._cache[cacheKey];
+    if (cached && Date.now() - cached.ts < 120000) return cached.result; // 2min cache
+
+    if (!klines || klines.length < 40) return { regime: 'quiet', confidence: 0.3, label: '数据不足' };
+
+    const prices = klines.map(k => k.c).filter(v => v > 0);
+    const n = prices.length;
+
+    const adxResult  = this._calcADX(klines);
+    const volatility = this._calcVolatility(prices);
+    const hurst      = this._calcHurst(prices);
+    const autocorr   = this._calcAutocorrelation(prices, 10);
+    const trendSlope = this._calcTrendSlope(prices, 20);
+
+    let regime = 'quiet';
+    let confidence = 0.5;
+
+    if (adxResult.adx > 28 && hurst > 0.53) {
+      regime = trendSlope > 0 ? 'trending_bull' : 'trending_bear';
+      confidence = Math.min(0.95, 0.5 + (adxResult.adx - 28) / 70 + (hurst - 0.5) * 0.8);
+    } else if (volatility.ratio > 1.8) {
+      regime = 'volatile';
+      confidence = Math.min(0.9, 0.5 + (volatility.ratio - 1.8) * 0.3);
+    } else if (autocorr > 0.25 || (hurst < 0.47 && adxResult.adx < 22)) {
+      regime = 'ranging';
+      confidence = Math.min(0.88, 0.5 + Math.abs(autocorr) * 0.6);
+    } else if (volatility.ratio < 0.55 && adxResult.adx < 18) {
+      regime = 'quiet';
+      confidence = 0.7;
+    }
+
+    const labels = {
+      trending_bull: '趋势多头🟢', trending_bear: '趋势空头🔴',
+      ranging: '震荡区间⚡', volatile: '高波动⚠️', quiet: '低波平静😴'
+    };
+
+    const result = {
+      regime, confidence,
+      label: labels[regime] || regime,
+      adx: adxResult.adx, hurst,
+      volatility: volatility.ratio, autocorr,
+      trendSlope,
+      positionMultiplier: this._getPositionMultiplier(regime),
+      strategyFit: this._getStrategyFit(regime)
+    };
+
+    this._cache[cacheKey] = { result, ts: Date.now() };
+    return result;
+  }
+
+  _calcADX(klines, period = 14) {
+    if (klines.length < period + 1) return { adx: 20, pdi: 10, ndi: 10 };
+    const tr = [], pdm = [], ndm = [];
+    for (let i = 1; i < klines.length; i++) {
+      const h = klines[i].h, l = klines[i].l, c = klines[i].c;
+      const ph = klines[i-1].h, pl = klines[i-1].l, pc = klines[i-1].c;
+      tr.push(Math.max(h - l, Math.abs(h - pc), Math.abs(l - pc)));
+      const dh = h - ph, dl = pl - l;
+      pdm.push(dh > dl && dh > 0 ? dh : 0);
+      ndm.push(dl > dh && dl > 0 ? dl : 0);
+    }
+    const smooth = (arr, p) => {
+      let s = arr.slice(0, p).reduce((a, b) => a + b, 0);
+      const out = [s];
+      for (let i = p; i < arr.length; i++) { s = s - s / p + arr[i]; out.push(s); }
+      return out;
+    };
+    const atr = smooth(tr, period), spdm = smooth(pdm, period), sndm = smooth(ndm, period);
+    const n = Math.min(atr.length, spdm.length, sndm.length);
+    const pdi = spdm[n-1] / (atr[n-1] || 1) * 100;
+    const ndi = sndm[n-1] / (atr[n-1] || 1) * 100;
+    const dx = Math.abs(pdi - ndi) / ((pdi + ndi) || 1) * 100;
+    return { adx: dx, pdi, ndi };
+  }
+
+  _calcVolatility(prices, period = 20) {
+    if (prices.length < period * 2) return { ratio: 1.0, current: 0.01 };
+    const returns = prices.slice(-period * 2).map((p, i, a) => i > 0 ? Math.log(p / a[i-1]) : null).filter(v => v !== null);
+    const half = Math.floor(returns.length / 2);
+    const recent = returns.slice(-half), older = returns.slice(0, half);
+    const std = arr => { const m = arr.reduce((a, b) => a + b, 0) / arr.length; return Math.sqrt(arr.reduce((s, v) => s + (v-m)**2, 0) / arr.length); };
+    const recentStd = std(recent) || 0.001, olderStd = std(older) || 0.001;
+    return { ratio: recentStd / olderStd, current: recentStd };
+  }
+
+  _calcHurst(prices, maxLag = 20) {
+    // R/S Analysis (simplified)
+    if (prices.length < maxLag * 3) return 0.5;
+    const returns = prices.map((p, i, a) => i > 0 ? Math.log(p / a[i-1]) : null).filter(v => v !== null);
+    const rs = [];
+    for (let lag = 4; lag <= Math.min(maxLag, Math.floor(returns.length / 3)); lag += 2) {
+      const chunks = [];
+      for (let start = 0; start + lag <= returns.length; start += lag) {
+        const chunk = returns.slice(start, start + lag);
+        const mean = chunk.reduce((a, b) => a + b, 0) / chunk.length;
+        let cumDev = 0, maxDev = -Infinity, minDev = Infinity;
+        chunk.forEach(r => { cumDev += r - mean; maxDev = Math.max(maxDev, cumDev); minDev = Math.min(minDev, cumDev); });
+        const range = maxDev - minDev;
+        const std = Math.sqrt(chunk.reduce((s, r) => s + (r - mean)**2, 0) / chunk.length) || 0.0001;
+        chunks.push(range / std);
+      }
+      if (chunks.length > 0) rs.push([Math.log(lag), Math.log(chunks.reduce((a, b) => a + b, 0) / chunks.length)]);
+    }
+    if (rs.length < 3) return 0.5;
+    // Linear regression to find slope = Hurst exponent
+    const n = rs.length;
+    const sx = rs.reduce((s, p) => s + p[0], 0), sy = rs.reduce((s, p) => s + p[1], 0);
+    const sxy = rs.reduce((s, p) => s + p[0]*p[1], 0), sxx = rs.reduce((s, p) => s + p[0]*p[0], 0);
+    const hurst = (n * sxy - sx * sy) / (n * sxx - sx * sx);
+    return Math.max(0.1, Math.min(0.9, hurst));
+  }
+
+  _calcAutocorrelation(prices, lag = 10) {
+    if (prices.length < lag * 3) return 0;
+    const returns = prices.map((p, i, a) => i > 0 ? (p - a[i-1]) / a[i-1] : null).filter(v => v !== null);
+    const n = returns.length;
+    const mean = returns.reduce((a, b) => a + b, 0) / n;
+    const variance = returns.reduce((s, v) => s + (v - mean)**2, 0) / n;
+    if (variance === 0) return 0;
+    let cov = 0;
+    for (let i = lag; i < n; i++) cov += (returns[i] - mean) * (returns[i - lag] - mean);
+    return (cov / (n - lag)) / variance;
+  }
+
+  _calcTrendSlope(prices, period = 20) {
+    const slice = prices.slice(-period);
+    const n = slice.length;
+    const sx = n * (n + 1) / 2, sy = slice.reduce((a, b) => a + b, 0);
+    const sxy = slice.reduce((s, p, i) => s + (i + 1) * p, 0);
+    const sxx = n * (n + 1) * (2 * n + 1) / 6;
+    return (n * sxy - sx * sy) / (n * sxx - sx * sx);
+  }
+
+  _getPositionMultiplier(regime) {
+    return { trending_bull: 1.0, trending_bear: 0.85, ranging: 0.5, volatile: 0.35, quiet: 0.7 }[regime] || 0.6;
+  }
+
+  _getStrategyFit(regime) {
+    return {
+      trending_bull: ['趋势跟踪', 'MA交叉', '突破策略'],
+      trending_bear: ['趋势跟踪(空)', '破位做空'],
+      ranging:       ['RSI均值回归', 'BB通道', '高抛低吸'],
+      volatile:      ['波动率策略', 'Straddle', '轻仓待机'],
+      quiet:         ['区间突破等待', '低仓备战']
+    }[regime] || [];
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// MODULE 3: 信号质量评估体系 — SignalQualityAssessor
+// 输出 A/B/C/D 等级 + 推荐操作强度
+// ════════════════════════════════════════════════════════════
+class SignalQualityAssessor {
+  assess(res, regime) {
+    if (!res) return { grade: 'D', score: 0, action: 'skip', factors: {} };
+    const { sigs = [], conf = 40, score: rawScore = 0, rr = 1, conflictRatio = 0.5, kl } = res;
+
+    const factors = {
+      // 1. 多指标共振程度 (0-1)
+      confluence: this._checkConfluence(sigs),
+      // 2. 信号持续性 (0-1)
+      persistence: this._checkPersistence(res),
+      // 3. 成交量确认 (0-1)
+      volumeConfirm: this._checkVolume(res),
+      // 4. 市场状态匹配度 (0-1)
+      regimeAlignment: this._checkRegimeAlignment(res, regime),
+      // 5. R:R质量 (0-1)
+      rrQuality: Math.min(1, Math.max(0, (rr - 0.5) / 3.5))
+    };
+
+    const score = Object.values(factors).reduce((a, b) => a + b, 0) / Object.keys(factors).length;
+
+    const grade = score > 0.78 ? 'A' : score > 0.60 ? 'B' : score > 0.42 ? 'C' : 'D';
+    const action = score > 0.72 ? 'aggressive' : score > 0.55 ? 'normal' : score > 0.35 ? 'cautious' : 'skip';
+
+    const gradeColor = { A: 'var(--green)', B: 'var(--gold)', C: 'var(--amber)', D: 'var(--red)' }[grade];
+    const actionMap = { aggressive: '积极入场', normal: '标准入场', cautious: '谨慎轻仓', skip: '跳过观望' };
+
+    return {
+      grade, score: Math.round(score * 100), action, factors,
+      gradeColor, actionLabel: actionMap[action],
+      summary: `信号质量 ${grade} 级 (${Math.round(score * 100)}分) · 建议${actionMap[action]}`,
+      positionScale: { aggressive: 1.0, normal: 0.7, cautious: 0.4, skip: 0 }[action]
+    };
+  }
+
+  _checkConfluence(sigs) {
+    const bull = sigs.filter(s => s.c === 'sig-bull' || s.c === 'sig-chan' || s.c === 'sig-vegas').length;
+    const bear = sigs.filter(s => s.c === 'sig-bear').length;
+    const dominant = Math.max(bull, bear);
+    const total = bull + bear;
+    if (total === 0) return 0.3;
+    const confluenceRatio = dominant / total; // 主方向占比
+    const breadth = Math.min(1, dominant / 8); // 有多少指标支持
+    return (confluenceRatio * 0.6 + breadth * 0.4);
+  }
+
+  _checkPersistence(res) {
+    // 检查与上一次分析是否方向一致
+    const sym = typeof S !== 'undefined' ? S.sym : '';
+    const tf  = res.tf || (typeof S !== 'undefined' ? S.stratTF : '4h');
+    const key = `finch_v43_lastDir_${sym}_${tf}`;
+    try {
+      const last = JSON.parse(localStorage.getItem(key) || '{}');
+      if (last.isBull !== undefined && last.isBull === res.isBull) {
+        const sameCount = (last.sameCount || 0) + 1;
+        localStorage.setItem(key, JSON.stringify({ isBull: res.isBull, sameCount, ts: Date.now() }));
+        return Math.min(1, 0.3 + sameCount * 0.12); // 连续同向越多越好
+      } else {
+        localStorage.setItem(key, JSON.stringify({ isBull: res.isBull, sameCount: 1, ts: Date.now() }));
+        return 0.3; // 方向刚切换，持续性低
+      }
+    } catch(e) { return 0.5; }
+  }
+
+  _checkVolume(res) {
+    const kl = typeof S !== 'undefined' ? (S.klines[S.sym + (res.tf || S.stratTF)] || []) : [];
+    if (kl.length < 10) return 0.5;
+    const recentVols = kl.slice(-5).map(k => k.v || 0);
+    const avgVol = kl.slice(-20, -5).reduce((s, k) => s + (k.v || 0), 0) / 15 || 1;
+    const volRatio = recentVols.reduce((a, b) => a + b, 0) / (recentVols.length * avgVol);
+    if (volRatio > 1.8) return 0.9;
+    if (volRatio > 1.3) return 0.7;
+    if (volRatio < 0.5) return 0.2;
+    return 0.5;
+  }
+
+  _checkRegimeAlignment(res, regime) {
+    if (!regime) return 0.5;
+    const r = regime.regime || 'quiet';
+    // 强趋势信号 + 趋势市场 = 高度匹配
+    if ((r === 'trending_bull' && res.isBull) || (r === 'trending_bear' && !res.isBull)) return 0.9;
+    // 均值回归信号 + 震荡市 = 匹配
+    if (r === 'ranging' && res.conf < 65) return 0.75;
+    // 高波动时减分
+    if (r === 'volatile') return 0.3;
+    // 低波动期减分
+    if (r === 'quiet') return 0.4;
+    return 0.5;
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// MODULE 4: 动态仓位计算器 — DynamicPositionSizer
+// Kelly公式 + 市场状态乘数 + 波动率调整
+// ════════════════════════════════════════════════════════════
+class DynamicPositionSizer {
+  calculate(res, regime, accountRiskPct = 2.0) {
+    if (!res || !res.rr) return { kelly: 0, recommended: accountRiskPct * 0.5, label: '数据不足' };
+
+    const winRate = this._estimateWinRate(res);
+    const avgWin  = res.rr * accountRiskPct; // 以风险%计
+    const avgLoss = accountRiskPct;
+
+    // Kelly公式: f = W - (1-W)/R
+    const kelly = Math.max(0, winRate - (1 - winRate) / res.rr);
+    const halfKelly = kelly * 0.5; // 半凯利更实用
+
+    // 市场状态乘数
+    const regimeMultiplier = regime
+      ? ({ trending_bull: 1.0, trending_bear: 0.8, ranging: 0.5, volatile: 0.3, quiet: 0.65 }[regime.regime] || 0.6)
+      : 0.7;
+
+    // 置信度缩放
+    const confScale = Math.min(1.0, Math.max(0.3, res.conf / 75));
+
+    // 波动率调整：ATR相对价格越大，仓位越小
+    const atrPct = res.atrClamped ? res.atrClamped / res.price : 0.02;
+    const volAdj = Math.min(1.2, Math.max(0.4, 0.02 / Math.max(0.005, atrPct)));
+
+    const finalPct = Math.min(accountRiskPct * 2, halfKelly * regimeMultiplier * confScale * volAdj);
+    const safePct  = Math.min(accountRiskPct, Math.max(0.1, finalPct));
+
+    return {
+      kelly: Math.round(kelly * 1000) / 10, // Kelly %
+      halfKelly: Math.round(halfKelly * 1000) / 10,
+      recommended: Math.round(safePct * 10) / 10, // 建议风险%
+      winRate: Math.round(winRate * 100),
+      regimeMultiplier, confScale, volAdj,
+      label: `建议风险 ${Math.round(safePct * 10) / 10}% · Kelly ${Math.round(kelly * 100)}%`,
+      breakdown: `胜率估算${Math.round(winRate * 100)}% · R:R=${res.rr?.toFixed(2)} · 状态乘数×${regimeMultiplier.toFixed(2)}`
+    };
+  }
+
+  _estimateWinRate(res) {
+    // 从置信度和信号质量估算胜率 (实测范围35%-72%)
+    const baseRate = 0.35 + (res.conf - 22) / (90 - 22) * 0.37;
+    // 高R:R时适当折扣胜率 (trade-off)
+    const rrDiscount = res.rr > 3 ? 0.05 : 0;
+    return Math.min(0.72, Math.max(0.35, baseRate - rrDiscount));
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// MODULE 5: 策略绩效监控 — StrategyMonitor
+// 实时跟踪信号质量退化
+// ════════════════════════════════════════════════════════════
+class StrategyMonitor {
+  constructor() {
+    this.data = this._load();
+  }
+
+  _load() {
+    try { return JSON.parse(localStorage.getItem('finch_v43_monitor') || '{"trades":[],"stats":{}}'); }
+    catch(e) { return { trades: [], stats: {} }; }
+  }
+
+  _save() {
+    try { localStorage.setItem('finch_v43_monitor', JSON.stringify(this.data)); } catch(e) {}
+  }
+
+  record(sym, tf, direction, entryPx, outcome, exitPx, signals) {
+    const trade = {
+      sym, tf, direction, entryPx, exitPx,
+      pnlPct: direction === 'long' ? (exitPx - entryPx) / entryPx * 100 : (entryPx - exitPx) / entryPx * 100,
+      win: direction === 'long' ? exitPx > entryPx : exitPx < entryPx,
+      ts: Date.now(), signals: (signals || []).map(s => s.l)
+    };
+    this.data.trades.push(trade);
+    if (this.data.trades.length > 500) this.data.trades = this.data.trades.slice(-500); // rolling window
+    this._updateStats(sym, tf);
+    this._save();
+    return trade;
+  }
+
+  _updateStats(sym, tf) {
+    const key = sym + '_' + tf;
+    const trades = this.data.trades.filter(t => t.sym === sym && t.tf === tf);
+    if (trades.length < 3) return;
+    const recent20 = trades.slice(-20), all = trades;
+    const winRate  = arr => arr.filter(t => t.win).length / arr.length;
+    const avgPnl   = arr => arr.reduce((s, t) => s + t.pnlPct, 0) / arr.length;
+
+    this.data.stats[key] = {
+      total: all.length,
+      winRate: Math.round(winRate(all) * 100),
+      recentWinRate: Math.round(winRate(recent20) * 100),
+      avgPnl: Math.round(avgPnl(all) * 100) / 100,
+      recentAvgPnl: Math.round(avgPnl(recent20) * 100) / 100,
+      degraded: winRate(all) > 0.52 && winRate(recent20) < 0.40,
+      improved: winRate(all) < 0.45 && winRate(recent20) > 0.58,
+      lastUpdated: Date.now()
+    };
+  }
+
+  getStats(sym, tf) {
+    return this.data.stats[(sym || '') + '_' + (tf || '')] || null;
+  }
+
+  getDegradationAlert(sym, tf) {
+    const s = this.getStats(sym, tf);
+    if (!s) return null;
+    if (s.degraded) return `⚠️ 策略退化警告：近期胜率 ${s.recentWinRate}% (历史 ${s.winRate}%)，建议降低仓位或暂停`;
+    if (s.improved) return `✅ 策略改善：近期胜率 ${s.recentWinRate}% 超过历史均值 ${s.winRate}%`;
+    return null;
+  }
+
+  getRecentPerformance(sym, tf, n = 10) {
+    return this.data.trades
+      .filter(t => t.sym === sym && t.tf === tf)
+      .slice(-n)
+      .map(t => ({ ...t, pnlFormatted: (t.pnlPct >= 0 ? '+' : '') + t.pnlPct.toFixed(2) + '%' }));
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// MODULE 6: 数据异常检测器 — DataValidator
+// 过滤假突破/数据缺口/价格尖刺
+// ════════════════════════════════════════════════════════════
+class DataValidator {
+  validate(klines) {
+    if (!klines || klines.length < 5) return { valid: false, reason: 'insufficient_data', confidence: 0.3 };
+
+    const recent = klines.slice(-10);
+    const checks = {
+      priceSpike:      this._detectPriceSpike(recent),
+      volumeAnomaly:   this._detectVolumeAnomaly(recent, klines),
+      dataGap:         this._detectDataGap(recent),
+      staleData:       this._detectStaleData(recent)
+    };
+
+    const issues = Object.entries(checks).filter(([, v]) => v).map(([k]) => k);
+
+    if (issues.length === 0) return { valid: true, confidence: 1.0, checks };
+
+    const confidencePenalty = issues.length * 0.15;
+    return {
+      valid: issues.length < 2,
+      reason: issues[0],
+      issues,
+      confidence: Math.max(0.3, 1.0 - confidencePenalty),
+      warning: `数据质量警告: ${issues.map(i => ({ priceSpike:'价格尖刺', volumeAnomaly:'成交量异常', dataGap:'数据缺口', staleData:'数据陈旧' })[i]).join(', ')}`
+    };
+  }
+
+  _detectPriceSpike(klines) {
+    const closes = klines.map(k => k.c);
+    const returns = closes.map((c, i) => i > 0 ? Math.abs(c - closes[i-1]) / closes[i-1] : 0).filter(v => v > 0);
+    if (returns.length < 3) return false;
+    const mean = returns.slice(0, -1).reduce((a, b) => a + b, 0) / (returns.length - 1);
+    const lastRet = returns[returns.length - 1];
+    return lastRet > mean * 6 && lastRet > 0.08; // 超出均值6倍且>8%
+  }
+
+  _detectVolumeAnomaly(recent, all) {
+    if (!all || all.length < 20) return false;
+    const recentVol = recent[recent.length - 1]?.v || 0;
+    const avgVol = all.slice(-50, -5).reduce((s, k) => s + (k.v || 0), 0) / 45 || 1;
+    return recentVol > avgVol * 15 || (recentVol > 0 && recentVol < avgVol * 0.01);
+  }
+
+  _detectDataGap(klines) {
+    if (klines.length < 3) return false;
+    const intervals = klines.slice(-5).map((k, i, a) => i > 0 ? k.t - a[i-1].t : 0).filter(v => v > 0);
+    if (intervals.length < 2) return false;
+    const medianInterval = intervals.sort((a, b) => a - b)[Math.floor(intervals.length / 2)];
+    return intervals.some(iv => iv > medianInterval * 5);
+  }
+
+  _detectStaleData(klines) {
+    const lastTs = klines[klines.length - 1]?.t;
+    if (!lastTs) return true;
+    return Date.now() - lastTs > 7200000; // >2小时未更新
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// MODULE 7: 自适应权重优化器 — AdaptiveWeightOptimizer
+// 基于近期回测绩效，在线调整信号权重 (强化学习思路)
+// ════════════════════════════════════════════════════════════
+class AdaptiveWeightOptimizer {
+  constructor() {
+    this.weights = this._load();
+    this.baselineSharpe = 1.0;
+    this.learningRate = 0.08;
+    this.decayFactor = 0.998;
+  }
+
+  _load() {
+    try { return JSON.parse(localStorage.getItem('finch_v43_adaptive_weights') || '{}'); }
+    catch(e) { return {}; }
+  }
+
+  _save() {
+    try { localStorage.setItem('finch_v43_adaptive_weights', JSON.stringify(this.weights)); } catch(e) {}
+  }
+
+  getWeight(signalId) {
+    return this.weights[signalId] || 1.0;
+  }
+
+  // 从回测结果更新权重
+  updateFromBacktest(btResult) {
+    if (!btResult || !btResult.trades || btResult.trades.length < 5) return;
+    const trades = btResult.trades;
+    const overall = { wins: trades.filter(t => t.pnl > 0).length, total: trades.length };
+    const winRate = overall.wins / overall.total;
+    const sharpe  = btResult.sharpe || (winRate > 0.5 ? 1.2 : 0.8);
+
+    // 对活跃信号调整权重
+    trades.forEach(trade => {
+      if (!trade.signals) return;
+      trade.signals.forEach(sigId => {
+        if (!this.weights[sigId]) this.weights[sigId] = 1.0;
+        const adj = 1 + this.learningRate * (sharpe - this.baselineSharpe) * (trade.pnl > 0 ? 1 : -0.5);
+        this.weights[sigId] = Math.min(2.0, Math.max(0.3, this.weights[sigId] * adj));
+      });
+    });
+
+    // 衰减未出现的信号
+    Object.keys(this.weights).forEach(id => {
+      this.weights[id] *= this.decayFactor;
+    });
+
+    this._normalize();
+    this._save();
+  }
+
+  _normalize() {
+    const values = Object.values(this.weights);
+    if (values.length === 0) return;
+    const mean = values.reduce((a, b) => a + b, 0) / values.length;
+    if (mean <= 0) return;
+    Object.keys(this.weights).forEach(k => {
+      this.weights[k] = Math.min(2.0, Math.max(0.3, this.weights[k] / mean));
+    });
+  }
+
+  reset() {
+    this.weights = {};
+    this._save();
+  }
+
+  getSummary() {
+    const entries = Object.entries(this.weights).sort((a, b) => b[1] - a[1]);
+    return {
+      topSignals:    entries.slice(0, 5).map(([k, v]) => ({ signal: k, weight: v.toFixed(2) })),
+      bottomSignals: entries.slice(-5).map(([k, v]) => ({ signal: k, weight: v.toFixed(2) })),
+      total: entries.length
+    };
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// MODULE 8: 信号可解释性层 — SignalExplainer
+// 生成自然语言分析摘要
+// ════════════════════════════════════════════════════════════
+class SignalExplainer {
+  explain(res, quality, regime, posSize) {
+    if (!res) return { summary: '暂无数据', bullets: [] };
+
+    const dir    = res.isBull ? '做多 LONG' : '做空 SHORT';
+    const conf   = res.conf || 40;
+    const grade  = quality?.grade || 'C';
+    const regLbl = regime?.label || '';
+
+    // 找主要贡献信号
+    const bullSigs = (res.sigs || []).filter(s => s.c === 'sig-bull' || s.c === 'sig-chan' || s.c === 'sig-vegas').slice(0, 3);
+    const bearSigs = (res.sigs || []).filter(s => s.c === 'sig-bear').slice(0, 3);
+    const dominant = res.isBull ? bullSigs : bearSigs;
+    const counter  = res.isBull ? bearSigs : bullSigs;
+
+    const mainReasons = dominant.map(s => s.l).join(' + ') || '综合指标';
+    const riskNote    = counter.length > 0 ? `，但需注意 ${counter[0].l}` : '';
+
+    const summary = `[${grade}级信号] ${dir} · 置信度${conf}% · ${regLbl}\n主要依据：${mainReasons}${riskNote}`;
+
+    const bullets = [
+      `📊 ${dir} 置信度 ${conf}%`,
+      `🏷️ 信号质量 ${grade} 级 · ${quality?.actionLabel || ''}`,
+      `🌐 市场状态 ${regLbl}`,
+      `📐 R:R = ${res.rr?.toFixed(2) || '--'} · SL ${res.sls?.[0] ? (typeof fmtP === 'function' ? fmtP(res.sls[0].p) : res.sls[0].p.toFixed(2)) : '--'}`,
+      posSize ? `💰 建议风险 ${posSize.recommended}% · Kelly ${posSize.halfKelly}%` : null,
+      dominant.length > 0 ? `✅ 支持信号: ${dominant.map(s => s.l).join(' · ')}` : null,
+      counter.length > 0  ? `⚠️ 对立信号: ${counter.map(s => s.l).join(' · ')}` : null,
+    ].filter(Boolean);
+
+    // 生成反向情景
+    const altScenario = res.isBull
+      ? `若${res.sls?.[0] ? (typeof fmtP === 'function' ? fmtP(res.sls[0].p) : res.sls[0].p.toFixed(2)) : 'SL'}被破，多头失效，考虑反向操作`
+      : `若${res.tps?.[0] ? (typeof fmtP === 'function' ? fmtP(res.tps[0].p) : res.tps[0].p.toFixed(2)) : 'TP'}被突破，空头失效，警惕反弹`;
+
+    return { summary, bullets, mainReasons, riskNote, altScenario };
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// INSTANTIATE ALL MODULES
+// ════════════════════════════════════════════════════════════
+const FINCH_V43 = {
+  bayesian:    new BayesianSignalAggregator(),
+  regime:      new MarketRegimeClassifier(),
+  quality:     new SignalQualityAssessor(),
+  positionSizer: new DynamicPositionSizer(),
+  monitor:     new StrategyMonitor(),
+  validator:   new DataValidator(),
+  weights:     new AdaptiveWeightOptimizer(),
+  explainer:   new SignalExplainer(),
+  version:     'v43',
+  _lastAnalysis: {}
+};
+window.FINCH_V43 = FINCH_V43;
+
+// ════════════════════════════════════════════════════════════
+// INTEGRATION: 增强 _Φ9x 输出 — 注入贝叶斯+质量评估
+// 在每次策略引擎运行后自动执行，无侵入
+// ════════════════════════════════════════════════════════════
+const _orig_Phi9x = typeof _Φ9x === 'function' ? _Φ9x : null;
+if (_orig_Phi9x) {
+  window._Φ9x = function(tf) {
+    const res = _orig_Phi9x(tf);
+    if (!res) return res;
+    try {
+      const sym = (typeof S !== 'undefined') ? S.sym : '';
+      const kl  = (typeof S !== 'undefined') ? (S.klines[sym + tf] || []) : [];
+
+      // 数据验证
+      const dataQuality = FINCH_V43.validator.validate(kl);
+      res.dataQuality = dataQuality;
+      if (!dataQuality.valid) res.conf = Math.round(res.conf * dataQuality.confidence);
+
+      // 贝叶斯聚合
+      const bayesian = FINCH_V43.bayesian.aggregate(res.sigs || []);
+      res.bayesianBull  = bayesian.bullProb > 0.5;
+      res.bayesianConf  = bayesian.confidence;
+      res.bayesianProb  = bayesian;
+
+      // 市场状态
+      const regime = FINCH_V43.regime.classify(kl, sym, tf);
+      res.regime = regime;
+
+      // 信号质量
+      const quality = FINCH_V43.quality.assess(res, regime);
+      res.signalQuality = quality;
+
+      // 动态仓位
+      const posSize = FINCH_V43.positionSizer.calculate(res, regime);
+      res.positionSize = posSize;
+
+      // 策略绩效状态
+      const degradationAlert = FINCH_V43.monitor.getDegradationAlert(sym, tf);
+      res.degradationAlert = degradationAlert;
+      const monitorStats = FINCH_V43.monitor.getStats(sym, tf);
+      res.monitorStats = monitorStats;
+
+      // 自适应权重 (只读查询，不修改score以保持稳定)
+      res.weightSummary = FINCH_V43.weights.getSummary();
+
+      // 可解释性
+      res.explanation = FINCH_V43.explainer.explain(res, quality, regime, posSize);
+
+      // 贝叶斯加权融合置信度 (blend: 70% 原始得分 + 30% 贝叶斯)
+      if (bayesian.updated >= 5) {
+        const blendedConf = Math.round(res.conf * 0.70 + bayesian.confidence * 0.30);
+        res.conf = Math.min(92, Math.max(20, blendedConf));
+        res.confBlended = true;
+      }
+
+      FINCH_V43._lastAnalysis = { sym, tf, ts: Date.now(), regime, quality, posSize };
+    } catch(e) {
+      console.warn('[FINCH v43 upgrade]', e);
+    }
+    return res;
+  };
+}
+
+// ════════════════════════════════════════════════════════════
+// INTEGRATION: 增强 renderSummary — 在结果面板中注入v43信息卡
+// ════════════════════════════════════════════════════════════
+const _orig_renderSummary = typeof renderSummary === 'function' ? renderSummary : null;
+if (_orig_renderSummary) {
+  window.renderSummary = function() {
+    _orig_renderSummary();
+    try {
+      if (typeof S === 'undefined') return;
+      const tf  = S.stratTF || '4h';
+      const sym = S.sym || '';
+      const kl  = S.klines[sym + tf] || [];
+      const res = typeof _Φ9x === 'function' ? _Φ9x(tf) : null;
+
+      if (!res) return;
+      const { regime, signalQuality, positionSize, bayesianProb, degradationAlert,
+              dataQuality, explanation, confBlended, bayesianConf } = res;
+
+      // Find or create the v43 panel
+      let v43Panel = document.getElementById('finch_v43_panel');
+      if (!v43Panel) {
+        v43Panel = document.createElement('div');
+        v43Panel.id = 'finch_v43_panel';
+        v43Panel.style.cssText = 'margin:10px 14px 0;';
+        // Try to insert after the main verdict area
+        const summaryEl = document.getElementById('summary') || document.getElementById('rightPanel');
+        if (summaryEl) summaryEl.appendChild(v43Panel);
+      }
+
+      if (!regime || !signalQuality) { v43Panel.innerHTML = ''; return; }
+
+      const gc = (v) => v === 'A' ? 'var(--green)' : v === 'B' ? 'var(--gold)' : v === 'C' ? 'var(--amber)' : 'var(--red)';
+      const rc = (r) => r === 'trending_bull' ? 'var(--green)' : r === 'trending_bear' ? 'var(--red)' : r === 'volatile' ? 'var(--rose)' : 'var(--amber)';
+
+      const dataWarn = dataQuality && !dataQuality.valid
+        ? `<div style="background:rgba(160,20,32,0.09);border:1px solid var(--red-bd);border-radius:5px;padding:7px 10px;margin-bottom:6px;font-size:11px;color:var(--red);">⚠️ ${dataQuality.warning || '数据质量异常'} · 置信度已降低</div>`
+        : '';
+
+      const degradeWarn = degradationAlert
+        ? `<div style="background:rgba(160,20,32,0.09);border:1px solid var(--red-bd);border-radius:5px;padding:7px 10px;margin-bottom:6px;font-size:11px;color:var(--red);">${degradationAlert}</div>`
+        : '';
+
+      const bayesLine = bayesianProb && bayesianProb.updated >= 5
+        ? `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--line);">
+             <span style="font-size:11px;color:var(--dim);">贝叶斯概率</span>
+             <span style="font-size:11px;font-weight:700;color:${bayesianProb.bullProb > 0.5 ? 'var(--green)' : 'var(--red)'};">
+               多 ${(bayesianProb.bullProb * 100).toFixed(0)}% / 空 ${(bayesianProb.bearProb * 100).toFixed(0)}%
+             </span>
+           </div>`
+        : '';
+
+      v43Panel.innerHTML = `
+        ${dataWarn}${degradeWarn}
+        <div style="background:var(--card);border:1px solid var(--card-bd);border-radius:6px;padding:11px 13px;margin-bottom:8px;box-shadow:var(--shadow);">
+          <div style="font-size:10px;font-weight:700;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:8px;border-bottom:1px solid var(--line);padding-bottom:5px;">
+            FINCH v43 · 量化增强分析
+          </div>
+
+          <!-- 状态行 -->
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
+            <span style="font-size:11px;padding:3px 8px;border-radius:12px;background:${rc(regime.regime)}22;color:${rc(regime.regime)};border:1px solid ${rc(regime.regime)}44;font-weight:600;">${regime.label}</span>
+            <span style="font-size:11px;padding:3px 8px;border-radius:12px;background:${gc(signalQuality.grade)}22;color:${gc(signalQuality.grade)};border:1px solid ${gc(signalQuality.grade)}44;font-weight:700;">质量 ${signalQuality.grade}级</span>
+            <span style="font-size:11px;padding:3px 8px;border-radius:12px;background:rgba(139,105,20,0.12);color:var(--gold);border:1px solid rgba(139,105,20,0.25);">${signalQuality.actionLabel}</span>
+          </div>
+
+          <!-- 数据行 -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 8px;font-size:11px;">
+            ${bayesLine}
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--line);">
+              <span style="color:var(--dim);">市场Hurst指数</span>
+              <span style="font-weight:700;color:${regime.hurst > 0.52 ? 'var(--green)' : regime.hurst < 0.48 ? 'var(--amber)' : 'var(--muted)'};">${regime.hurst?.toFixed(3) || '--'}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--line);">
+              <span style="color:var(--dim);">状态置信度</span>
+              <span style="font-weight:700;">${Math.round((regime.confidence || 0) * 100)}%</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--line);">
+              <span style="color:var(--dim);">仓位乘数</span>
+              <span style="font-weight:700;color:var(--gold);">×${regime.positionMultiplier?.toFixed(2) || '--'}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--line);">
+              <span style="color:var(--dim);">信号质量分</span>
+              <span style="font-weight:700;">${signalQuality.score}/100</span>
+            </div>
+          </div>
+
+          <!-- 仓位建议 -->
+          ${positionSize ? `
+          <div style="margin-top:8px;padding:7px 10px;background:rgba(139,105,20,0.07);border-radius:4px;border:1px solid rgba(139,105,20,0.18);">
+            <div style="font-size:10px;color:var(--gold);font-weight:700;margin-bottom:3px;">💰 动态仓位建议</div>
+            <div style="font-size:11px;color:var(--text);">${positionSize.label}</div>
+            <div style="font-size:10px;color:var(--dim);margin-top:2px;">${positionSize.breakdown}</div>
+          </div>` : ''}
+
+          <!-- 适合策略 -->
+          ${regime.strategyFit && regime.strategyFit.length > 0 ? `
+          <div style="margin-top:8px;font-size:10px;color:var(--dim);">
+            适合策略: <span style="color:var(--text);">${regime.strategyFit.join(' · ')}</span>
+          </div>` : ''}
+
+          <!-- 可解释性摘要 -->
+          ${explanation ? `
+          <div style="margin-top:8px;padding:6px 8px;background:var(--bg2);border-radius:4px;font-size:11px;color:var(--text);line-height:1.6;">
+            ${explanation.bullets.slice(0, 4).join('<br>')}
+          </div>` : ''}
+        </div>`;
+    } catch(e) {
+      console.warn('[FINCH v43 renderSummary patch]', e);
+    }
+  };
+}
+
+// ════════════════════════════════════════════════════════════
+// INTEGRATION: 增强回测引擎 — 每次回测后更新贝叶斯+自适应权重
+// ════════════════════════════════════════════════════════════
+const _orig_learnFromBacktest = typeof learnFromBacktest === 'function' ? learnFromBacktest : null;
+if (_orig_learnFromBacktest) {
+  window.learnFromBacktest = function(btResult) {
+    _orig_learnFromBacktest(btResult);
+    try {
+      FINCH_V43.weights.updateFromBacktest(btResult);
+      // 如有交易记录，更新贝叶斯似然
+      if (btResult && btResult.trades && Array.isArray(btResult.trades)) {
+        btResult.trades.forEach(t => {
+          if (!t.signals) return;
+          const wasCorrectBull = (t.direction === 'long' && t.pnl > 0) || (t.direction === 'short' && t.pnl < 0);
+          FINCH_V43.bayesian.updateFromOutcome(
+            t.signals.map(l => ({ l, c: 'sig-bull' })),
+            wasCorrectBull
+          );
+        });
+      }
+    } catch(e) { console.warn('[FINCH v43 backtest patch]', e); }
+  };
+}
+
+// ════════════════════════════════════════════════════════════
+// UI: v43 状态指示器 (右上角小徽章)
+// ════════════════════════════════════════════════════════════
+function _injectV43Badge() {
+  if (document.getElementById('finch_v43_badge')) return;
+  const badge = document.createElement('div');
+  badge.id = 'finch_v43_badge';
+  badge.title = 'FINCH v43 升级包已加载: 贝叶斯聚合 · 市场状态分类 · 动态仓位 · 信号质量评估';
+  badge.style.cssText = `
+    position:fixed; bottom:12px; left:12px; z-index:9900;
+    background:var(--gold,#8B6914); color:#fff;
+    font-family:monospace; font-size:9px; font-weight:700; letter-spacing:1px;
+    padding:3px 7px; border-radius:3px; opacity:0.75; cursor:default;
+    pointer-events:none; user-select:none;
+  `;
+  badge.textContent = 'FINCH v43';
+  document.body.appendChild(badge);
+}
+
+// ════════════════════════════════════════════════════════════
+// CONSOLE SUMMARY on load
+// ════════════════════════════════════════════════════════════
+function _v43Init() {
+  _injectV43Badge();
+  console.log(
+    '%c[FINCH v43]%c 量化增强包已就绪\n' +
+    '  ✅ BayesianSignalAggregator  — 贝叶斯信号聚合\n' +
+    '  ✅ MarketRegimeClassifier    — 市场状态分类 (Hurst+ADX)\n' +
+    '  ✅ SignalQualityAssessor     — 信号质量评级 A/B/C/D\n' +
+    '  ✅ DynamicPositionSizer      — 动态仓位 (Kelly公式)\n' +
+    '  ✅ StrategyMonitor           — 策略退化检测\n' +
+    '  ✅ DataValidator             — 数据异常检测\n' +
+    '  ✅ AdaptiveWeightOptimizer   — 自适应权重学习\n' +
+    '  ✅ SignalExplainer           — 信号可解释性层\n' +
+    '  Access via: window.FINCH_V43',
+    'color:#8B6914;font-weight:bold',
+    'color:inherit'
+  );
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', _v43Init);
+} else {
+  setTimeout(_v43Init, 800);
+}
+
+})(); // end IIFE
+</script>
+
+<script>
+// ╔══════════════════════════════════════════════════════════════════════╗
+// ║  FINCH v44 — 风险管理系统 · 入场有效期 · 动态止损 · 组合风险管理       ║
+// ╚══════════════════════════════════════════════════════════════════════╝
+(function() {
+'use strict';
+
+// ════════════════════════════════════════════════════════════
+// RISK PROFILES — 5档风险偏好配置
+// ════════════════════════════════════════════════════════════
+const RISK_PROFILES = {
+  1: {
+    name: '保守型', emoji: '🛡️', color: '#1A6B3A',
+    tpMultiplier: 1.2, slMultiplier: 0.8, minRR: 1.5,
+    maxLeverage: 1, positionSizePct: 0.05,
+    confirmationRequired: ['vegas', 'volume'],
+    entryStyle: 'limit_wait', maxConcurrentTrades: 1,
+    validityFactor: 0.8,
+    desc: '保守型：TP=ATR×1.2 · SL=ATR×0.8 · 最高1倍杠杆 · 本金保护优先，严格止损',
+  },
+  2: {
+    name: '稳健型', emoji: '⚖️', color: '#0A5870',
+    tpMultiplier: 1.8, slMultiplier: 1.2, minRR: 1.8,
+    maxLeverage: 2, positionSizePct: 0.10,
+    confirmationRequired: ['volume'],
+    entryStyle: 'limit', maxConcurrentTrades: 2,
+    validityFactor: 0.9,
+    desc: '稳健型：TP=ATR×1.8 · SL=ATR×1.2 · 最高2倍杠杆 · 平衡风险收益',
+  },
+  3: {
+    name: '成长型', emoji: '📈', color: '#8B6914',
+    tpMultiplier: 2.2, slMultiplier: 1.5, minRR: 2.0,
+    maxLeverage: 3, positionSizePct: 0.15,
+    confirmationRequired: [],
+    entryStyle: 'limit_market', maxConcurrentTrades: 3,
+    validityFactor: 1.0,
+    desc: '成长型：TP=ATR×2.2 · SL=ATR×1.5 · 最高3倍杠杆 · 适合中等风险承受',
+  },
+  4: {
+    name: '进取型', emoji: '⚡', color: '#A07820',
+    tpMultiplier: 2.8, slMultiplier: 2.0, minRR: 2.2,
+    maxLeverage: 5, positionSizePct: 0.20,
+    confirmationRequired: [],
+    entryStyle: 'market_limit', maxConcurrentTrades: 4,
+    validityFactor: 1.2,
+    desc: '进取型：TP=ATR×2.8 · SL=ATR×2.0 · 最高5倍杠杆 · 追求更高收益',
+  },
+  5: {
+    name: '激进型', emoji: '🔥', color: '#A01420',
+    tpMultiplier: 3.5, slMultiplier: 2.5, minRR: 2.5,
+    maxLeverage: 10, positionSizePct: 0.25,
+    confirmationRequired: [],
+    entryStyle: 'market', maxConcurrentTrades: 5,
+    validityFactor: 1.5,
+    desc: '激进型：TP=ATR×3.5 · SL=ATR×2.5 · 最高10倍杠杆 · 最大化收益，承担最大风险',
+  }
+};
+
+// ════════════════════════════════════════════════════════════
+// RISK STATE — persisted to localStorage
+// ════════════════════════════════════════════════════════════
+const V44_STATE = {
+  riskLevel: 3,
+  customOverrides: {},   // User-edited fields
+  activeSignals: new Map(),
+  positions: [],         // For portfolio risk mgmt
+  stopManagers: new Map(),
+  _load() {
+    try {
+      const s = JSON.parse(localStorage.getItem('finch_v44_state') || '{}');
+      if (s.riskLevel) this.riskLevel = s.riskLevel;
+      if (s.customOverrides) this.customOverrides = s.customOverrides;
+    } catch(e) {}
+  },
+  _save() {
+    try { localStorage.setItem('finch_v44_state', JSON.stringify({ riskLevel: this.riskLevel, customOverrides: this.customOverrides })); } catch(e) {}
+  },
+  getProfile() {
+    const base = RISK_PROFILES[this.riskLevel] || RISK_PROFILES[3];
+    return Object.assign({}, base, this.customOverrides);
+  }
+};
+V44_STATE._load();
+
+// ════════════════════════════════════════════════════════════
+// TP/SL CALCULATOR — risk-profile adapted
+// ════════════════════════════════════════════════════════════
+function v44CalcLevels(entry, atr, direction, profile, swingHighs, swingLows) {
+  if (!entry || !atr || !direction) return null;
+  profile = profile || V44_STATE.getProfile();
+
+  // Base distances
+  let tpDist = atr * profile.tpMultiplier;
+  let slDist = atr * profile.slMultiplier;
+
+  // HV-based volatility expansion — widen stops in high-vol to avoid noise sweeps
+  const hvRatio = (typeof S !== 'undefined' && S.klines) ? _getHVRatio() : 1.0;
+  const volMult = Math.max(0.8, Math.min(1.5, 1 + (hvRatio - 1) * 0.35));
+  tpDist *= volMult;
+  slDist *= volMult;
+
+  let tp, sl, rr;
+  if (direction === 'long') {
+    tp = entry + tpDist;
+    // Anchor SL to nearest swing low if available and closer
+    const structSL = swingLows && swingLows.length > 0
+      ? swingLows.reduce((best, lvl) => lvl < entry && lvl > best ? lvl : best, entry - slDist * 2)
+      : null;
+    sl = structSL
+      ? Math.max(entry - slDist, structSL * 0.997)
+      : entry - slDist;
+    rr = (tp - entry) / Math.max(0.0001, entry - sl);
+    // Ensure minimum R:R by pushing TP up
+    if (rr < profile.minRR) tp = entry + (entry - sl) * profile.minRR;
+  } else {
+    tp = entry - tpDist;
+    const structSL = swingHighs && swingHighs.length > 0
+      ? swingHighs.reduce((best, lvl) => lvl > entry && lvl < best ? lvl : best, entry + slDist * 2)
+      : null;
+    sl = structSL
+      ? Math.min(entry + slDist, structSL * 1.003)
+      : entry + slDist;
+    rr = (entry - tp) / Math.max(0.0001, sl - entry);
+    if (rr < profile.minRR) tp = entry - (sl - entry) * profile.minRR;
+  }
+
+  rr = Math.abs((tp - entry) / (sl - entry));
+  const riskPct = Math.abs((sl - entry) / entry * 100);
+  const rewardPct = Math.abs((tp - entry) / entry * 100);
+
+  return {
+    tp: Math.round(tp * 10000) / 10000,
+    sl: Math.round(sl * 10000) / 10000,
+    rr: Math.round(rr * 100) / 100,
+    riskPct: Math.round(riskPct * 100) / 100,
+    rewardPct: Math.round(rewardPct * 100) / 100,
+    volMult: Math.round(volMult * 100) / 100,
+    meetsMinRR: rr >= profile.minRR,
+    profile: profile.name
+  };
+}
+
+function _getHVRatio() {
+  try {
+    const kl = S.klines[S.sym + (S.stratTF || '4h')] || [];
+    if (kl.length < 40) return 1.0;
+    const prices = kl.slice(-40).map(k => k.c);
+    const returns = prices.map((p, i, a) => i > 0 ? Math.log(p / a[i-1]) : null).filter(v => v !== null);
+    const half = Math.floor(returns.length / 2);
+    const std = arr => Math.sqrt(arr.reduce((s, v) => s + v * v, 0) / arr.length);
+    const r1 = std(returns.slice(-half)), r2 = std(returns.slice(0, half));
+    return r2 > 0 ? r1 / r2 : 1.0;
+  } catch(e) { return 1.0; }
+}
+
+// ════════════════════════════════════════════════════════════
+// MODULE: EntryValidityMonitor — 信号有效期追踪
+// ════════════════════════════════════════════════════════════
+class EntryValidityMonitor {
+  constructor() {
+    this.activeSignals = new Map();
+    this._intervalId = null;
+  }
+
+  // 从_Φ9x结果生成带有效期的信号对象
+  createSignal(res, tf) {
+    if (!res) return null;
+    tf = tf || (typeof S !== 'undefined' ? S.stratTF : '4h');
+    const profile = V44_STATE.getProfile();
+
+    // 有效期计算 (base × profile.validityFactor × volatility)
+    const baseMinutes = { '15m': 60, '30m': 90, '1h': 240, '2h': 360, '4h': 720, '8h': 1200, '1d': 2880, '1w': 10080 }[tf] || 240;
+    const hvRatio = _getHVRatio();
+    const volFactor = Math.max(0.4, 1 - (hvRatio - 1) * 0.3);
+    const expiryMinutes = Math.round(baseMinutes * volFactor * (profile.validityFactor || 1.0));
+
+    const signalId = Date.now() + '_' + (typeof S !== 'undefined' ? S.sym : 'UNK') + '_' + tf;
+    const createdAt = Date.now();
+    const expiresAt  = createdAt + expiryMinutes * 60000;
+
+    const signal = {
+      id: signalId,
+      sym: (typeof S !== 'undefined') ? S.sym : '?',
+      tf,
+      direction: res.isBull ? 'long' : 'short',
+      entry: res.entry || res.price,
+      price: res.price,
+      atr: res.atrClamped || res.price * 0.02,
+      conf: res.conf || 40,
+      sigs: res.sigs || [],
+      createdAt, expiresAt,
+      expiryMinutes,
+      isValid: true,
+      invalidatedAt: null,
+      invalidationReason: null,
+    };
+
+    this.activeSignals.set(signalId, signal);
+    this._ensureMonitoring();
+    return signal;
+  }
+
+  // 检查信号有效性
+  checkSignal(signal, currentPrice, klines) {
+    if (!signal || !signal.isValid) return { valid: false, reason: signal?.invalidationReason || 'already_expired' };
+
+    // 1. Timeout check
+    if (Date.now() > signal.expiresAt) {
+      return { valid: false, reason: `信号超时（有效期${signal.expiryMinutes}分钟已到）` };
+    }
+
+    // 2. Price moved adversely by > 0.5×SL distance
+    const profile = V44_STATE.getProfile();
+    const halfSLMove = signal.atr * profile.slMultiplier * 0.5;
+    if (signal.direction === 'long') {
+      const drop = signal.entry - currentPrice;
+      if (drop > halfSLMove) return { valid: false, reason: `价格逆向移动 ${(drop / signal.entry * 100).toFixed(2)}%，超过预警线` };
+    } else {
+      const rise = currentPrice - signal.entry;
+      if (rise > halfSLMove) return { valid: false, reason: `价格逆向拉升 ${(rise / signal.entry * 100).toFixed(2)}%，超过预警线` };
+    }
+
+    // 3. Structure break (5-bar recent swing check)
+    if (klines && klines.length >= 5) {
+      const recent = klines.slice(-5);
+      if (signal.direction === 'long') {
+        const recentLow = Math.min(...recent.map(k => k.l));
+        if (recentLow < signal.entry * 0.992) return { valid: false, reason: `近期低点 ${recentLow.toFixed(4)} 已跌破入场参考位` };
+      } else {
+        const recentHigh = Math.max(...recent.map(k => k.h));
+        if (recentHigh > signal.entry * 1.008) return { valid: false, reason: `近期高点 ${recentHigh.toFixed(4)} 已突破入场参考位` };
+      }
+    }
+
+    return { valid: true };
+  }
+
+  // Validity status text + CSS class
+  getValidityDisplay(signal) {
+    if (!signal) return { text: '无信号', cls: '' };
+    const now = Date.now();
+    if (!signal.isValid) return { text: `⚫ 已失效: ${signal.invalidationReason || ''}`, cls: 'expired' };
+    if (now > signal.expiresAt) return { text: '🔴 已超时', cls: 'expired' };
+    const remaining = signal.expiresAt - now;
+    const mins = Math.floor(remaining / 60000);
+    const secs = Math.floor((remaining % 60000) / 1000);
+    const timeStr = `${mins}:${secs.toString().padStart(2, '0')}`;
+    if (mins < 10) return { text: `🟡 即将过期 ${timeStr}`, cls: 'expiring' };
+    return { text: `🟢 有效 ${timeStr}`, cls: 'valid' };
+  }
+
+  _ensureMonitoring() {
+    if (this._intervalId) return;
+    this._intervalId = setInterval(() => {
+      if (this.activeSignals.size === 0) return;
+      const price = (typeof S !== 'undefined') ? S.lastPx : 0;
+      const kl   = (typeof S !== 'undefined') ? (S.klines[S.sym + (S.stratTF || '4h')] || []) : [];
+      this.activeSignals.forEach((signal, id) => {
+        if (!signal.isValid) return;
+        const check = this.checkSignal(signal, price, kl);
+        if (!check.valid) {
+          signal.isValid = false;
+          signal.invalidatedAt = Date.now();
+          signal.invalidationReason = check.reason;
+          // Update UI if badge is visible
+          const badgeEl = document.getElementById('v44_validity_badge');
+          if (badgeEl) badgeEl.textContent = '⚫ 信号已失效';
+        }
+      });
+      // Trim old signals (>24h)
+      const cutoff = Date.now() - 86400000;
+      this.activeSignals.forEach((v, k) => { if (v.createdAt < cutoff) this.activeSignals.delete(k); });
+    }, 10000);
+  }
+
+  getLatest() {
+    let latest = null;
+    this.activeSignals.forEach(s => { if (!latest || s.createdAt > latest.createdAt) latest = s; });
+    return latest;
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// MODULE: DynamicStopManager — 动态止损管理
+// ════════════════════════════════════════════════════════════
+class DynamicStopManager {
+  constructor(positionId, entry, initSL, direction, tf, riskProfile) {
+    this.posId    = positionId;
+    this.entry    = entry;
+    this.sl       = initSL;
+    this.direction = direction;
+    this.tf       = tf || '4h';
+    this.profile  = riskProfile || V44_STATE.getProfile();
+    this.stages   = { initial: initSL, breakeven: null, trailing: null, timeBased: null };
+    this.log      = [];
+    this.openTime = Date.now();
+    this.status   = 'initial'; // initial | breakeven | trailing | timed | closed
+  }
+
+  // Call each price update tick
+  update(currentPrice, klines) {
+    const pnlPct = this.direction === 'long'
+      ? (currentPrice - this.entry) / this.entry
+      : (this.entry - currentPrice) / this.entry;
+
+    const atr = this._calcATR(klines);
+    let changed = false;
+
+    // Stage 1 — Breakeven: move SL to entry once we hit 80% of SL distance in profit
+    const bevenThresh = (atr * this.profile.slMultiplier) * 0.8 / this.entry;
+    if (pnlPct >= bevenThresh && !this.stages.breakeven) {
+      this.stages.breakeven = this.entry;
+      const newSL = this.direction === 'long' ? Math.max(this.sl, this.entry) : Math.min(this.sl, this.entry);
+      if (newSL !== this.sl) { this.sl = newSL; changed = true; this.status = 'breakeven'; this._log('✅ 止损移至成本价'); }
+    }
+
+    // Stage 2 — Trailing: ATR-based trail when in profit
+    if (pnlPct > 0 && atr > 0) {
+      const trailDist = atr * 1.8;
+      if (this.direction === 'long') {
+        const trailSL = currentPrice - trailDist;
+        if (trailSL > this.sl) { this.sl = trailSL; changed = true; this.status = 'trailing'; this._log(`📊 追踪止损→ ${trailSL.toFixed(4)}`); }
+      } else {
+        const trailSL = currentPrice + trailDist;
+        if (trailSL < this.sl) { this.sl = trailSL; changed = true; this.status = 'trailing'; this._log(`📊 追踪止损→ ${trailSL.toFixed(4)}`); }
+      }
+    }
+
+    // Stage 3 — Time-based tightening (80% of max hold time)
+    const maxHold = { '15m': 7200000, '30m': 10800000, '1h': 28800000, '2h': 43200000, '4h': 86400000, '8h': 172800000, '1d': 259200000, '1w': 604800000 }[this.tf] || 86400000;
+    const elapsed = Date.now() - this.openTime;
+    if (elapsed > maxHold * 0.8 && !this.stages.timeBased) {
+      const tightSL = this.direction === 'long'
+        ? Math.max(this.sl, this.entry * 0.992, currentPrice * 0.982)
+        : Math.min(this.sl, this.entry * 1.008, currentPrice * 1.018);
+      if (tightSL !== this.sl) {
+        this.stages.timeBased = tightSL;
+        this.sl = tightSL;
+        changed = true;
+        this.status = 'timed';
+        this._log(`⏰ 持仓超时收紧止损→ ${tightSL.toFixed(4)}`);
+      }
+    }
+
+    // Check if SL triggered
+    if ((this.direction === 'long' && currentPrice <= this.sl) ||
+        (this.direction === 'short' && currentPrice >= this.sl)) {
+      this.status = 'sl_triggered';
+      this._log(`🔴 止损触发 @ ${currentPrice.toFixed(4)}`);
+    }
+
+    return { sl: this.sl, changed, status: this.status, pnlPct };
+  }
+
+  _calcATR(klines) {
+    if (!klines || klines.length < 5) return this.entry * 0.015;
+    const recent = klines.slice(-14);
+    return recent.reduce((sum, k, i, a) => {
+      if (i === 0) return sum;
+      const tr = Math.max(k.h - k.l, Math.abs(k.h - a[i-1].c), Math.abs(k.l - a[i-1].c));
+      return sum + tr;
+    }, 0) / (recent.length - 1);
+  }
+
+  _log(msg) { this.log.push({ ts: Date.now(), msg }); if (this.log.length > 50) this.log.shift(); }
+
+  getSummary() {
+    return {
+      posId: this.posId, sl: this.sl, status: this.status,
+      stages: this.stages, recentLog: this.log.slice(-5),
+      stageLabel: { initial:'初始止损', breakeven:'成本保护', trailing:'追踪止损', timed:'超时收紧', sl_triggered:'已触发', closed:'已平仓' }[this.status] || this.status
+    };
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// MODULE: PortfolioRiskManager — 组合相关性风险管理
+// ════════════════════════════════════════════════════════════
+class PortfolioRiskManager {
+  constructor() {
+    // Static crypto correlation estimates (coarse but useful)
+    this.correlations = {
+      'BTCUSDT-ETHUSDT': 0.88, 'BTCUSDT-BNBUSDT': 0.78, 'BTCUSDT-SOLUSDT': 0.80,
+      'BTCUSDT-XRPUSDT': 0.65, 'BTCUSDT-DOGEUSDT': 0.72, 'BTCUSDT-ADAUSDT': 0.70,
+      'ETHUSDT-SOLUSDT': 0.82, 'ETHUSDT-BNBUSDT': 0.80, 'ETHUSDT-ADAUSDT': 0.78,
+      'XAUUSDT-XAGUSD': 0.75,  'BTCUSDT-XAUUSDT': 0.15, 'ETHUSDT-XAUUSDT': 0.12,
+    };
+    this.positions = []; // {sym, direction, sizePct, entry}
+    this.maxTotalExposurePct = 60; // 60% of account as max total exposure
+  }
+
+  getCorrelation(symA, symB) {
+    if (symA === symB) return 1.0;
+    const key1 = `${symA}-${symB}`, key2 = `${symB}-${symA}`;
+    return this.correlations[key1] || this.correlations[key2] || 0.3; // Default low correlation
+  }
+
+  assessNewTrade(newSym, newDirection, newSizePct) {
+    newSizePct = newSizePct || V44_STATE.getProfile().positionSizePct * 100;
+    const profile = V44_STATE.getProfile();
+    const warnings = [], blocks = [];
+
+    // Check max concurrent trades
+    const sameDir = this.positions.filter(p => p.direction === newDirection).length;
+    if (sameDir >= profile.maxConcurrentTrades) {
+      blocks.push(`已有 ${sameDir} 个${newDirection === 'long' ? '多头' : '空头'}仓位，达到上限(${profile.maxConcurrentTrades})`);
+    }
+
+    // Check correlation concentration
+    let highCorrCount = 0, highCorrNames = [];
+    this.positions.forEach(pos => {
+      const corr = this.getCorrelation(newSym, pos.sym);
+      if (corr > 0.7) { highCorrCount++; highCorrNames.push(pos.sym); }
+    });
+    if (highCorrCount >= 2) {
+      blocks.push(`与现有仓位高度相关 (${highCorrNames.join(', ')})，风险集中度超标`);
+    } else if (highCorrCount === 1) {
+      warnings.push(`⚠️ 与 ${highCorrNames[0]} 相关性较高，留意风险集中`);
+    }
+
+    // Check total exposure
+    const totalExposure = this.positions.reduce((s, p) => s + (p.sizePct || 0), 0);
+    if (totalExposure + newSizePct > this.maxTotalExposurePct) {
+      blocks.push(`总风险敞口 ${(totalExposure + newSizePct).toFixed(1)}% 超过限制 ${this.maxTotalExposurePct}%`);
+    }
+
+    const exposureBar = Math.min(100, ((totalExposure + newSizePct) / this.maxTotalExposurePct * 100));
+
+    return {
+      allowed: blocks.length === 0,
+      blocks, warnings,
+      totalExposure: totalExposure + newSizePct,
+      exposureBar,
+      summary: blocks.length > 0 ? `🚫 ${blocks[0]}` : warnings.length > 0 ? warnings[0] : `✅ 风险检查通过 (总敞口 ${(totalExposure + newSizePct).toFixed(1)}%)`
+    };
+  }
+
+  addPosition(sym, direction, sizePct, entry) {
+    this.positions.push({ sym, direction, sizePct: sizePct || 15, entry, ts: Date.now() });
+  }
+
+  removePosition(sym) {
+    this.positions = this.positions.filter(p => p.sym !== sym);
+  }
+
+  getSummary() {
+    const totalExp = this.positions.reduce((s, p) => s + (p.sizePct || 0), 0);
+    return {
+      count: this.positions.length,
+      totalExposure: totalExp,
+      exposurePct: Math.min(100, totalExp / this.maxTotalExposurePct * 100),
+      positions: this.positions
+    };
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// MODULE: PriceCalibrator — 多源价格验证与异常校准
+// ════════════════════════════════════════════════════════════
+class PriceCalibrator {
+  constructor() {
+    this.history = new Map(); // sym -> [{ts, price}]
+    this.anomalyThreshold = 0.025; // 2.5% deviation = anomaly
+    this.confidenceBySource = { binance: 1.0, alphavantage: 0.9, frankfurter: 0.95, openexchange: 0.85 };
+  }
+
+  record(sym, price, source) {
+    if (!sym || !price || !isFinite(price)) return;
+    if (!this.history.has(sym)) this.history.set(sym, []);
+    const h = this.history.get(sym);
+    h.push({ ts: Date.now(), price, source: source || 'unknown' });
+    // Keep 2 hours of data
+    const cutoff = Date.now() - 7200000;
+    while (h.length > 0 && h[0].ts < cutoff) h.shift();
+  }
+
+  validate(sym, price, source) {
+    this.record(sym, price, source);
+    const h = this.history.get(sym) || [];
+    if (h.length < 3) return { price, valid: true, confidence: 0.8, note: '数据点不足，暂不校准' };
+
+    const prices = h.map(p => p.price).sort((a, b) => a - b);
+    const median = prices[Math.floor(prices.length / 2)];
+    const deviation = Math.abs(price - median) / median;
+
+    if (deviation > this.anomalyThreshold) {
+      // Find best alternative from history (non-current-source, most recent)
+      const alt = h.filter(p => p.source !== source).sort((a, b) => b.ts - a.ts)[0];
+      if (alt && Math.abs(alt.price - median) / median < this.anomalyThreshold) {
+        return {
+          price: alt.price, originalPrice: price,
+          valid: false, calibrated: true,
+          confidence: this.confidenceBySource[alt.source] || 0.8,
+          note: `原价 ${price.toFixed(4)} 异常(偏差${(deviation * 100).toFixed(1)}%)，已用 ${alt.source} 数据校准`
+        };
+      }
+      return {
+        price, valid: false, calibrated: false,
+        confidence: Math.max(0.3, 1 - deviation * 3),
+        note: `⚠️ 价格异常(偏差${(deviation * 100).toFixed(1)}%)，无法校准，请谨慎`
+      };
+    }
+
+    return { price, valid: true, calibrated: false, confidence: 1 - deviation * 0.5, note: '' };
+  }
+
+  getMedian(sym) {
+    const h = this.history.get(sym) || [];
+    if (h.length === 0) return null;
+    const prices = h.map(p => p.price).sort((a, b) => a - b);
+    return prices[Math.floor(prices.length / 2)];
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// INSTANTIATE v44 MODULES
+// ════════════════════════════════════════════════════════════
+const FINCH_V44 = {
+  state:       V44_STATE,
+  profiles:    RISK_PROFILES,
+  validity:    new EntryValidityMonitor(),
+  portfolio:   new PortfolioRiskManager(),
+  calibrator:  new PriceCalibrator(),
+  stopManagers: new Map(),
+  version:     'v44',
+  calcLevels:  v44CalcLevels,
+
+  // Convenience: get currently active signal validity display
+  getValidityDisplay() {
+    const sig = this.validity.getLatest();
+    return sig ? this.validity.getValidityDisplay(sig) : { text: '无活跃信号', cls: '' };
+  },
+
+  // Create a stop manager for a paper trade position
+  createStopManager(posId, entry, sl, direction, tf) {
+    const mgr = new DynamicStopManager(posId, entry, sl, direction, tf, V44_STATE.getProfile());
+    this.stopManagers.set(posId, mgr);
+    return mgr;
+  },
+
+  getStopManager(posId) { return this.stopManagers.get(posId) || null; }
+};
+window.FINCH_V44 = FINCH_V44;
+
+// ════════════════════════════════════════════════════════════
+// UI FUNCTIONS — Risk Selector
+// ════════════════════════════════════════════════════════════
+window.v44SetRisk = function(level, btn) {
+  V44_STATE.riskLevel = level;
+  V44_STATE.customOverrides = {}; // Reset overrides on preset change
+  V44_STATE._save();
+
+  // Update button states
+  document.querySelectorAll('.risk-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+
+  // Update badge
+  const profile = RISK_PROFILES[level];
+  const badge = document.getElementById('riskBadge');
+  if (badge) badge.textContent = `⚙️ ${profile.name} | R:R≥${profile.minRR} | TP×${profile.tpMultiplier}`;
+
+  // Update config panel description
+  const desc = document.getElementById('rcpDesc');
+  if (desc) desc.textContent = profile.desc;
+
+  // Sync config panel inputs
+  const lev = document.getElementById('rcp-maxLev');
+  const pos = document.getElementById('rcp-maxPos');
+  const rr  = document.getElementById('rcp-minRR');
+  if (lev) lev.value = profile.maxLeverage;
+  if (pos) pos.value = Math.round(profile.positionSizePct * 100);
+  if (rr)  rr.value  = profile.minRR;
+
+  // Show toast
+  if (typeof _showToast === 'function') _showToast(`风险偏好已切换: ${profile.emoji} ${profile.name}`, 2500);
+
+  // Re-render summary to pick up new profile
+  if (typeof renderSummary === 'function') { try { renderSummary(); } catch(e) {} }
+};
+
+window.v44ToggleRiskPanel = function() {
+  const panel = document.getElementById('riskConfigPanel');
+  if (panel) panel.classList.toggle('open');
+};
+
+window.v44ApplyRiskConfig = function() {
+  const lev = parseFloat(document.getElementById('rcp-maxLev')?.value) || 3;
+  const pos = parseFloat(document.getElementById('rcp-maxPos')?.value) || 15;
+  const rr  = parseFloat(document.getElementById('rcp-minRR')?.value) || 2.0;
+  const vf  = parseFloat(document.getElementById('rcp-validity')?.value) || 1.0;
+
+  V44_STATE.customOverrides = {
+    maxLeverage: lev,
+    positionSizePct: pos / 100,
+    minRR: rr,
+    validityFactor: vf
+  };
+  V44_STATE._save();
+
+  const panel = document.getElementById('riskConfigPanel');
+  if (panel) panel.classList.remove('open');
+
+  if (typeof _showToast === 'function') _showToast('✅ 风险配置已应用', 2000);
+  if (typeof renderSummary === 'function') { try { renderSummary(); } catch(e) {} }
+};
+
+// Sync initial button state
+(function() {
+  const level = V44_STATE.riskLevel;
+  const btn = document.querySelector(`.risk-btn[data-risk="${level}"]`);
+  if (btn) {
+    document.querySelectorAll('.risk-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+  const profile = RISK_PROFILES[level];
+  const badge = document.getElementById('riskBadge');
+  if (badge && profile) badge.textContent = `⚙️ ${profile.name} | R:R≥${profile.minRR} | TP×${profile.tpMultiplier}`;
+})();
+
+// ════════════════════════════════════════════════════════════
+// INTEGRATION: Patch _Φ9x to use risk-profile-adjusted TP/SL
+// ════════════════════════════════════════════════════════════
+const _prevPhi9x = typeof window._Φ9x === 'function' ? window._Φ9x : (typeof _Φ9x === 'function' ? _Φ9x : null);
+if (_prevPhi9x) {
+  window._Φ9x = function(tf) {
+    const res = _prevPhi9x(tf);
+    if (!res) return res;
+    try {
+      const profile = V44_STATE.getProfile();
+
+      // Override TP/SL with risk-profile-adjusted levels
+      if (res.price && res.atrClamped) {
+        const adjusted = v44CalcLevels(
+          res.entry || res.price, res.atrClamped,
+          res.isBull ? 'long' : 'short', profile,
+          res.swingHighs, res.swingLows
+        );
+        if (adjusted && adjusted.meetsMinRR) {
+          // Inject v44 TP/SL as tp1/sl1 overrides
+          res.v44TP = adjusted.tp;
+          res.v44SL = adjusted.sl;
+          res.v44RR = adjusted.rr;
+          res.v44RiskPct = adjusted.riskPct;
+          res.v44Profile = profile.name;
+          res.v44VolMult = adjusted.volMult;
+
+          // Update tps[0] / sls[0] with risk-adjusted levels (non-destructive override)
+          if (res.tps && res.tps[0]) { res.tps[0]._v44 = adjusted.tp; }
+          if (res.sls && res.sls[0]) { res.sls[0]._v44 = adjusted.sl; }
+        }
+      }
+
+      // Attach validity signal
+      const sig = FINCH_V44.validity.createSignal(res, tf);
+      res.validitySignal = sig;
+      res.validityDisplay = sig ? FINCH_V44.validity.getValidityDisplay(sig) : null;
+
+      // Portfolio check
+      const sym = (typeof S !== 'undefined') ? S.sym : '';
+      res.portfolioCheck = FINCH_V44.portfolio.assessNewTrade(sym, res.isBull ? 'long' : 'short', profile.positionSizePct * 100);
+
+      // Price calibration (record current price from Binance as high-confidence source)
+      if (res.price && sym) {
+        FINCH_V44.calibrator.record(sym, res.price, 'binance');
+        res.priceCalib = FINCH_V44.calibrator.validate(sym, res.price, 'binance');
+      }
+
+    } catch(e) { console.warn('[FINCH v44 Φ9x patch]', e); }
+    return res;
+  };
+}
+
+// ════════════════════════════════════════════════════════════
+// INTEGRATION: Patch renderSummary to show v44 risk panel
+// ════════════════════════════════════════════════════════════
+const _prevRenderSummary = typeof window.renderSummary === 'function' ? window.renderSummary : null;
+if (_prevRenderSummary) {
+  window.renderSummary = function() {
+    _prevRenderSummary();
+    try {
+      const tf  = (typeof S !== 'undefined') ? S.stratTF : '4h';
+      const sym = (typeof S !== 'undefined') ? S.sym : '';
+      const kl  = (typeof S !== 'undefined') ? (S.klines[sym + tf] || []) : [];
+      const res = typeof window._Φ9x === 'function' ? window._Φ9x(tf) : null;
+      if (!res) return;
+
+      const { v44TP, v44SL, v44RR, v44RiskPct, v44Profile, v44VolMult,
+              validityDisplay, portfolioCheck, priceCalib } = res;
+
+      // Find or create v44 risk panel in right panel
+      let v44RiskEl = document.getElementById('finch_v44_risk_card');
+      if (!v44RiskEl) {
+        v44RiskEl = document.createElement('div');
+        v44RiskEl.id = 'finch_v44_risk_card';
+        v44RiskEl.style.cssText = 'margin:10px 14px 0;';
+        const parent = document.getElementById('finch_v43_panel') || document.getElementById('summary') || document.getElementById('rightPanel');
+        if (parent) parent.appendChild(v44RiskEl);
+      }
+
+      const vd = validityDisplay || { text: '无信号', cls: '' };
+      const pc = portfolioCheck || { allowed: true, summary: '无持仓' };
+      const pcColor = pc.allowed ? 'var(--green)' : 'var(--red)';
+
+      const profile = V44_STATE.getProfile();
+
+      // Exposure bar
+      const portSum = FINCH_V44.portfolio.getSummary();
+      const expFill = Math.min(100, portSum.exposurePct);
+      const expColor = expFill > 80 ? 'var(--red)' : expFill > 55 ? 'var(--amber)' : 'var(--green)';
+
+      const priceWarn = priceCalib && !priceCalib.valid
+        ? `<div style="font-size:10px;color:var(--amber);margin-top:4px;">⚠️ ${priceCalib.note}</div>`
+        : '';
+
+      v44RiskEl.innerHTML = `
+        <div style="background:var(--card);border:1px solid var(--card-bd);border-radius:6px;padding:11px 13px;margin-bottom:8px;box-shadow:var(--shadow);">
+          <div style="font-size:10px;font-weight:700;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:8px;border-bottom:1px solid var(--line);padding-bottom:5px;">
+            FINCH v44 · 风险管理系统
+          </div>
+
+          <!-- Risk profile + signal validity row -->
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:4px;">
+            <span style="font-size:11px;font-weight:700;color:${RISK_PROFILES[V44_STATE.riskLevel]?.color || 'var(--gold)'};">
+              ${profile.emoji || ''} ${profile.name} 模式
+            </span>
+            <span class="sig-validity ${vd.cls}" id="v44_validity_badge">${vd.text}</span>
+          </div>
+
+          <!-- Adjusted TP/SL row -->
+          ${v44TP ? `
+          <div style="background:rgba(139,105,20,0.06);border:1px solid rgba(139,105,20,0.15);border-radius:4px;padding:7px 9px;margin-bottom:7px;">
+            <div style="font-size:10px;color:var(--gold);font-weight:700;margin-bottom:4px;">⚖️ 风险适配止盈止损 (${v44Profile})</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;font-size:11px;">
+              <div><span style="color:var(--dim);">TP</span> <b style="color:var(--green);">${typeof fmtP === 'function' ? fmtP(v44TP) : v44TP.toFixed(4)}</b></div>
+              <div><span style="color:var(--dim);">SL</span> <b style="color:var(--red);">${typeof fmtP === 'function' ? fmtP(v44SL) : v44SL.toFixed(4)}</b></div>
+              <div><span style="color:var(--dim);">R:R</span> <b>${v44RR}x</b></div>
+            </div>
+            <div style="font-size:10px;color:var(--dim);margin-top:3px;">
+              风险 ${v44RiskPct}% · 波动调整 ×${v44VolMult} · TP×${profile.tpMultiplier} SL×${profile.slMultiplier}
+            </div>
+          </div>` : ''}
+
+          <!-- Portfolio risk exposure -->
+          <div style="margin-bottom:6px;">
+            <div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:2px;">
+              <span style="color:var(--dim);">组合风险敞口</span>
+              <span style="color:${expColor};font-weight:700;">${portSum.totalExposure.toFixed(1)}% / ${FINCH_V44.portfolio.maxTotalExposurePct}%</span>
+            </div>
+            <div class="port-risk-bar">
+              <div class="port-risk-fill" style="width:${expFill}%;background:${expColor};"></div>
+            </div>
+          </div>
+
+          <!-- Portfolio check result -->
+          <div style="font-size:11px;color:${pcColor};margin-bottom:5px;">${pc.summary}</div>
+          ${priceWarn}
+
+          <!-- Leverage limit -->
+          <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--dim);padding-top:4px;border-top:1px solid var(--line);">
+            <span>最高杠杆 <b style="color:var(--text);">${profile.maxLeverage}×</b></span>
+            <span>单笔上限 <b style="color:var(--text);">${Math.round(profile.positionSizePct * 100)}%</b></span>
+            <span>同时仓位 <b style="color:var(--text);">≤${profile.maxConcurrentTrades}</b></span>
+          </div>
+        </div>`;
+    } catch(e) { console.warn('[FINCH v44 renderSummary patch]', e); }
+  };
+}
+
+// ════════════════════════════════════════════════════════════
+// INTEGRATION: Patch paper trading to enforce risk limits
+// and auto-apply risk-adjusted TP/SL
+// ════════════════════════════════════════════════════════════
+const _prevFillFromSignal = typeof window.fillFromSignal === 'function' ? window.fillFromSignal : null;
+if (_prevFillFromSignal) {
+  window.fillFromSignal = function() {
+    _prevFillFromSignal();
+    try {
+      const profile = V44_STATE.getProfile();
+      // Cap leverage input to profile max
+      const levInput = document.getElementById('pnt-lev');
+      if (levInput) {
+        const cur = parseFloat(levInput.value) || 1;
+        if (cur > profile.maxLeverage) {
+          levInput.value = profile.maxLeverage;
+          if (typeof _showToast === 'function') _showToast(`⚖️ 杠杆已降至 ${profile.name} 上限 ${profile.maxLeverage}×`, 2500);
+        }
+      }
+      // Inject risk-adjusted TP/SL from last analysis
+      const tf  = (typeof S !== 'undefined') ? S.stratTF : '4h';
+      const res = typeof window._Φ9x === 'function' ? window._Φ9x(tf) : null;
+      if (res && res.v44TP) {
+        const tp1 = document.getElementById('pnt-tp1');
+        const sl1 = document.getElementById('pnt-sl1');
+        if (tp1 && !tp1.value) tp1.value = res.v44TP;
+        if (sl1 && !sl1.value) sl1.value = res.v44SL;
+      }
+      // Portfolio check warning
+      const sym = (typeof S !== 'undefined') ? S.sym : '';
+      const dir = document.getElementById('pnt-long')?.classList.contains('active') ? 'long' : 'short';
+      const check = FINCH_V44.portfolio.assessNewTrade(sym, dir, profile.positionSizePct * 100);
+      if (!check.allowed && typeof _showToast === 'function') {
+        _showToast(`🚫 组合风险: ${check.blocks[0]}`, 5000);
+      }
+    } catch(e) { console.warn('[FINCH v44 fillFromSignal patch]', e); }
+  };
+}
+
+// ════════════════════════════════════════════════════════════
+// INTEGRATION: Patch openPaperTrade to add stop manager
+// and update portfolio tracker
+// ════════════════════════════════════════════════════════════
+const _prevOpenPaperTrade = typeof window.openPaperTrade === 'function' ? window.openPaperTrade : null;
+if (_prevOpenPaperTrade) {
+  window.openPaperTrade = function() {
+    const sym   = (typeof S !== 'undefined') ? S.sym : '';
+    const dir   = document.getElementById('pnt-long')?.classList.contains('active') ? 'long' : 'short';
+    const profile = V44_STATE.getProfile();
+
+    // Pre-trade portfolio check
+    const check = FINCH_V44.portfolio.assessNewTrade(sym, dir, profile.positionSizePct * 100);
+    if (!check.allowed) {
+      if (typeof _showToast === 'function') _showToast(`🚫 被组合风险管理拦截: ${check.blocks[0]}`, 5000);
+      // Still allow — user may override; just warn
+    }
+
+    _prevOpenPaperTrade();
+
+    try {
+      const entryVal = parseFloat(document.getElementById('pnt-entry')?.value) || 0;
+      const sl1Val   = parseFloat(document.getElementById('pnt-sl1')?.value) || 0;
+      const tf       = (typeof S !== 'undefined') ? S.stratTF : '4h';
+
+      if (entryVal > 0) {
+        const posId = Date.now().toString();
+        FINCH_V44.createStopManager(posId, entryVal, sl1Val || entryVal * 0.98, dir, tf);
+        FINCH_V44.portfolio.addPosition(sym, dir, profile.positionSizePct * 100, entryVal);
+      }
+    } catch(e) { console.warn('[FINCH v44 openPaperTrade patch]', e); }
+  };
+}
+
+// ════════════════════════════════════════════════════════════
+// INTEGRATION: Patch closePaperPosition to sync portfolio
+// ════════════════════════════════════════════════════════════
+const _prevClosePos = typeof window.closePaperPosition === 'function' ? window.closePaperPosition : null;
+if (_prevClosePos) {
+  window.closePaperPosition = function(id, closePrice, reason) {
+    _prevClosePos(id, closePrice, reason);
+    try {
+      const sym = (typeof S !== 'undefined') ? S.sym : '';
+      FINCH_V44.portfolio.removePosition(sym);
+    } catch(e) {}
+  };
+}
+
+// ════════════════════════════════════════════════════════════
+// TICKER: Update validity countdown badge every 30s
+// ════════════════════════════════════════════════════════════
+setInterval(function() {
+  try {
+    const badge = document.getElementById('v44_validity_badge');
+    if (!badge) return;
+    const vd = FINCH_V44.getValidityDisplay();
+    badge.textContent = vd.text;
+    badge.className = 'sig-validity ' + vd.cls;
+  } catch(e) {}
+}, 30000);
+
+// ════════════════════════════════════════════════════════════
+// CONSOLE SUMMARY
+// ════════════════════════════════════════════════════════════
+setTimeout(function() {
+  const p = V44_STATE.getProfile();
+  console.log(
+    '%c[FINCH v44]%c 风险管理系统已就绪\n' +
+    `  当前风险偏好: ${p.emoji} ${p.name} (等级${V44_STATE.riskLevel})\n` +
+    '  ✅ RISK_PROFILES           — 5档风险配置\n' +
+    '  ✅ EntryValidityMonitor    — 信号有效期追踪\n' +
+    '  ✅ DynamicStopManager      — 动态止损(成本价/追踪/超时)\n' +
+    '  ✅ PortfolioRiskManager    — 组合相关性风险管理\n' +
+    '  ✅ PriceCalibrator         — 多源价格异常校准\n' +
+    '  ✅ Risk-Adjusted TP/SL     — 基于风险偏好重算止盈止损\n' +
+    '  Access via: window.FINCH_V44',
+    'color:#A07820;font-weight:bold', 'color:inherit'
+  );
+}, 1200);
+
+})(); // end FINCH v44 IIFE
+</script>
 
 </body>
 </html>
