@@ -1,18 +1,12 @@
 <!-- 
-  FINCH v46 — 全维度市场分析系统 (加密 · 黄金 · 白银 · 石油)
-  v45 升级：
-    ① 黑天鹅/地缘政治事件雷达 — 自动检测高风险宏观窗口，发出"暂缓入场"警告
-    ② 宏观情绪过滤层 — 将F&G极值、资金费率极端、TVL骤变纳入入场资格审核
-    ③ 哲学裁决引擎 "末日思维" — 抛开技术分析，以存在主义视角审视市场机会
-    ④ 动态止损防抖 — 在高波动/消息面环境下自动加宽SL缓冲区，避免被正常噪音扫出
-    ⑤ 信号有效期与事件锁定 — 重大事件前后30分钟自动进入"观察模式"
-    ⑥ 精简优化：移除冗余注释与无效代码块，提速约12%
+  FINCH v42 — 全维度市场分析系统 (加密 · 黄金 · 白银 · 石油)
+  v42 升级：移除美股/马股/新股，保留 USD/SGD · SGD/MYR 汇率，专注加密 + 贵金属 + 原油实时分析
   GitHub Pages: place this file as index.html in your repo root
   No build step · No npm · No server · Pure HTML/CSS/JS
   Data: Binance WebSocket + REST (Crypto) · Alpha Vantage API (Gold/Silver/Oil/Forex)
   CoinGecko · DeFi Llama · Alternative.me
   Alpha Vantage API Key: stored in localStorage (finch_av_key) — never hardcoded
-  © FINCH v45 — For educational / research purposes only
+  © FINCH v42 — For educational / research purposes only
   Not financial advice
 -->
 <!DOCTYPE html>
@@ -23,7 +17,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://fonts.googleapis.com https://fonts.gstatic.com https://api.binance.com https://api1.binance.com https://api2.binance.com https://api3.binance.com https://api4.binance.com https://data-api.binance.vision https://data-stream.binance.vision https://fapi.binance.com https://api.alternative.me https://api.coingecko.com https://api.llama.fi https://corsproxy.io https://api.allorigins.win https://thingproxy.freeboard.io https://api.anthropic.com https://api.blockchain.info https://www.alphavantage.co https://cdn.jsdelivr.net https://open.er-api.com wss://stream.binance.com wss://data-stream.binance.vision; connect-src 'self' https: wss: data: blob:; frame-ancestors 'none';">
 <meta http-equiv="X-Frame-Options" content="DENY">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>FINCH v46 — 全维度市场分析 · 加密·黄金·白银·石油</title>
+<title>FINCH v42 — 全维度市场分析 · 加密·黄金·白银·石油</title>
 
 <!-- ═══ PWA / iOS APP META ═══ -->
 <meta name="mobile-web-app-capable" content="yes">
@@ -32,7 +26,7 @@
 <meta name="apple-mobile-web-app-title" content="FINCH">
 <meta name="application-name" content="FINCH">
 <meta name="theme-color" content="#F0EDE6">
-<meta name="description" content="FINCH v46 — 全维度市场分析系统 加密·黄金·白银·石油">
+<meta name="description" content="FINCH v42 — 全维度市场分析系统 加密·黄金·白银·石油">
 <meta name="format-detection" content="telephone=no">
 
 <!-- iOS Icons (inline SVG-generated, no external file needed) -->
@@ -94,7 +88,7 @@
   --fs-base:16px;--fs-sm:14px;--fs-xs:13px;--fs-xxs:12px;--fs-label:12px;
   --radius:6px;--radius-lg:10px;
 }
-
+/* inst-research CSS removed v41 */
 .inst-tag{
   display:inline-block;font-size:9px;font-weight:700;padding:1px 5px;border-radius:2px;
   margin-right:3px;margin-top:3px;
@@ -1177,7 +1171,7 @@ canvas.main-c{width:100%!important;}
   <div class="brand-wrap">
     <div style="display:flex;flex-direction:column;justify-content:center;">
       <div class="brand">FINCH</div>
-      <div class="brand-sub">全维度市场分析 v41</div>
+      <div class="brand-sub">全维度市场分析 v44</div>
     </div>
   </div>
 
@@ -1197,7 +1191,7 @@ canvas.main-c{width:100%!important;}
   </div>
 
   <div class="topbar-right">
-    <span style="font-size:9px;color:var(--dim);padding:2px 6px;border:1px solid var(--line2);border-radius:3px;letter-spacing:.5px;">v45</span>
+    <span style="font-size:9px;color:var(--dim);padding:2px 6px;border:1px solid var(--line2);border-radius:3px;letter-spacing:.5px;">v42</span>
     <span class="clock-el" id="clockEl">--:--:-- MYT</span>
     <div class="conn-pill"><div class="conn-dot" id="connDot"></div><span id="connLbl" style="font-size:10px">Connecting</span></div>
     <div class="td-status" onclick="showAVKeyDialog()" title="设置 Alpha Vantage Key（石油K线需要）" style="cursor:pointer;">
@@ -1850,13 +1844,8 @@ canvas.main-c{width:100%!important;}
       ℹ️ 查看权重说明
     </button>
 
-    <!-- v45: 宏观风险雷达警告条 -->
-    <div id="finch_macro_warning" style="display:none;border:1.5px solid var(--amber);border-radius:7px;padding:12px 14px;margin-bottom:12px;background:rgba(128,80,0,0.04);">
-      <div style="color:var(--muted);font-size:11px;">🌍 宏观风险雷达加载中...</div>
-    </div>
-
     <div id="summaryBody"><div style="color:var(--muted);font-size:12px">⏳ 加载中...</div></div>
-    <!-- v45: Alpha Vantage asset info card (forex + commodities) -->
+    <!-- v42: Alpha Vantage asset info card (forex + commodities) -->
     <div id="tdAssetInfoCard" style="display:none;"></div>
   </div>
 
@@ -1945,10 +1934,7 @@ canvas.main-c{width:100%!important;}
         <div style="font-size:11px;font-weight:700;letter-spacing:2px;color:var(--violet);text-transform:uppercase;">🧠 FINCH 思维引擎</div>
         <div style="font-size:10px;color:var(--dim);margin-top:1px;">本地推理 · 实时监控 · 主动预警</div>
       </div>
-      <div style="display:flex;gap:5px;">
-        <button onclick="brainManualInfer()" style="padding:3px 9px;border:1px solid var(--violet);border-radius:3px;background:rgba(88,24,144,0.08);color:var(--violet);font-family:inherit;font-size:10px;cursor:pointer;font-weight:700;">⚡ 立即推理</button>
-        <button onclick="if(window.FINCH_MACRO)FINCH_MACRO._showEventLockInput()" style="padding:3px 9px;border:1px solid var(--red);border-radius:3px;background:rgba(160,20,32,0.08);color:var(--red);font-family:inherit;font-size:10px;cursor:pointer;font-weight:700;" title="报告消息面风险事件">🔒 事件</button>
-      </div>
+      <button onclick="brainManualInfer()" style="padding:3px 9px;border:1px solid var(--violet);border-radius:3px;background:rgba(88,24,144,0.08);color:var(--violet);font-family:inherit;font-size:10px;cursor:pointer;font-weight:700;">⚡ 立即推理</button>
     </div>
     <!-- Brain input -->
     <div style="display:flex;gap:6px;margin-bottom:8px;">
@@ -2018,106 +2004,49 @@ canvas.main-c{width:100%!important;}
       </div>
       <div class="paper-new-trade">
         <div class="paper-section-head">➕ 开新仓 · New Position</div>
-        
-        <!-- v46: Coin selector row -->
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
-          <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:1px;">交易对</div>
-          <div class="pnt-val" id="pnt-sym" style="font-size:14px;font-weight:700;min-width:80px;">--</div>
-          <button onclick="ptShowCoinPicker()" style="padding:4px 10px;border:1px solid var(--gold);border-radius:4px;background:rgba(139,105,20,0.08);color:var(--gold);font-family:inherit;font-size:11px;cursor:pointer;font-weight:700;">🔄 换币种</button>
-          <div style="margin-left:auto;font-size:10px;color:var(--muted);">余额: <strong id="pt-bal-display" style="color:var(--text);">$10,000</strong></div>
-          <button onclick="ptSetCustomBalance()" style="padding:3px 8px;border:1px solid var(--line2);border-radius:4px;background:transparent;color:var(--muted);font-family:inherit;font-size:10px;cursor:pointer;">⚙️ 设置余额</button>
-        </div>
-        
-        <!-- Direction -->
-        <div style="display:flex;gap:8px;margin-bottom:10px;">
-          <button class="pnt-dir-btn active" id="pnt-long" onclick="setPaperDir('long',this)" style="flex:1;padding:10px;font-size:13px;font-weight:700;">▲ 做多 LONG</button>
-          <button class="pnt-dir-btn" id="pnt-short" onclick="setPaperDir('short',this)" style="flex:1;padding:10px;font-size:13px;font-weight:700;">▼ 做空 SHORT</button>
-        </div>
-        
-        <!-- Size mode toggle -->
-        <div style="display:flex;gap:4px;margin-bottom:8px;background:var(--bg2);border-radius:6px;padding:2px;">
-          <button id="pt-mode-usdt" onclick="ptSetSizeMode('usdt',this)" style="flex:1;padding:5px;border:none;border-radius:5px;background:var(--gold);color:#fff;font-family:inherit;font-size:11px;cursor:pointer;font-weight:700;">USDT 仓位</button>
-          <button id="pt-mode-pct" onclick="ptSetSizeMode('pct',this)" style="flex:1;padding:5px;border:none;border-radius:5px;background:transparent;color:var(--muted);font-family:inherit;font-size:11px;cursor:pointer;">% 余额</button>
-          <button id="pt-mode-coin" onclick="ptSetSizeMode('coin',this)" style="flex:1;padding:5px;border:none;border-radius:5px;background:transparent;color:var(--muted);font-family:inherit;font-size:11px;cursor:pointer;">本位币数量</button>
-        </div>
-        
         <div class="pnt-grid">
           <div class="pnt-field">
-            <div class="pnt-label">入场价</div>
-            <input class="pnt-input" id="pnt-entry" type="number" placeholder="现价" oninput="ptUpdateSizeCalc()">
+            <div class="pnt-label">币种</div>
+            <div class="pnt-val" id="pnt-sym" style="font-size:15px;font-weight:700">--</div>
           </div>
           <div class="pnt-field">
-            <div class="pnt-label" id="pnt-size-label">仓位 (USDT)</div>
-            <input class="pnt-input" id="pnt-size" type="number" placeholder="500" value="500" oninput="ptUpdateSizeCalc()">
+            <div class="pnt-label">方向</div>
+            <div style="display:flex;gap:6px;margin-top:4px">
+              <button class="pnt-dir-btn active" id="pnt-long" onclick="setPaperDir('long',this)">▲ 做多</button>
+              <button class="pnt-dir-btn" id="pnt-short" onclick="setPaperDir('short',this)">▼ 做空</button>
+            </div>
+          </div>
+          <div class="pnt-field">
+            <div class="pnt-label">入场价</div>
+            <input class="pnt-input" id="pnt-entry" type="number" placeholder="现价">
+          </div>
+          <div class="pnt-field">
+            <div class="pnt-label">仓位 (USDT)</div>
+            <input class="pnt-input" id="pnt-size" type="number" placeholder="500" value="500">
           </div>
           <div class="pnt-field">
             <div class="pnt-label">杠杆</div>
-            <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px;">
-              <button onclick="ptSetLev(1,this)" class="port-lev-btn active" style="font-size:11px;padding:4px 7px;">1×</button>
-              <button onclick="ptSetLev(2,this)" class="port-lev-btn" style="font-size:11px;padding:4px 7px;">2×</button>
-              <button onclick="ptSetLev(3,this)" class="port-lev-btn" style="font-size:11px;padding:4px 7px;">3×</button>
-              <button onclick="ptSetLev(5,this)" class="port-lev-btn" style="font-size:11px;padding:4px 7px;">5×</button>
-              <button onclick="ptSetLev(10,this)" class="port-lev-btn" style="font-size:11px;padding:4px 7px;">10×</button>
-              <button onclick="ptSetLev(20,this)" class="port-lev-btn" style="font-size:11px;padding:4px 7px;">20×</button>
-              <input id="pnt-lev" type="number" value="1" min="1" max="125" style="width:46px;padding:4px 6px;border:1px solid var(--line2);border-radius:4px;background:var(--bg);font-family:inherit;font-size:11px;color:var(--text);" oninput="ptUpdateSizeCalc()">
-            </div>
+            <input class="pnt-input" id="pnt-lev" type="number" placeholder="1" value="1" min="1" max="125">
           </div>
           <div class="pnt-field">
-            <div class="pnt-label">计算结果</div>
-            <div id="pnt-size-calc" style="font-size:11px;color:var(--muted);margin-top:4px;line-height:1.7;">--</div>
+            <div class="pnt-label">TP1</div>
+            <input class="pnt-input" id="pnt-tp1" type="number" placeholder="来自信号">
+          </div>
+          <div class="pnt-field">
+            <div class="pnt-label">SL1</div>
+            <input class="pnt-input" id="pnt-sl1" type="number" placeholder="来自信号">
+          </div>
+          <div class="pnt-field">
+            <div class="pnt-label">备注</div>
+            <input class="pnt-input" id="pnt-note" type="text" placeholder="交易理由...">
           </div>
         </div>
-        
-        <!-- TP/SL with % helpers -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">
-          <div>
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-              <div class="pnt-label">🎯 止盈 TP1</div>
-              <div style="display:flex;gap:3px;">
-                <button onclick="ptAutoTP(1)" style="padding:2px 5px;border:1px solid var(--green-bd);border-radius:3px;background:var(--green-bg);color:var(--green);font-family:inherit;font-size:9px;cursor:pointer;">信号</button>
-                <button onclick="ptSetTPpct(2)" style="padding:2px 5px;border:1px solid var(--line2);border-radius:3px;background:var(--bg);color:var(--muted);font-family:inherit;font-size:9px;cursor:pointer;">2%</button>
-                <button onclick="ptSetTPpct(5)" style="padding:2px 5px;border:1px solid var(--line2);border-radius:3px;background:var(--bg);color:var(--muted);font-family:inherit;font-size:9px;cursor:pointer;">5%</button>
-              </div>
-            </div>
-            <input class="pnt-input" id="pnt-tp1" type="number" placeholder="来自信号或手动" style="border-color:rgba(26,107,58,0.3);">
-          </div>
-          <div>
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-              <div class="pnt-label">🛑 止损 SL1</div>
-              <div style="display:flex;gap:3px;">
-                <button onclick="ptAutoSL(1)" style="padding:2px 5px;border:1px solid var(--red-bd);border-radius:3px;background:var(--red-bg);color:var(--red);font-family:inherit;font-size:9px;cursor:pointer;">信号</button>
-                <button onclick="ptSetSLpct(1)" style="padding:2px 5px;border:1px solid var(--line2);border-radius:3px;background:var(--bg);color:var(--muted);font-family:inherit;font-size:9px;cursor:pointer;">1%</button>
-                <button onclick="ptSetSLpct(2)" style="padding:2px 5px;border:1px solid var(--line2);border-radius:3px;background:var(--bg);color:var(--muted);font-family:inherit;font-size:9px;cursor:pointer;">2%</button>
-              </div>
-            </div>
-            <input class="pnt-input" id="pnt-sl1" type="number" placeholder="来自信号或手动" style="border-color:rgba(160,20,32,0.3);">
-          </div>
-          <div>
-            <div class="pnt-label" style="margin-bottom:4px;">🎯 TP2 (可选)</div>
-            <input class="pnt-input" id="pnt-tp2" type="number" placeholder="可选">
-          </div>
-          <div>
-            <div class="pnt-label" style="margin-bottom:4px;">🛑 SL2 (可选)</div>
-            <input class="pnt-input" id="pnt-sl2" type="number" placeholder="可选">
-          </div>
-        </div>
-        
-        <!-- Signal conditions / invalidation note -->
-        <div style="margin-top:8px;">
-          <div class="pnt-label" style="margin-bottom:4px;">📋 备注 / 失效条件</div>
-          <input class="pnt-input" id="pnt-note" type="text" placeholder="例: 跌破MA200则信号失效 · 等待NFP后确认...">
-        </div>
-        
-        <!-- Signal validity preview -->
-        <div id="pnt-validity-preview" style="display:none;margin-top:8px;padding:8px 10px;background:var(--bg2);border-radius:5px;font-size:11px;color:var(--text);border-left:3px solid var(--gold);line-height:1.7;"></div>
-        
         <div style="display:flex;gap:8px;margin-top:10px;">
-          <button class="pnt-fill-btn" onclick="fillFromSignal()" style="flex:1;">📡 从信号填入</button>
-          <button class="pnt-open-btn" onclick="openPaperTrade()" style="flex:1.5;">✅ 开仓确认</button>
+          <button class="pnt-fill-btn" onclick="fillFromSignal()">📡 从信号填入</button>
+          <button class="pnt-open-btn" onclick="openPaperTrade()">✅ 开仓确认</button>
         </div>
-        <div style="display:flex;gap:8px;margin-top:6px;">
-          <button class="pnt-auto-btn" onclick="showPaperTab('auto',document.querySelector('.paper-tab:nth-child(4)'))" style="flex:1;">🤖 AI托管模式</button>
-          <button onclick="ptResetBalance()" style="flex:0.5;padding:6px;border:1px solid var(--line2);border-radius:5px;background:transparent;color:var(--muted);font-family:inherit;font-size:11px;cursor:pointer;">🔄 重置</button>
+        <div style="display:flex;gap:8px;margin-top:8px;">
+          <button class="pnt-auto-btn" onclick="showPaperTab('auto',document.querySelector('.paper-tab:nth-child(4)'))">🤖 使用AI托管模式</button>
         </div>
       </div>
     </div>
@@ -2248,7 +2177,7 @@ function buildStrategyMemo(tf){
 }
 
 // ═══════════════════════════════════════════════════════════════════
-//  FINCH v45 — MULTI-ASSET ENGINE  (final clean architecture)
+//  FINCH v42 — MULTI-ASSET ENGINE  (final clean architecture)
 //
 //  Data sources (chosen for reliability + accuracy):
 //
@@ -3318,8 +3247,6 @@ async function refreshPrices(){
       S.ticker[t.symbol]=t;
       const p=+t.lastPrice,c=+t.priceChangePercent;
       if(p>0&&!priceValid(t.symbol,p))return; // skip invalid prices
-      // v46: Cache price for paper trading multi-symbol tracking
-      if(p>0&&typeof ptUpdateSymPrice==='function') ptUpdateSymPrice(t.symbol, p);
       const ep=document.getElementById('px-'+t.symbol);const ec=document.getElementById('chg-'+t.symbol);
       if(ep)ep.textContent=fmtP(p);if(ec){ec.textContent=fmtPct(c);ec.className='sym-chg '+pctC(c);}
       const tp=document.getElementById('tt-'+t.symbol);const tc=document.getElementById('tc-'+t.symbol);
@@ -3343,7 +3270,7 @@ async function refreshPrices(){
 function updConn(ok,host){
   const dot=document.getElementById('connDot');const lbl=document.getElementById('connLbl');
   if(!dot||!lbl)return;
-  // v45: differentiate AlphaVantage vs Binance
+  // v42: differentiate AlphaVantage vs Binance
   if(isTDAsset(S.sym)){
     dot.className='conn-dot rest';
     lbl.textContent='AlphaVantage';
@@ -3354,7 +3281,7 @@ function updConn(ok,host){
   else{dot.className='conn-dot';lbl.textContent='Connecting...';}
 }
 function updatePHPrice(px){
-  // v45: for AV assets, always allow price through
+  // v42: for AV assets, always allow price through
   if(!px||px<=0)return;
   if(!isTDAsset(S.sym)&&!priceValid(S.sym,px))return;
   const fmted=fmtP(px);
@@ -3424,8 +3351,6 @@ function connectWS(sym){
 function updatePH(d){
   // Guard: never display a price outside the valid range for current symbol
   if(!d.price||d.price<=0||!priceValid(S.sym,d.price))return;
-  // v46: Update per-symbol price cache for paper trading
-  if(typeof ptUpdateSymPrice==='function') ptUpdateSymPrice(S.sym, d.price);
   const big=document.getElementById('priceBig');const chg=document.getElementById('priceChg');
   if(big){
     const fmted=fmtP(d.price);big.textContent=fmted;
@@ -5163,22 +5088,6 @@ function renderFINCHVerdict(res){
   const v=_Ψ7v(res);
   if(!v)return'';
 
-  // ── v45: Macro Risk Check ──
-  const macroRisk = window.FINCH_MACRO || null;
-  const dynamicSL = window.FINCH_DYNAMIC_SL || null;
-  const macroBanner = (() => {
-    if (!macroRisk) return '';
-    const advice = macroRisk.getAdvice();
-    if (advice.level === 'ok') return '';
-    const slInfo = dynamicSL ? dynamicSL.getInfoHTML() : '';
-    return `<div style="background:${advice.level==='block'?'rgba(160,20,32,0.08)':'rgba(128,80,0,0.08)'};border:1.5px solid ${advice.color};border-radius:6px;padding:10px 12px;margin-bottom:10px;">
-      <div style="font-size:11px;font-weight:700;color:${advice.color};margin-bottom:3px;">${advice.icon} 宏观风险警告 · v45</div>
-      <div style="font-size:11px;color:var(--text);line-height:1.7;">${advice.text}</div>
-      ${slInfo}
-      ${advice.level === 'block' ? '<div style="font-size:11px;font-weight:700;color:var(--red);margin-top:4px;">⛔ 建议: 取消入场，等待宏观风险消退后重新评估</div>' : '<div style="font-size:11px;font-weight:700;color:var(--amber);margin-top:4px;">⚠️ 建议: 减仓50% + 加宽止损</div>'}
-    </div>`;
-  })();
-
   const urgencyColor = v.urgency==='high'?'var(--green)':v.urgency==='medium'?'var(--amber)':'var(--muted)';
   const actionColor = v.action==='long'?'var(--green)':v.action==='short'?'var(--red)':v.action.includes('lean')?'var(--amber)':'var(--muted)';
   const bgColor = v.action==='long'?'rgba(26,107,58,0.05)':v.action==='short'?'rgba(160,20,32,0.05)':'rgba(0,0,0,0.02)';
@@ -5187,7 +5096,6 @@ function renderFINCHVerdict(res){
   const probColor=(p)=>p==='高'?'var(--green)':p==='中'?'var(--amber)':'var(--muted)';
 
   return`
-  ${macroBanner}
   <div style="background:${bgColor};border:2px solid ${borderColor};border-radius:8px;padding:16px;margin-bottom:12px;">
     <!-- Verdict Header -->
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
@@ -5208,45 +5116,7 @@ function renderFINCHVerdict(res){
 
     <!-- Key Levels -->
     <div style="font-size:12px;color:var(--bright);font-weight:700;margin-bottom:4px">${v.keyLevels}</div>
-    <div style="font-size:11px;color:var(--muted);margin-bottom:8px">${v.watchFor}</div>
-    
-    <!-- v46: Signal Validity Window & Invalidation Conditions -->
-    ${(()=>{
-      const tf = res.tf || S.stratTF || '4h';
-      const tfHours = {'15m':0.25,'30m':0.5,'1h':1,'2h':2,'4h':4,'8h':8,'1d':24,'1w':168}[tf]||4;
-      const validUntil = new Date(Date.now() + tfHours*3*3600000);
-      const validStr = validUntil.toLocaleString('zh',{month:'numeric',day:'numeric',hour:'numeric',minute:'numeric'});
-      
-      const invalidConditions = [];
-      // Structural invalidation
-      if(res.sls && res.sls[0]) invalidConditions.push(`价格收盘${res.isBull?'跌破':'突破'} <strong>${fmtP(res.sls[0].p)}</strong> → 信号立即失效`);
-      if(res.sls && res.sls[1]) invalidConditions.push(`价格收盘${res.isBull?'跌破':'突破'} <strong>${fmtP(res.sls[1].p)}</strong> → 趋势逆转，必须离场`);
-      // MACD flip
-      invalidConditions.push(res.isBull ? 'MACD柱由正转负 → 动能逆转' : 'MACD柱由负转正 → 动能逆转');
-      // Vegas flip
-      if(res.vegas) invalidConditions.push(res.isBull ? 'Vegas通道 价格跌破下轨 → 结构失效' : 'Vegas通道 价格突破上轨 → 结构失效');
-      // RSI
-      if(res.rsi < 35) invalidConditions.push('RSI从超卖区回到50以上且不再创新低 → 超卖反弹结束');
-      if(res.rsi > 65) invalidConditions.push('RSI从超买区回落至50以下 → 超买回调确认');
-      // Time
-      invalidConditions.push(`超过 ${validStr} 未入场 → 信号过期，需重新分析`);
-      // Macro
-      if(window.FINCH_MACRO && window.FINCH_MACRO.riskScore >= 25) {
-        invalidConditions.push('宏观风险激活 → 暂停入场，消息面主导行情');
-      }
-      
-      return \`<div style="background:rgba(255,255,255,0.5);border:1px solid var(--line2);border-radius:6px;padding:10px 12px;margin-bottom:12px;">
-        <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;color:var(--gold);text-transform:uppercase;margin-bottom:6px;">⏱️ 信号有效期 · SIGNAL VALIDITY</div>
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
-          <span style="font-size:11px;background:rgba(26,107,58,0.1);color:var(--green);border:1px solid var(--green-bd);border-radius:4px;padding:3px 8px;font-weight:700;">📅 有效至 ${validStr}</span>
-          <span style="font-size:11px;color:var(--muted);">基于 ${tf} 周期 × 3根K线</span>
-        </div>
-        <div style="font-size:10px;font-weight:700;color:var(--red);margin-bottom:4px;">🚨 以下任一条件成立则信号失效：</div>
-        <div style="display:flex;flex-direction:column;gap:3px;">
-          \${invalidConditions.slice(0,5).map(c=>\`<div style="font-size:11px;color:var(--text);line-height:1.5;">• \${c}</div>\`).join('')}
-        </div>
-      </div>\`;
-    })()}
+    <div style="font-size:11px;color:var(--muted);margin-bottom:12px">${v.watchFor}</div>
 
     <!-- Three Scenarios -->
     <div style="font-size:10px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:6px">📊 三种情景分析</div>
@@ -6210,7 +6080,7 @@ function renderAllModules(){
 }
 
 async function loadAll(sym){
-  // ── v45: Route AV assets to their own loader ──
+  // ── v42: Route AV assets to their own loader ──
   if(isTDAsset(sym)){
     await loadAllUnified(sym);
     return;
@@ -7171,27 +7041,14 @@ function _Φ9x(tf){
       const sl3=Math.max(slFloor,Math.min(sl2-minGap,sl3raw));
 
       // Final sanity: ensure strictly decreasing for LONG (sl1 > sl2 > sl3, all < entry)
-      let finalSL1=Math.min(slCeil,sl1);
-      let finalSL2=Math.min(finalSL1-minGap,sl2);
-      let finalSL3=Math.min(finalSL2-minGap,sl3);
-
-      // v45: Dynamic SL widening for macro risk / high volatility
-      let _slWideNote='';
-      if(window.FINCH_DYNAMIC_SL){
-        const _widen=window.FINCH_DYNAMIC_SL.applyToSL(finalSL1,entry,'long');
-        if(_widen.mult>1.02){
-          const _gap1=entry-finalSL1,_gap2=entry-finalSL2,_gap3=entry-finalSL3;
-          finalSL1=entry-_gap1*_widen.mult;
-          finalSL2=entry-_gap2*_widen.mult;
-          finalSL3=entry-_gap3*_widen.mult;
-          _slWideNote=` ⚡×${_widen.mult.toFixed(1)}`;
-        }
-      }
+      const finalSL1=Math.min(slCeil,sl1);
+      const finalSL2=Math.min(finalSL1-minGap,sl2);
+      const finalSL3=Math.min(finalSL2-minGap,sl3);
 
       return[
-        {p:finalSL1,note:'🔒 紧止损'+_slWideNote+' · 结构支撑破位',riskPct:Math.abs((finalSL1-entry)/entry*100).toFixed(2),invalidate:'跌破意味近期上涨结构失效',pct:(finalSL1-entry)/entry*100},
-        {p:finalSL2,note:'⚠️ 中止损'+_slWideNote+' · 关键支撑失效',riskPct:Math.abs((finalSL2-entry)/entry*100).toFixed(2),invalidate:'第二支撑失守确认转空',pct:(finalSL2-entry)/entry*100},
-        {p:finalSL3,note:'🛡️ 宽止损'+_slWideNote+' · 趋势彻底失效',riskPct:Math.abs((finalSL3-entry)/entry*100).toFixed(2),invalidate:'大级别趋势逆转确认',pct:(finalSL3-entry)/entry*100},
+        {p:finalSL1,note:'🔒 紧止损 · 结构支撑破位',riskPct:Math.abs((finalSL1-entry)/entry*100).toFixed(2),invalidate:'跌破意味近期上涨结构失效',pct:(finalSL1-entry)/entry*100},
+        {p:finalSL2,note:'⚠️ 中止损 · 关键支撑失效',riskPct:Math.abs((finalSL2-entry)/entry*100).toFixed(2),invalidate:'第二支撑失守确认转空',pct:(finalSL2-entry)/entry*100},
+        {p:finalSL3,note:'🛡️ 宽止损 · 趋势彻底失效',riskPct:Math.abs((finalSL3-entry)/entry*100).toFixed(2),invalidate:'大级别趋势逆转确认',pct:(finalSL3-entry)/entry*100},
       ];
     } else {
       const slCeil=entry+maxSlDist; // absolute max (widest allowed)
@@ -7220,27 +7077,14 @@ function _Φ9x(tf){
       )*10000)/10000;
       const sl3=Math.min(slCeil,Math.max(sl2+minGap,sl3raw));
 
-      let finalSL1=Math.max(slFloor,sl1);
-      let finalSL2=Math.max(finalSL1+minGap,sl2);
-      let finalSL3=Math.max(finalSL2+minGap,sl3);
-
-      // v45: Dynamic SL widening for macro risk / high volatility
-      let _slWideNote='';
-      if(window.FINCH_DYNAMIC_SL){
-        const _widen=window.FINCH_DYNAMIC_SL.applyToSL(finalSL1,entry,'short');
-        if(_widen.mult>1.02){
-          const _gap1=finalSL1-entry,_gap2=finalSL2-entry,_gap3=finalSL3-entry;
-          finalSL1=entry+_gap1*_widen.mult;
-          finalSL2=entry+_gap2*_widen.mult;
-          finalSL3=entry+_gap3*_widen.mult;
-          _slWideNote=` ⚡×${_widen.mult.toFixed(1)}`;
-        }
-      }
+      const finalSL1=Math.max(slFloor,sl1);
+      const finalSL2=Math.max(finalSL1+minGap,sl2);
+      const finalSL3=Math.max(finalSL2+minGap,sl3);
 
       return[
-        {p:finalSL1,note:'🔒 紧止损'+_slWideNote+' · 阻力突破止损',riskPct:Math.abs((finalSL1-entry)/entry*100).toFixed(2),invalidate:'突破意味下跌结构失效',pct:(finalSL1-entry)/entry*100},
-        {p:finalSL2,note:'⚠️ 中止损'+_slWideNote+' · 关键阻力突破止损',riskPct:Math.abs((finalSL2-entry)/entry*100).toFixed(2),invalidate:'第二阻力突破确认转多',pct:(finalSL2-entry)/entry*100},
-        {p:finalSL3,note:'🛡️ 宽止损'+_slWideNote+' · 趋势逆转止损',riskPct:Math.abs((finalSL3-entry)/entry*100).toFixed(2),invalidate:'大级别方向逆转确认',pct:(finalSL3-entry)/entry*100},
+        {p:finalSL1,note:'🔒 紧止损 · 阻力突破止损',riskPct:Math.abs((finalSL1-entry)/entry*100).toFixed(2),invalidate:'突破意味下跌结构失效',pct:(finalSL1-entry)/entry*100},
+        {p:finalSL2,note:'⚠️ 中止损 · 关键阻力突破止损',riskPct:Math.abs((finalSL2-entry)/entry*100).toFixed(2),invalidate:'第二阻力突破确认转多',pct:(finalSL2-entry)/entry*100},
+        {p:finalSL3,note:'🛡️ 宽止损 · 趋势逆转止损',riskPct:Math.abs((finalSL3-entry)/entry*100).toFixed(2),invalidate:'大级别方向逆转确认',pct:(finalSL3-entry)/entry*100},
       ];
     }
   }
@@ -10033,7 +9877,7 @@ function renderSummary(){
   const fr2 = document.getElementById('filterRow2');
   if (fr && fr2) { fr2.innerHTML = fr.innerHTML; }
 
-  // ── v45: Render AV forex/commodity info card ──
+  // ── v42: Render AV forex/commodity info card ──
   _renderTDAssetInfoCard();
 }
 
@@ -10470,384 +10314,6 @@ function ptSave(){
   }
 }
 
-
-// ════════════════════════════════════════════════════════════
-// FINCH v46 — Paper Trading Enhanced Helpers
-// ════════════════════════════════════════════════════════════
-
-// ── Size mode (USDT / % of balance / coin quantity) ──
-let _ptSizeMode = 'usdt'; // 'usdt' | 'pct' | 'coin'
-let _ptLev = 1;
-
-function ptSetSizeMode(mode, btn) {
-  _ptSizeMode = mode;
-  document.querySelectorAll('#pt-mode-usdt, #pt-mode-pct, #pt-mode-coin').forEach(b => {
-    b.style.background = 'transparent'; b.style.color = 'var(--muted)'; b.style.fontWeight = '';
-  });
-  if(btn) { btn.style.background = 'var(--gold)'; btn.style.color = '#fff'; btn.style.fontWeight = '700'; }
-  const lbl = document.getElementById('pnt-size-label');
-  if(lbl) lbl.textContent = mode === 'usdt' ? '仓位 (USDT)' : mode === 'pct' ? '仓位 (% 余额)' : '数量 (本位币)';
-  const inp = document.getElementById('pnt-size');
-  if(inp) {
-    if(mode === 'pct') { inp.placeholder = '25'; inp.value = '25'; }
-    else if(mode === 'coin') { inp.placeholder = '0.01'; inp.value = ''; }
-    else { inp.placeholder = '500'; inp.value = '500'; }
-  }
-  ptUpdateSizeCalc();
-}
-
-function ptSetLev(n, btn) {
-  _ptLev = n;
-  document.querySelectorAll('.port-lev-btn').forEach(b => b.classList.remove('active'));
-  if(btn) btn.classList.add('active');
-  const levInput = document.getElementById('pnt-lev');
-  if(levInput) levInput.value = n;
-  ptUpdateSizeCalc();
-}
-
-function ptUpdateSizeCalc() {
-  const calcEl = document.getElementById('pnt-size-calc');
-  if(!calcEl) return;
-  
-  const lev = parseInt(document.getElementById('pnt-lev')?.value || _ptLev) || 1;
-  const entryRaw = parseFloat(document.getElementById('pnt-entry')?.value || 0);
-  const entry = entryRaw > 0 ? entryRaw : (S.lastPx || 0);
-  const sizeRaw = parseFloat(document.getElementById('pnt-size')?.value || 0);
-  
-  let sizeUSDT = 0, coinQty = 0, notional = 0;
-  
-  if(_ptSizeMode === 'usdt') {
-    sizeUSDT = sizeRaw || 500;
-    notional = sizeUSDT * lev;
-    coinQty = entry > 0 ? notional / entry : 0;
-  } else if(_ptSizeMode === 'pct') {
-    const pct = sizeRaw || 25;
-    sizeUSDT = PT.balance * pct / 100;
-    notional = sizeUSDT * lev;
-    coinQty = entry > 0 ? notional / entry : 0;
-  } else { // coin
-    coinQty = sizeRaw || 0;
-    notional = coinQty * entry;
-    sizeUSDT = notional / lev;
-  }
-  
-  const fee = notional * 0.0005;
-  const liqPct = lev > 1 ? (100/lev * 0.9).toFixed(1) : '--';
-  
-  const symShort = S.sym.replace('USDT','').replace('/USD','');
-  calcEl.innerHTML = `
-    <span style="color:var(--text);">保证金 <strong>$${sizeUSDT.toFixed(2)}</strong></span> · 
-    <span>名义 <strong>$${notional.toFixed(2)}</strong></span> · 
-    <span>数量 <strong>${coinQty.toFixed(4)} ${symShort}</strong></span><br>
-    <span style="color:var(--muted);">手续费≈$${fee.toFixed(2)}</span>
-    ${lev > 1 ? ` · <span style="color:var(--red);">爆仓≈-${liqPct}%</span>` : ''}
-    ${sizeUSDT > PT.balance * 0.5 ? ' · <span style="color:var(--amber);">⚠️ 超过余额50%</span>' : ''}`;
-  
-  // Also update the size input if in coin mode to show USDT equivalent
-  if(_ptSizeMode === 'coin' && sizeRaw > 0 && entry > 0) {
-    // Update internal tracking
-  }
-}
-
-// ── TP/SL quick-set helpers ──
-function ptAutoTP(level) {
-  const res = S.lastSignal;
-  if(!res || !res.tps || !res.tps[level-1]) return;
-  const inp = document.getElementById('pnt-tp1');
-  if(inp) { inp.value = res.tps[level-1].p.toFixed(4); ptShowValidityPreview(); }
-}
-
-function ptAutoSL(level) {
-  const res = S.lastSignal;
-  if(!res || !res.sls || !res.sls[level-1]) return;
-  const inp = document.getElementById('pnt-sl1');
-  if(inp) { inp.value = res.sls[level-1].p.toFixed(4); ptShowValidityPreview(); }
-}
-
-function ptSetTPpct(pct) {
-  const entry = parseFloat(document.getElementById('pnt-entry')?.value || S.lastPx || 0);
-  if(!entry) return;
-  const dir = _paperDir || 'long';
-  const tp = dir === 'long' ? entry * (1 + pct/100) : entry * (1 - pct/100);
-  const inp = document.getElementById('pnt-tp1');
-  if(inp) inp.value = tp.toFixed(4);
-}
-
-function ptSetSLpct(pct) {
-  const entry = parseFloat(document.getElementById('pnt-entry')?.value || S.lastPx || 0);
-  if(!entry) return;
-  const dir = _paperDir || 'long';
-  const sl = dir === 'long' ? entry * (1 - pct/100) : entry * (1 + pct/100);
-  const inp = document.getElementById('pnt-sl1');
-  if(inp) inp.value = sl.toFixed(4);
-}
-
-// ── Signal validity + conditions preview ──
-function ptShowValidityPreview() {
-  const el = document.getElementById('pnt-validity-preview');
-  const res = S.lastSignal;
-  if(!el || !res) return;
-  
-  const entry = parseFloat(document.getElementById('pnt-entry')?.value || res.entry || 0);
-  const tp1 = parseFloat(document.getElementById('pnt-tp1')?.value || 0);
-  const sl1 = parseFloat(document.getElementById('pnt-sl1')?.value || 0);
-  const dir = _paperDir || 'long';
-  
-  // Compute conditions under which signal is valid
-  const conditions = [];
-  
-  // 1. Timeframe validity
-  const tf = res.tf || S.stratTF || '4h';
-  const tfHours = {'15m':0.25,'30m':0.5,'1h':1,'2h':2,'4h':4,'8h':8,'1d':24,'1w':168}[tf] || 4;
-  const validUntil = new Date(Date.now() + tfHours * 3 * 3600000); // 3 candles
-  conditions.push(`📅 信号有效至约 ${validUntil.toLocaleString('zh',{month:'numeric',day:'numeric',hour:'numeric',minute:'numeric'})} (${tf}×3根K线)`);
-  
-  // 2. Price must not cross SL before entry
-  if(sl1 > 0) {
-    conditions.push(`🚨 失效条件: 价格${dir==='long'?'收盘跌破':'收盘突破'} ${fmtP(sl1)} → 信号立即失效，不应入场`);
-  }
-  
-  // 3. Structural invalidation
-  if(res.sls && res.sls[1]) {
-    conditions.push(`⚠️ 结构失效: 价格突破 ${fmtP(res.sls[1].p)} → 趋势逆转，必须止损`);
-  }
-  
-  // 4. Key indicator conditions
-  const rsi = res.rsi || 50;
-  if(rsi < 35) conditions.push(`📊 RSI 当前 ${rsi.toFixed(0)} (超卖) → 若RSI回到50以上且背驰消失，信号失效`);
-  if(rsi > 65) conditions.push(`📊 RSI 当前 ${rsi.toFixed(0)} (超买) → 若RSI回落至50以下，信号失效`);
-  
-  // 5. Macro/news risk
-  const macro = window.FINCH_MACRO;
-  if(macro && macro.riskScore >= 25) {
-    conditions.push(`🌍 宏观风险 ${macro.riskScore}/100 → 建议在重大消息发布后重新评估信号`);
-  }
-  
-  // 6. R:R
-  if(entry > 0 && tp1 > 0 && sl1 > 0) {
-    const rrCalc = Math.abs(tp1 - entry) / Math.abs(sl1 - entry);
-    const slPct = Math.abs((sl1-entry)/entry*100).toFixed(2);
-    const tpPct = Math.abs((tp1-entry)/entry*100).toFixed(2);
-    conditions.push(`⚖️ 此设置 R:R = ${rrCalc.toFixed(2)}:1 | TP +${tpPct}% | SL -${slPct}%${rrCalc < 1.5 ? ' ⚠️ R:R偏低，建议>2:1' : rrCalc >= 3 ? ' ✅ 优秀' : ''}`);
-  }
-  
-  el.style.display = 'block';
-  el.innerHTML = `<div style="font-size:10px;font-weight:700;color:var(--gold);letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">📋 信号有效性 & 失效条件</div>` +
-    conditions.map(c => `<div style="margin-bottom:3px;">${c}</div>`).join('');
-}
-
-// ── Coin picker for new position ──
-function ptShowCoinPicker() {
-  // Simple dropdown of available pairs
-  const existing = document.getElementById('_ptCoinPickerModal');
-  if(existing) { existing.remove(); return; }
-  
-  const modal = document.createElement('div');
-  modal.id = '_ptCoinPickerModal';
-  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(20,12,0,0.6);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;';
-  
-  const cryptoPairs = (window.PAIRS || []).filter(p => !p.cls || p.cls === 'crypto').slice(0, 30);
-  const items = cryptoPairs.map(p => {
-    const pk = S.ticker[p.s];
-    const pxStr = pk ? fmtP(+pk.lastPrice) : '--';
-    const chg = pk ? +pk.priceChangePercent : 0;
-    return `<button onclick="ptSelectCoin('${p.s}');document.getElementById('_ptCoinPickerModal').remove();"
-      style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border:1px solid var(--line);border-radius:6px;background:var(--bg1);cursor:pointer;font-family:inherit;transition:background .1s;"
-      onmouseenter="this.style.background='rgba(139,105,20,0.08)'" onmouseleave="this.style.background='var(--bg1)'">
-      <div style="text-align:left;">
-        <div style="font-size:14px;font-weight:700;color:var(--bright);">${p.b}</div>
-        <div style="font-size:10px;color:var(--muted);">${p.n}</div>
-      </div>
-      <div style="text-align:right;">
-        <div style="font-size:13px;font-weight:700;">${pxStr}</div>
-        <div style="font-size:11px;color:${chg>=0?'var(--green)':'var(--red)'};">${chg>=0?'+':''}${chg.toFixed(2)}%</div>
-      </div>
-    </button>`;
-  }).join('');
-  
-  modal.innerHTML = `<div style="background:var(--bg1);border-radius:12px;padding:16px;width:min(380px,96vw);max-height:80vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,0.4);">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-      <div style="font-size:14px;font-weight:700;color:var(--bright);">🪙 选择交易币种</div>
-      <button onclick="document.getElementById('_ptCoinPickerModal').remove()" style="padding:4px 10px;border:1px solid var(--line2);border-radius:4px;background:transparent;font-family:inherit;font-size:11px;color:var(--muted);cursor:pointer;">✕</button>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:6px;">${items}</div>
-    <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--line);font-size:11px;color:var(--muted);">💡 选择不同于当前图表的币种，FINCH将在后台实时追踪其价格</div>
-  </div>`;
-  document.body.appendChild(modal);
-  modal.addEventListener('click', e => { if(e.target === modal) modal.remove(); });
-}
-
-function ptSelectCoin(sym) {
-  // Set the paper trade symbol without switching the chart
-  const el = document.getElementById('pnt-sym');
-  if(el) el.textContent = sym.replace('USDT','/USDT');
-  // Store it for use in openPaperTrade
-  window._ptSelectedSym = sym;
-  // Update entry price from cache
-  const px = ptGetPrice(sym) || 0;
-  const entryEl = document.getElementById('pnt-entry');
-  if(entryEl && px > 0) entryEl.value = px.toFixed(px < 1 ? 6 : px < 100 ? 4 : 2);
-  ptUpdateSizeCalc();
-}
-
-// ── Custom balance setter ──
-function ptSetCustomBalance() {
-  const cur = PT.balance.toFixed(2);
-  const input = prompt(`设置模拟余额 (当前: $${cur})\n输入新余额 (例: 10000, 50000):`, cur);
-  if(input === null) return;
-  const newBal = parseFloat(input.replace(/,/g,''));
-  if(isNaN(newBal) || newBal <= 0) { alert('请输入有效金额'); return; }
-  PT.balance = newBal;
-  PT.startBalance = newBal;
-  PT.equityHistory.push({t: Date.now(), v: newBal});
-  ptSave();
-  renderPaperStats();
-  // Update display
-  const el = document.getElementById('pt-bal-display');
-  if(el) el.textContent = '$' + newBal.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
-  if(typeof _showToast === 'function') _showToast(`✅ 余额设置为 $${newBal.toLocaleString()}`, 2000);
-}
-
-function ptResetBalance() {
-  if(!confirm('重置模拟账户？(余额、持仓、历史全部清零)')) return;
-  resetPaperTrading();
-}
-
-// ── Hook fillFromSignal to also show validity preview ──
-const _origFillFromSignal = typeof fillFromSignal === 'function' ? fillFromSignal : null;
-if(_origFillFromSignal) {
-  window.fillFromSignal = function() {
-    _origFillFromSignal();
-    // Also fill TP2, SL2
-    const res = S.lastSignal;
-    if(res) {
-      if(res.tps[1]) { const el=document.getElementById('pnt-tp2'); if(el) el.value=res.tps[1].p.toFixed(4); }
-      if(res.sls[1]) { const el=document.getElementById('pnt-sl2'); if(el) el.value=res.sls[1].p.toFixed(4); }
-      // Set selected sym to current sym
-      window._ptSelectedSym = S.sym;
-      const symEl = document.getElementById('pnt-sym');
-      if(symEl) symEl.textContent = S.sym.replace('USDT','/USDT');
-      ptUpdateSizeCalc();
-      ptShowValidityPreview();
-    }
-  };
-}
-
-// ── Patch openPaperTrade to use selected sym & size mode ──
-const _origOpenPaperTrade = typeof openPaperTrade === 'function' ? openPaperTrade : null;
-if(_origOpenPaperTrade) {
-  window.openPaperTrade = function() {
-    // Override S.sym temporarily if user picked a different coin
-    const savedSym = S.sym;
-    if(window._ptSelectedSym && window._ptSelectedSym !== S.sym) {
-      // Temporarily set for the openPaperTrade call
-      S._paperSym = window._ptSelectedSym;
-    }
-    
-    // Handle % mode: convert to USDT before calling original
-    if(_ptSizeMode === 'pct') {
-      const pct = parseFloat(document.getElementById('pnt-size')?.value || 25);
-      const usdt = PT.balance * pct / 100;
-      const sizeEl = document.getElementById('pnt-size');
-      const oldVal = sizeEl?.value;
-      if(sizeEl) sizeEl.value = usdt.toFixed(2);
-      _origOpenPaperTradeCore(); // call the actual logic
-      if(sizeEl) sizeEl.value = oldVal;
-    } else if(_ptSizeMode === 'coin') {
-      const coinQty = parseFloat(document.getElementById('pnt-size')?.value || 0);
-      const entry = parseFloat(document.getElementById('pnt-entry')?.value || S.lastPx || 0);
-      const lev = parseInt(document.getElementById('pnt-lev')?.value || 1);
-      const notionalVal = coinQty * entry;
-      const usdt = notionalVal / lev;
-      const sizeEl = document.getElementById('pnt-size');
-      const oldVal = sizeEl?.value;
-      if(sizeEl) sizeEl.value = usdt.toFixed(2);
-      _origOpenPaperTradeCore();
-      if(sizeEl) sizeEl.value = oldVal;
-    } else {
-      _origOpenPaperTradeCore();
-    }
-    
-    // Also update display balance
-    setTimeout(() => {
-      const el = document.getElementById('pt-bal-display');
-      if(el) el.textContent = '$' + PT.balance.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
-    }, 100);
-  };
-}
-
-// Core of openPaperTrade that handles sym override
-function _origOpenPaperTradeCore() {
-  // Use selected sym or current sym
-  const sym = window._ptSelectedSym || S.sym;
-  const price = ptGetPrice(sym) || S.lastPx || 0;
-  const entryEl = document.getElementById('pnt-entry');
-  const entryInput = parseFloat(entryEl?.value || 0);
-  const entry = entryInput > 0 ? entryInput : price;
-  const sizeEl = document.getElementById('pnt-size');
-  const size = parseFloat(sizeEl?.value || 500) || 500;
-  const levEl = document.getElementById('pnt-lev');
-  const lev = parseInt(levEl?.value || 1) || 1;
-  const tp1 = parseFloat(document.getElementById('pnt-tp1')?.value || 0) || 0;
-  const sl1 = parseFloat(document.getElementById('pnt-sl1')?.value || 0) || 0;
-  const tp2 = parseFloat(document.getElementById('pnt-tp2')?.value || 0) || 0;
-  const sl2 = parseFloat(document.getElementById('pnt-sl2')?.value || 0) || 0;
-  const note = document.getElementById('pnt-note')?.value || '';
-  
-  if(!entry || entry <= 0) { alert('请输入入场价或等待价格加载'); return; }
-  if(size > PT.balance) { alert(`仓位 $${size.toFixed(2)} 超过余额 $${PT.balance.toFixed(2)}`); return; }
-  
-  // Validate TP/SL direction
-  if(_paperDir === 'long') {
-    if(tp1 > 0 && tp1 <= entry) { alert('做多时止盈价必须高于入场价'); return; }
-    if(sl1 > 0 && sl1 >= entry) { alert('做多时止损价必须低于入场价'); return; }
-  } else {
-    if(tp1 > 0 && tp1 >= entry) { alert('做空时止盈价必须低于入场价'); return; }
-    if(sl1 > 0 && sl1 <= entry) { alert('做空时止损价必须高于入场价'); return; }
-  }
-  
-  const notional = size * lev;
-  const fee = notional * 0.0005;
-  PT.balance -= fee;
-  
-  // Cache the entry price for this symbol
-  if(sym && entry > 0) PT_PRICE_CACHE[sym] = entry;
-  
-  const pos = {
-    id: Date.now(),
-    sym, dir: _paperDir,
-    entry, size, lev, notional,
-    tp1: tp1 || null, sl1: sl1 || null,
-    tp2: tp2 || null, sl2: sl2 || null,
-    note,
-    openTime: Date.now(),
-    fee,
-    sizeMode: _ptSizeMode,
-    signal: S.lastSignal ? {conf:S.lastSignal.conf, score:S.lastSignal.score, tf:S.lastSignal.tf} : null,
-  };
-  PT.positions.push(pos);
-  ptSave();
-  renderOpenPositions();
-  renderPaperStats();
-  // Clear form
-  ['pnt-entry','pnt-tp1','pnt-sl1','pnt-tp2','pnt-sl2','pnt-note'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
-  const pvEl = document.getElementById('pnt-validity-preview');
-  if(pvEl) pvEl.style.display = 'none';
-  
-  const symShort = sym.replace('USDT','').replace('/USD','');
-  ptAutoLog(`✅ 开仓 ${symShort} ${_paperDir.toUpperCase()} @ ${fmtP(entry)} · $${size}×${lev} · 费$${fee.toFixed(2)}`);
-  if(typeof _showToast==='function') _showToast(`✅ ${symShort} ${_paperDir==='long'?'多':'空'}仓已开 @ ${fmtP(entry)}`, 2500);
-}
-
-// Init balance display
-setTimeout(() => {
-  ptLoad();
-  const el = document.getElementById('pt-bal-display');
-  if(el) el.textContent = '$' + PT.balance.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
-  ptUpdateSizeCalc();
-}, 500);
-
-
 // ─── UI ───
 function openPaper(){
   ptLoad();
@@ -11038,53 +10504,17 @@ function manualClosePaperPosition(id){
 }
 
 // ─── LIVE PNL UPDATE ───
-// v46 FIX: Per-symbol price cache for multi-symbol paper trading
-// This ensures BTC positions track BTC price even when viewing ETH chart
-const PT_PRICE_CACHE = {};
-
-// Call this whenever any symbol price updates (hook into existing price update flow)
-function ptUpdateSymPrice(sym, px) {
-  if(sym && px > 0) PT_PRICE_CACHE[sym] = px;
-}
-
-// Get the best known price for a symbol
-function ptGetPrice(sym) {
-  // 1. Use per-symbol cache (most accurate)
-  if(PT_PRICE_CACHE[sym] && PT_PRICE_CACHE[sym] > 0) return PT_PRICE_CACHE[sym];
-  // 2. If current symbol, use live price
-  if(sym === S.sym && S.lastPx > 0) return S.lastPx;
-  // 3. Try ticker cache
-  const tk = S.ticker[sym];
-  if(tk && +tk.lastPrice > 0) return +tk.lastPrice;
-  // 4. Try klines last close
-  const kl = S.klines[sym + S.chartTF] || S.klines[sym + '4h'] || S.klines[sym + '1h'] || [];
-  if(kl.length) return kl[kl.length-1].c;
-  return 0;
-}
-
 function updateLivePnL(){
-  if(!PT.positions.length) return;
-  
-  // Update current symbol in cache first
-  if(S.sym && S.lastPx > 0) PT_PRICE_CACHE[S.sym] = S.lastPx;
-  
-  // Also refresh all positions' symbols from ticker cache
-  PT.positions.forEach(pos => {
-    const tk = S.ticker[pos.sym];
-    if(tk && +tk.lastPrice > 0) PT_PRICE_CACHE[pos.sym] = +tk.lastPrice;
-  });
-  
+  const px=S.lastPx;
+  if(!px||!PT.positions.length)return;
   PT.positions.forEach(pos=>{
-    const px = ptGetPrice(pos.sym);
-    if(!px || px <= 0) return; // no price yet, skip this position
-    
     const priceDiff=pos.dir==='long'?px-pos.entry:pos.entry-px;
     const pnlPct=priceDiff/pos.entry;
     const grossPnl=pnlPct*pos.notional;
     const closeFee=pos.notional*0.0005;
     const liveNet=grossPnl-closeFee;
     
-    // Check TP/SL triggers (only if we have a reliable price)
+    // Check TP/SL triggers
     if(pos.tp1&&((pos.dir==='long'&&px>=pos.tp1)||(pos.dir==='short'&&px<=pos.tp1))){
       closePaperPosition(pos.id,pos.tp1,'TP1 触发 🎯');return;
     }
@@ -11093,122 +10523,58 @@ function updateLivePnL(){
     }
     
     // Update live PnL display
-    const pnlPctLev = pnlPct*pos.lev*100;
     const el=document.getElementById('pos-pnl-'+pos.id);
     if(el){
-      el.textContent=(liveNet>=0?'+$':'-$')+Math.abs(liveNet).toFixed(2)+' ('+(pnlPctLev>=0?'+':'')+pnlPctLev.toFixed(2)+'%)';
+      el.textContent=(liveNet>=0?'+$':'-$')+Math.abs(liveNet).toFixed(2)+' ('+(pnlPct*pos.lev*100>=0?'+':''+(pnlPct*pos.lev*100).toFixed(2))+'%)';
       el.style.color=liveNet>=0?'var(--green)':'var(--red)';
     }
     const pxEl=document.getElementById('pos-px-'+pos.id);
-    if(pxEl)pxEl.textContent=fmtP(px)+' ('+pos.sym.replace('USDT','').replace('/USD','')+')';
+    if(pxEl)pxEl.textContent=fmtP(px);
   });
   renderPaperStats();
 }
 
-// ─── RENDER POSITIONS (v46: multi-symbol, per-symbol price) ───
+// ─── RENDER POSITIONS ───
 function renderOpenPositions(){
   const el=document.getElementById('paperOpenPos');
   if(!el)return;
-  if(!PT.positions.length){
-    el.innerHTML='<div style="color:var(--muted);font-size:13px;text-align:center;padding:20px 0">暂无持仓 · No open positions<br><span style="font-size:11px">开仓后切换币种不会关闭持仓</span></div>';
-    return;
-  }
-  // v46: Compute portfolio totals across all symbols
-  let totalLiveNet = 0;
-  PT.positions.forEach(pos => {
-    const px = ptGetPrice(pos.sym);
-    if(!px) return;
-    const priceDiff = pos.dir==='long' ? px-pos.entry : pos.entry-px;
-    const pnlPct = priceDiff/pos.entry;
-    totalLiveNet += pnlPct*pos.notional - pos.notional*0.0005;
-  });
-  
-  // Portfolio summary bar
-  const portfolioBar = PT.positions.length > 1 ? `
-    <div style="background:${totalLiveNet>=0?'rgba(26,107,58,0.08)':'rgba(160,20,32,0.08)'};border:1px solid ${totalLiveNet>=0?'var(--green-bd)':'var(--red-bd)'};border-radius:6px;padding:8px 12px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;">
-      <div style="font-size:11px;color:var(--muted)">📊 组合总盈亏 (${PT.positions.length}个持仓)</div>
-      <div style="font-size:14px;font-weight:700;color:${totalLiveNet>=0?'var(--green)':'var(--red)'}">${totalLiveNet>=0?'+$':'-$'}${Math.abs(totalLiveNet).toFixed(2)}</div>
-    </div>` : '';
-  
-  el.innerHTML = portfolioBar + PT.positions.map(pos=>{
-    const px = ptGetPrice(pos.sym) || pos.entry;
+  if(!PT.positions.length){el.innerHTML='<div style="color:var(--muted);font-size:13px;text-align:center;padding:20px 0">暂无持仓 · No open positions</div>';return;}
+  const px=S.lastPx||0;
+  el.innerHTML=PT.positions.map(pos=>{
     const priceDiff=pos.dir==='long'?px-pos.entry:pos.entry-px;
     const pnlPct=priceDiff/pos.entry;
     const liveNet=(pnlPct*pos.notional)-(pos.notional*0.0005);
     const dur=Date.now()-pos.openTime;
     const durStr=dur<3600000?Math.round(dur/60000)+'分钟':dur<86400000?Math.round(dur/3600000)+'小时':Math.round(dur/86400000)+'天';
-    const symDisplay = pos.sym.replace('USDT','/USDT').replace('/USD','/USD');
-    const isCurrentSym = pos.sym === S.sym;
-    const priceSource = isCurrentSym ? '实时' : '最新';
-    
-    // Compute % to TP/SL for progress bars
-    const distToTP = pos.tp1 ? Math.abs(pos.tp1 - px) / Math.abs(pos.tp1 - pos.entry) * 100 : 0;
-    const distToSL = pos.sl1 ? Math.abs(px - pos.sl1) / Math.abs(pos.entry - pos.sl1) * 100 : 0;
-    const slPct = pos.sl1 ? Math.abs((pos.entry - pos.sl1)/pos.entry*100).toFixed(2) : '--';
-    const tpPct = pos.tp1 ? Math.abs((pos.tp1 - pos.entry)/pos.entry*100).toFixed(2) : '--';
-    
-    return`<div class="pos-card ${pos.dir}" style="border-left:3px solid ${pos.dir==='long'?'var(--green)':'var(--red)'};">
+    return`<div class="pos-card ${pos.dir}">
       <div class="pos-card-top">
-        <div style="display:flex;flex-direction:column;gap:2px;">
-          <div style="display:flex;align-items:center;gap:6px;">
-            <span class="pos-sym">${symDisplay}</span>
-            <span class="pos-dir ${pos.dir}" style="font-size:11px;font-weight:700;color:${pos.dir==='long'?'var(--green)':'var(--red)'};">${pos.dir==='long'?'▲ LONG':'▼ SHORT'}${pos.lev>1?' '+pos.lev+'×':''}</span>
-            ${!isCurrentSym?`<span style="font-size:9px;padding:1px 5px;background:rgba(128,80,0,0.1);color:var(--amber);border-radius:3px;border:1px solid rgba(128,80,0,0.25);">后台追踪</span>`:'<span style="font-size:9px;padding:1px 5px;background:rgba(26,107,58,0.1);color:var(--green);border-radius:3px;border:1px solid rgba(26,107,58,0.25);">●实时</span>'}
-          </div>
-          ${pos.signal?`<span style="font-size:10px;color:var(--muted)">${pos.signal.tf}周期 · 信号置信${pos.signal.conf}% · ${pos.note||''}</span>`:`<span style="font-size:10px;color:var(--muted)">${pos.note||''}</span>`}
+        <div>
+          <span class="pos-sym">${pos.sym.replace('USDT','/USDT')}</span>
+          <span class="pos-dir ${pos.dir}" style="margin-left:8px">${pos.dir==='long'?'▲ 多':'▼ 空'} ${pos.lev>1?pos.lev+'×':''}</span>
+          ${pos.signal?`<span style="font-size:10px;color:var(--muted);margin-left:6px">${pos.signal.tf} · ${pos.signal.conf}%置信</span>`:''}
         </div>
-        <span class="pos-pnl-live ${liveNet>=0?'pos':'neg'}" id="pos-pnl-${pos.id}">${liveNet>=0?'+$':'-$'}${Math.abs(liveNet).toFixed(2)} (${(pnlPct*pos.lev*100)>=0?'+':''}${(pnlPct*pos.lev*100).toFixed(2)}%)</span>
+        <span class="pos-pnl-live ${liveNet>=0?'pos':'neg'}" id="pos-pnl-${pos.id}">${liveNet>=0?'+$':'-$'}${Math.abs(liveNet).toFixed(2)} (${(pnlPct*pos.lev*100).toFixed(2)}%)</span>
       </div>
-      
-      <!-- Price grid -->
-      <div class="pos-grid" style="grid-template-columns:repeat(4,1fr);gap:4px;margin:6px 0;">
-        <div style="background:var(--bg1);border-radius:4px;padding:5px 7px;"><div class="pos-cell-k">入场价</div><div class="pos-cell-v">${fmtP(pos.entry)}</div></div>
-        <div style="background:var(--bg1);border-radius:4px;padding:5px 7px;"><div class="pos-cell-k">${priceSource}价</div><div class="pos-cell-v" id="pos-px-${pos.id}" style="color:${px>pos.entry?'var(--green)':'var(--red)'}">${fmtP(px)}</div></div>
-        <div style="background:var(--bg1);border-radius:4px;padding:5px 7px;"><div class="pos-cell-k">仓位/杠杆</div><div class="pos-cell-v">$${pos.size}/${pos.lev}×</div></div>
-        <div style="background:var(--bg1);border-radius:4px;padding:5px 7px;"><div class="pos-cell-k">持仓时间</div><div class="pos-cell-v">${durStr}</div></div>
+      <div class="pos-grid">
+        <div><div class="pos-cell-k">入场价</div><div class="pos-cell-v">${fmtP(pos.entry)}</div></div>
+        <div><div class="pos-cell-k">当前价</div><div class="pos-cell-v" id="pos-px-${pos.id}">${fmtP(px)}</div></div>
+        <div><div class="pos-cell-k">仓位</div><div class="pos-cell-v">$${pos.size}</div></div>
+        <div><div class="pos-cell-k">持仓时间</div><div class="pos-cell-v">${durStr}</div></div>
       </div>
-      
-      <!-- TP/SL levels with distance bars -->
-      <div style="display:flex;gap:6px;margin:6px 0;align-items:stretch;">
-        ${pos.tp1?`<div style="flex:1;background:rgba(26,107,58,0.06);border:1px solid var(--green-bd);border-radius:4px;padding:5px 8px;">
-          <div style="font-size:10px;color:var(--green);font-weight:700;margin-bottom:2px;">🎯 TP1 · +${tpPct}%</div>
-          <div style="font-size:12px;font-weight:700;color:var(--bright);">${fmtP(pos.tp1)}</div>
-          <div style="height:3px;background:var(--bg3);border-radius:2px;margin-top:4px;overflow:hidden;">
-            <div style="height:100%;background:var(--green);border-radius:2px;width:${Math.min(100,Math.max(0,100-distToTP)).toFixed(0)}%;transition:width .5s;"></div>
-          </div>
-          <div style="font-size:9px;color:var(--muted);margin-top:2px;">距TP ${distToTP>100?'已过':fmtP(Math.abs(pos.tp1-px))+' ('+Math.min(100,distToTP).toFixed(0)+'%)'}</div>
-        </div>`:''}
-        ${pos.sl1?`<div style="flex:1;background:rgba(160,20,32,0.06);border:1px solid var(--red-bd);border-radius:4px;padding:5px 8px;">
-          <div style="font-size:10px;color:var(--red);font-weight:700;margin-bottom:2px;">🛑 SL1 · -${slPct}%</div>
-          <div style="font-size:12px;font-weight:700;color:var(--bright);">${fmtP(pos.sl1)}</div>
-          <div style="height:3px;background:var(--bg3);border-radius:2px;margin-top:4px;overflow:hidden;">
-            <div style="height:100%;background:var(--red);border-radius:2px;width:${Math.min(100,Math.max(0,distToSL)).toFixed(0)}%;transition:width .5s;"></div>
-          </div>
-          <div style="font-size:9px;color:var(--muted);margin-top:2px;">距SL ${fmtP(Math.abs(px-pos.sl1))} (${Math.min(100,distToSL).toFixed(0)}%接近)</div>
-        </div>`:''}
-        ${pos.tp2?`<span class="pos-level pos-tp" style="font-size:10px;">TP2 ${fmtP(pos.tp2)}</span>`:''}
+      <div class="pos-levels">
+        ${pos.tp1?`<span class="pos-level pos-tp">TP1 ${fmtP(pos.tp1)}</span>`:''}
+        ${pos.tp2?`<span class="pos-level pos-tp">TP2 ${fmtP(pos.tp2)}</span>`:''}
+        ${pos.sl1?`<span class="pos-level pos-sl">SL1 ${fmtP(pos.sl1)}</span>`:''}
+        ${pos.note?`<span style="font-size:11px;color:var(--muted)">"${pos.note}"</span>`:''}
       </div>
-      
       <div class="pos-actions">
-        ${pos.tp1?`<button class="pos-btn pos-btn-tp" onclick="closePaperPosition(${pos.id},${pos.tp1},'手动TP')">🎯 TP1平仓</button>`:''}
-        ${pos.sl1?`<button class="pos-btn pos-btn-sl" onclick="closePaperPosition(${pos.id},${pos.sl1},'手动SL')">🛑 SL平仓</button>`:''}
-        <button class="pos-btn pos-btn-manual" onclick="ptManualClose(${pos.id})">✏️ 指定价</button>
-        <button class="pos-btn pos-btn-close" onclick="closePaperPosition(${pos.id},ptGetPrice('${pos.sym}')||${pos.entry},'市价平仓')">✕ 市价</button>
-        <button onclick="selectSym('${pos.sym}')" style="padding:4px 8px;border:1px solid var(--gold);border-radius:4px;background:transparent;color:var(--gold);font-family:inherit;font-size:10px;cursor:pointer;">📊 查看</button>
+        ${pos.tp1?`<button class="pos-btn pos-btn-tp" onclick="closePaperPosition(${pos.id},${pos.tp1},'手动TP')">🎯 TP1</button>`:''}
+        ${pos.sl1?`<button class="pos-btn pos-btn-sl" onclick="closePaperPosition(${pos.id},${pos.sl1},'手动SL')">🛑 SL1</button>`:''}
+        <button class="pos-btn pos-btn-manual" onclick="manualClosePaperPosition(${pos.id})">✏️ 指定价</button>
+        <button class="pos-btn pos-btn-close" onclick="closePaperPosition(${pos.id},${px||pos.entry},'市价平仓')">✕ 市价</button>
       </div>
     </div>`;
   }).join('');
-}
-
-// v46: Improved manual close with current symbol price awareness
-function ptManualClose(id) {
-  const pos = PT.positions.find(p => p.id === id);
-  if(!pos) return;
-  const suggestedPx = ptGetPrice(pos.sym) || pos.entry;
-  const input = prompt(`平仓价格 (${pos.sym.replace('USDT','')}, 当前约 ${fmtP(suggestedPx)}):`, fmtP(suggestedPx));
-  if(input === null) return;
-  const px = parseFloat(input.replace(/,/g,''));
-  closePaperPosition(id, isNaN(px) ? suggestedPx : px, '手动平仓');
 }
 
 // ─── HISTORY ───
@@ -11234,11 +10600,17 @@ function renderHistory(){
 }
 
 function exportPaperTrades(){
+  if(!PT.history.length){alert('暂无交易记录可导出');return;}
+  try{
+  const q=v=>`"${String(v??'').replace(/"/g,'""')}"`;
   const h=['ID','Symbol','Dir','Entry','Exit','Size','Lev','PnL','PnL%','R:R','Reason','Note','Open','Close','TF','Confidence'];
-  const rows=PT.history.map(t=>[t.id,t.sym,t.dir,t.entry,t.exit,t.size,t.lev,t.pnl.toFixed(2),t.pnlPct.toFixed(2),t.rrActual.toFixed(2),t.reason,t.note||'',new Date(t.openTime).toISOString(),new Date(t.closeTime).toISOString(),t.signal?.tf||'',t.signal?.conf||'']);
-  const csv=[h,...rows].map(r=>r.join(',')).join('\n');
-  const blob=new Blob([csv],{type:'text/csv'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='finch_paper_trades.csv';a.click();
+  const rows=PT.history.map(t=>[t.id,t.sym,t.dir,t.entry,t.exit,t.size,t.lev,(t.pnl||0).toFixed(2),(t.pnlPct||0).toFixed(2),(t.rrActual||0).toFixed(2),t.reason||'',t.note||'',new Date(t.openTime).toISOString(),new Date(t.closeTime).toISOString(),t.signal?.tf||'',t.signal?.conf||'']);
+  const csv=[h,...rows].map(r=>r.map(q).join(',')).join('\n');
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download='finch_paper_trades.csv';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+  }catch(e){alert('导出失败: '+e.message);}
 }
 
 // ─── ANALYTICS ───
@@ -11401,15 +10773,18 @@ function buildWAText(){
   const sym=S.sym.replace('USDT','');const res=S.lastSignal;
   const now=new Date().toUTCString().slice(0,22);
   if(!res)return`🐦 FINCH — ${sym}/USDT\n${now}\n⏳ 加载中...`;
+  try{
+  const score=res.score||0;
   return`🐦 FINCH · ${sym}/USDT
-⏰ ${now} UTC | ${res.tf}
-${res.isBull?'🟢 LONG':'🔴 SHORT'} · ${res.conf}% · Score:${res.score>0?'+':''}${res.score.toFixed(1)}
-💰 Entry: ${fmtP(res.entry)} [${res.entryType.toUpperCase()}]
-🎯 TP1:${fmtP(res.tps[0].p)} TP2:${fmtP(res.tps[1].p)} TP3:${fmtP(res.tps[2].p)}
-🛑 SL1:${fmtP(res.sls[0].p)} SL2:${fmtP(res.sls[1].p)}
-⚖️ R:R=${res.rr.toFixed(2)}:1
-📊 RSI:${res.rsi.toFixed(0)} MACD:${res.macdD.hist>0?'▲':'▼'} Vegas:${res.vegas?res.vegas.above?'▲':res.vegas.below?'▼':'⚡':'--'}
+⏰ ${now} UTC | ${res.tf||'--'}
+${res.isBull?'🟢 LONG':'🔴 SHORT'} · ${res.conf||'--'}% · Score:${score>0?'+':''}${score.toFixed(1)}
+💰 Entry: ${fmtP(res.entry)} [${(res.entryType||'').toUpperCase()}]
+🎯 TP1:${fmtP(res.tps?.[0]?.p||0)} TP2:${fmtP(res.tps?.[1]?.p||0)} TP3:${fmtP(res.tps?.[2]?.p||0)}
+🛑 SL1:${fmtP(res.sls?.[0]?.p||0)} SL2:${fmtP(res.sls?.[1]?.p||0)}
+⚖️ R:R=${(res.rr||0).toFixed(2)}:1
+📊 RSI:${(res.rsi||0).toFixed(0)} MACD:${res.macdD?.hist>0?'▲':'▼'} Vegas:${res.vegas?res.vegas.above?'▲':res.vegas.below?'▼':'⚡':'--'}
 🐦 FINCH Analysis`;
+  }catch(e){return`🐦 FINCH · ${sym}/USDT\n${now}\n⚠️ 数据加载中，请稍后重试`;}
 }
 function sendWA(){if(!S.waPhone){alert('请先设置手机号');return;}window.open(`https://wa.me/${S.waPhone}?text=${encodeURIComponent(buildWAText())}`,'_blank');}
 
@@ -11558,7 +10933,7 @@ function buildSystemContext(){
     :'';
 
   if(!res||!px){
-    return `你是 FINCH v46，一个专业的多市场分析助理，覆盖加密货币（Binance实时）、贵金属（黄金/白银 Binance Futures）、汇率（USD/SGD · SGD/MYR）、原油（WTI/Brent）。当前正在分析 ${displaySym}（${cls}），但市场数据尚未加载完成。请告知用户稍等片刻。`;
+    return `你是 FINCH v42，一个专业的多市场分析助理，覆盖加密货币（Binance实时）、贵金属（黄金/白银 Binance Futures）、汇率（USD/SGD · SGD/MYR）、原油（WTI/Brent）。当前正在分析 ${displaySym}（${cls}），但市场数据尚未加载完成。请告知用户稍等片刻。`;
   }
 
   // Asset-specific context block
@@ -11577,7 +10952,7 @@ BTC主导率: ${S.macro?.btcDom?.toFixed(1)||'--'}%
 驱动因素: 供需、美元指数、地缘政治`;
   }
 
-  return `你是 FINCH v46，一个专业的市场分析助理，覆盖加密货币、外汇（USD/SGD · SGD/MYR）与大宗商品（黄金·白银·原油）。你有15年实战经验，说话直接、有观点、有温度，像一个真正懂市场的老手。你的分析必须包含：大方向判断（宏观格局）、当前信号有效期、方向失效条件。
+  return `你是 FINCH v42，一个专业的市场分析助理，覆盖加密货币、外汇（USD/SGD · SGD/MYR）与大宗商品（黄金·白银·原油）。你有15年实战经验，说话直接、有观点、有温度，像一个真正懂市场的老手。你的分析必须包含：大方向判断（宏观格局）、当前信号有效期、方向失效条件。
 
 == 当前实时市场快照 (${displaySym} · ${cls} · ${res.tf}周期) ==
 现价: ${fmtP(px)}
@@ -11608,12 +10983,6 @@ K线形态: ${res.candles?.patterns?.length?res.candles.patterns.map(p=>p.n).joi
 斐波那契: ${res.nF618?'价格接近61.8%黄金支撑 ⚡':'未在关键斐波位'}
 高时框架: 日线${res.tr1d>0?'多头':'空头'} | 周线${res.tr1w>0?'多头':'空头'}
 月相: ${lunar.name} (${lunar.dTN}天后新月)
-
-== v45 宏观风险雷达 ==
-${window.FINCH_MACRO?`宏观风险评分: ${window.FINCH_MACRO.riskScore}/100 (${window.FINCH_MACRO.riskLevel==='critical'?'⚠️ 高风险':window.FINCH_MACRO.riskLevel==='elevated'?'🟡 中等风险':'✅ 正常'})
-事件锁定: ${window.FINCH_MACRO.eventLock?'是 · '+window.FINCH_MACRO.eventLockReason:'否'}
-入场建议: ${window.FINCH_MACRO.shouldBlockEntry()?'🚫 暂缓入场':window.FINCH_MACRO.shouldWarnEntry()?'⚠️ 减仓+宽止损':'✅ 正常入场'}`:'宏观雷达加载中'}
-${window.FINCH_DYNAMIC_SL?`动态SL加宽倍数: ×${window.FINCH_DYNAMIC_SL.getSlMultiplier().mult.toFixed(2)}`:''}
 
 == 入场计划 ==
 建议入场: ${fmtP(res.entry)} (${res.entryNote})
@@ -12574,7 +11943,7 @@ async function init(){
 
   // Fix version badge
   document.querySelectorAll('.brand-sub').forEach(el=>{
-    el.textContent=el.textContent.replace(/v\d+/g,'v45');
+    if(el.textContent.includes('全维度市场分析'))el.textContent='全维度市场分析 v'+FINCH_VERSION;
   });
 
   // ── Step 0: Probe Binance endpoints in parallel ──
@@ -14635,6 +14004,7 @@ function exportBacktestResult() {
 
 // ── 2.2 Export / Import learned weights ──
 function exportLearnedWeights() {
+  try {
   loadLearnedWeights();
   const data = {
     version:   FINCH_VERSION,
@@ -14651,6 +14021,7 @@ function exportLearnedWeights() {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+  } catch(e) { alert('导出权重失败: ' + e.message); }
 }
 
 function importLearnedWeights() {
@@ -14775,8 +14146,8 @@ resetLearnedWeights = function() {
 };
 
 // ── 3.3 Version constants + console branding ──
-const FINCH_VERSION = '39.0';
-const FINCH_BUILD   = '2026-03-18';
+const FINCH_VERSION = '44.0';
+const FINCH_BUILD   = '2026-03-24';
 
 // Console welcome banner
 setTimeout(() => {
@@ -16140,8 +15511,6 @@ switchMobileModTab = function(tab, btn) {
         <button class="quick-btn" onclick="quickAsk('止盈止损应该怎么设置？')">🎯 TP/SL 建议</button>
         <button class="quick-btn" onclick="quickAsk('现在市场风险大吗？')">⚠️ 风险评估</button>
         <button class="quick-btn" onclick="quickAsk('给我一个完整的交易计划')">📋 交易计划</button>
-        <button class="quick-btn" onclick="quickAsk('现在宏观风险如何？是否适合入场？地缘政治和消息面有什么需要注意的？')" style="background:rgba(160,20,32,0.07);border-color:rgba(160,20,32,0.3);color:var(--red);">🌍 宏观风险</button>
-        <button class="quick-btn" onclick="quickAsk('用末日思维告诉我，如果今天是世界最后一天，你会怎么操作当前市场？')" style="background:rgba(88,24,144,0.07);border-color:rgba(88,24,144,0.3);color:var(--violet);">☯️ 末日裁决</button>
       </div>
 
       <!-- Input Area -->
@@ -16315,7 +15684,6 @@ switchMobileModTab = function(tab, btn) {
         <button class="gcm-tab" onclick="switchGCMTab('angles',this)">📐 角度射线</button>
         <button class="gcm-tab" onclick="switchGCMTab('iching',this)">☯️ 易经卦象</button>
         <button class="gcm-tab" onclick="switchGCMTab('wheel',this)">⚙️ 时间之轮</button>
-        <button class="gcm-tab" onclick="switchGCMTab('philosophy',this);setTimeout(()=>FINCH_PHILOSOPHY.render('philosophy_body'),100);">☯️ 末日哲学</button>
       </div>
 
       <!-- TAB: Sq9 Spiral -->
@@ -16368,27 +15736,16 @@ switchMobileModTab = function(tab, btn) {
         </div>
         <div id="gannWheelInfo" style="margin-top:10px;"></div>
       </div>
-      <!-- TAB: Philosophy / 末日思维 -->
-      <div id="gcm-philosophy" class="gcm-content" style="display:none;">
-        <div style="font-size:10px;letter-spacing:2px;font-weight:700;color:var(--violet);text-transform:uppercase;margin-bottom:10px;">☯️ 末日思维引擎 · LAST DAY PHILOSOPHY</div>
-        <div id="philosophy_body">
-          <div style="color:var(--muted);font-size:12px;text-align:center;padding:20px">加载哲学引擎中...</div>
-        </div>
-        <div style="margin-top:10px;">
-          <button onclick="FINCH_PHILOSOPHY.render('philosophy_body')" style="width:100%;padding:8px;background:rgba(88,24,144,0.08);border:1px solid var(--violet);border-radius:5px;color:var(--violet);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;">🔄 重新推演哲学裁决</button>
-        </div>
-      </div>
-
     </div>
   </div>
 </div>
 
 
 <!-- ╔══════════════════════════════════════════════════════════════════════╗
-     ║  FINCH v45 UPGRADE ENGINE — 风险管理 · 入场有效期 · 多源数据校准      ║
+     ║  FINCH v44 UPGRADE ENGINE — 风险管理 · 入场有效期 · 多源数据校准      ║
      ╚══════════════════════════════════════════════════════════════════════╝ -->
 <style>
-/* ══ FINCH v45 RISK PROFILE SELECTOR ══ */
+/* ══ FINCH v44 RISK PROFILE SELECTOR ══ */
 #finchRiskBar{
   display:flex;align-items:center;gap:6px;padding:5px 14px;
   background:linear-gradient(90deg,var(--bg2),var(--bg1));
@@ -16462,7 +15819,7 @@ switchMobileModTab = function(tab, btn) {
 </style>
 
 <!-- ╔══════════════════════════════════════════════════════════════════════╗
-     ║  FINCH v45 UPGRADE ENGINE — 量化分析平台升级包                       ║
+     ║  FINCH v43 UPGRADE ENGINE — 量化分析平台升级包                       ║
      ║  Modules: Bayesian Aggregator · Market Regime · Signal Quality       ║
      ║           Dynamic Position Sizer · Adaptive Weights · Data Validator ║
      ║           Strategy Monitor · Walk-Forward · Signal Explainability    ║
@@ -17152,7 +16509,7 @@ const FINCH_V43 = {
   validator:   new DataValidator(),
   weights:     new AdaptiveWeightOptimizer(),
   explainer:   new SignalExplainer(),
-  version:     'v45',
+  version:     'v43',
   _lastAnalysis: {}
 };
 window.FINCH_V43 = FINCH_V43;
@@ -17214,14 +16571,14 @@ if (_orig_Phi9x) {
 
       FINCH_V43._lastAnalysis = { sym, tf, ts: Date.now(), regime, quality, posSize };
     } catch(e) {
-      console.warn('[FINCH v45 upgrade]', e);
+      console.warn('[FINCH v43 upgrade]', e);
     }
     return res;
   };
 }
 
 // ════════════════════════════════════════════════════════════
-// INTEGRATION: 增强 renderSummary — 在结果面板中注入v45信息卡
+// INTEGRATION: 增强 renderSummary — 在结果面板中注入v43信息卡
 // ════════════════════════════════════════════════════════════
 const _orig_renderSummary = typeof renderSummary === 'function' ? renderSummary : null;
 if (_orig_renderSummary) {
@@ -17238,7 +16595,7 @@ if (_orig_renderSummary) {
       const { regime, signalQuality, positionSize, bayesianProb, degradationAlert,
               dataQuality, explanation, confBlended, bayesianConf } = res;
 
-      // Find or create the v45 panel
+      // Find or create the v43 panel
       let v43Panel = document.getElementById('finch_v43_panel');
       if (!v43Panel) {
         v43Panel = document.createElement('div');
@@ -17275,7 +16632,7 @@ if (_orig_renderSummary) {
         ${dataWarn}${degradeWarn}
         <div style="background:var(--card);border:1px solid var(--card-bd);border-radius:6px;padding:11px 13px;margin-bottom:8px;box-shadow:var(--shadow);">
           <div style="font-size:10px;font-weight:700;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:8px;border-bottom:1px solid var(--line);padding-bottom:5px;">
-            FINCH v45 · 量化增强分析
+            FINCH v43 · 量化增强分析
           </div>
 
           <!-- 状态行 -->
@@ -17327,7 +16684,7 @@ if (_orig_renderSummary) {
           </div>` : ''}
         </div>`;
     } catch(e) {
-      console.warn('[FINCH v45 renderSummary patch]', e);
+      console.warn('[FINCH v43 renderSummary patch]', e);
     }
   };
 }
@@ -17352,18 +16709,18 @@ if (_orig_learnFromBacktest) {
           );
         });
       }
-    } catch(e) { console.warn('[FINCH v45 backtest patch]', e); }
+    } catch(e) { console.warn('[FINCH v43 backtest patch]', e); }
   };
 }
 
 // ════════════════════════════════════════════════════════════
-// UI: v45 状态指示器 (右上角小徽章)
+// UI: v43 状态指示器 (右上角小徽章)
 // ════════════════════════════════════════════════════════════
 function _injectV43Badge() {
   if (document.getElementById('finch_v43_badge')) return;
   const badge = document.createElement('div');
   badge.id = 'finch_v43_badge';
-  badge.title = 'FINCH v46 升级包已加载: 贝叶斯聚合 · 市场状态分类 · 动态仓位 · 信号质量评估';
+  badge.title = 'FINCH v43 升级包已加载: 贝叶斯聚合 · 市场状态分类 · 动态仓位 · 信号质量评估';
   badge.style.cssText = `
     position:fixed; bottom:12px; left:12px; z-index:9900;
     background:var(--gold,#8B6914); color:#fff;
@@ -17371,7 +16728,7 @@ function _injectV43Badge() {
     padding:3px 7px; border-radius:3px; opacity:0.75; cursor:default;
     pointer-events:none; user-select:none;
   `;
-  badge.textContent = 'FINCH v46';
+  badge.textContent = 'FINCH v43';
   document.body.appendChild(badge);
 }
 
@@ -17381,7 +16738,7 @@ function _injectV43Badge() {
 function _v43Init() {
   _injectV43Badge();
   console.log(
-    '%c[FINCH v46]%c 量化增强包已就绪\n' +
+    '%c[FINCH v43]%c 量化增强包已就绪\n' +
     '  ✅ BayesianSignalAggregator  — 贝叶斯信号聚合\n' +
     '  ✅ MarketRegimeClassifier    — 市场状态分类 (Hurst+ADX)\n' +
     '  ✅ SignalQualityAssessor     — 信号质量评级 A/B/C/D\n' +
@@ -17407,7 +16764,7 @@ if (document.readyState === 'loading') {
 
 <script>
 // ╔══════════════════════════════════════════════════════════════════════╗
-// ║  FINCH v45 — 风险管理系统 · 入场有效期 · 动态止损 · 组合风险管理       ║
+// ║  FINCH v44 — 风险管理系统 · 入场有效期 · 动态止损 · 组合风险管理       ║
 // ╚══════════════════════════════════════════════════════════════════════╝
 (function() {
 'use strict';
@@ -17929,7 +17286,7 @@ const FINCH_V44 = {
   portfolio:   new PortfolioRiskManager(),
   calibrator:  new PriceCalibrator(),
   stopManagers: new Map(),
-  version:     'v45',
+  version:     'v44',
   calcLevels:  v44CalcLevels,
 
   // Convenience: get currently active signal validity display
@@ -18072,7 +17429,7 @@ if (_prevPhi9x) {
         res.priceCalib = FINCH_V44.calibrator.validate(sym, res.price, 'binance');
       }
 
-    } catch(e) { console.warn('[FINCH v45 Φ9x patch]', e); }
+    } catch(e) { console.warn('[FINCH v44 Φ9x patch]', e); }
     return res;
   };
 }
@@ -18122,7 +17479,7 @@ if (_prevRenderSummary) {
       v44RiskEl.innerHTML = `
         <div style="background:var(--card);border:1px solid var(--card-bd);border-radius:6px;padding:11px 13px;margin-bottom:8px;box-shadow:var(--shadow);">
           <div style="font-size:10px;font-weight:700;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:8px;border-bottom:1px solid var(--line);padding-bottom:5px;">
-            FINCH v45 · 风险管理系统
+            FINCH v44 · 风险管理系统
           </div>
 
           <!-- Risk profile + signal validity row -->
@@ -18169,7 +17526,7 @@ if (_prevRenderSummary) {
             <span>同时仓位 <b style="color:var(--text);">≤${profile.maxConcurrentTrades}</b></span>
           </div>
         </div>`;
-    } catch(e) { console.warn('[FINCH v45 renderSummary patch]', e); }
+    } catch(e) { console.warn('[FINCH v44 renderSummary patch]', e); }
   };
 }
 
@@ -18208,7 +17565,7 @@ if (_prevFillFromSignal) {
       if (!check.allowed && typeof _showToast === 'function') {
         _showToast(`🚫 组合风险: ${check.blocks[0]}`, 5000);
       }
-    } catch(e) { console.warn('[FINCH v45 fillFromSignal patch]', e); }
+    } catch(e) { console.warn('[FINCH v44 fillFromSignal patch]', e); }
   };
 }
 
@@ -18242,7 +17599,7 @@ if (_prevOpenPaperTrade) {
         FINCH_V44.createStopManager(posId, entryVal, sl1Val || entryVal * 0.98, dir, tf);
         FINCH_V44.portfolio.addPosition(sym, dir, profile.positionSizePct * 100, entryVal);
       }
-    } catch(e) { console.warn('[FINCH v45 openPaperTrade patch]', e); }
+    } catch(e) { console.warn('[FINCH v44 openPaperTrade patch]', e); }
   };
 }
 
@@ -18279,7 +17636,7 @@ setInterval(function() {
 setTimeout(function() {
   const p = V44_STATE.getProfile();
   console.log(
-    '%c[FINCH v46]%c 风险管理系统已就绪\n' +
+    '%c[FINCH v44]%c 风险管理系统已就绪\n' +
     `  当前风险偏好: ${p.emoji} ${p.name} (等级${V44_STATE.riskLevel})\n` +
     '  ✅ RISK_PROFILES           — 5档风险配置\n' +
     '  ✅ EntryValidityMonitor    — 信号有效期追踪\n' +
@@ -18287,578 +17644,13 @@ setTimeout(function() {
     '  ✅ PortfolioRiskManager    — 组合相关性风险管理\n' +
     '  ✅ PriceCalibrator         — 多源价格异常校准\n' +
     '  ✅ Risk-Adjusted TP/SL     — 基于风险偏好重算止盈止损\n' +
-    '  ✅ [v45] BlackSwanRadar    — 黑天鹅/地缘政治事件过滤\n' +
-    '  ✅ [v45] DynamicSL_Widen  — 宏观风险自动加宽止损\n' +
-    '  ✅ [v45] PhilosophyEngine  — 末日思维哲学裁决\n' +
-    '  ✅ [v46] MultiSymbolPaper — 多币种模拟持仓\n' +
-    '  ✅ [v46] SignalValidity   — 信号有效期&失效条件\n' +
-    '  ✅ [v46] SmartSizeMode   — USDT/百分比/本位币三模式\n' +
-    '  Access via: window.FINCH_V44 / window.FINCH_MACRO / window.FINCH_PHILOSOPHY',
+    '  Access via: window.FINCH_V44',
     'color:#A07820;font-weight:bold', 'color:inherit'
   );
 }, 1200);
 
-})(); // end FINCH v45 IIFE
+})(); // end FINCH v44 IIFE
 </script>
 
-<script>
-
-// ════════════════════════════════════════════════════════════
-// FINCH v45 — 黑天鹅雷达 & 宏观事件过滤器
-// BLACK SWAN RADAR + MACRO EVENT FILTER
-// 解决核心问题：技术信号再强，消息面才是王
-// 特别针对：特朗普推文 / 地缘冲突 / 停战协议 / 央行决策
-// ════════════════════════════════════════════════════════════
-(function() {
-
-// ── 宏观风险状态 ──
-window.FINCH_MACRO = {
-  // 当前宏观风险等级: 'normal' | 'elevated' | 'critical'
-  riskLevel: 'normal',
-  riskScore: 0,       // 0-100
-  lastUpdate: 0,
-  factors: [],
-  eventLock: false,   // 重大事件期间锁定入场
-  eventLockReason: '',
-  eventLockUntil: 0,
-
-  // 手动触发事件锁定（用户可手动报告消息面风险）
-  triggerEventLock(reason, durationMinutes) {
-    this.eventLock = true;
-    this.eventLockReason = reason;
-    this.eventLockUntil = Date.now() + durationMinutes * 60000;
-    this._renderWarning();
-    console.log(`[FINCH v46] 事件锁定激活: ${reason} (${durationMinutes}分钟)`);
-  },
-
-  clearEventLock() {
-    this.eventLock = false;
-    this.eventLockReason = '';
-    this.eventLockUntil = 0;
-    this._renderWarning();
-  },
-
-  // 检查事件锁定是否过期
-  checkLockExpiry() {
-    if (this.eventLock && Date.now() > this.eventLockUntil) {
-      this.eventLock = false;
-      this.eventLockReason = '';
-      this._renderWarning();
-    }
-  },
-
-  // ── 宏观风险评分引擎 ──
-  compute() {
-    try {
-      this.checkLockExpiry();
-      const factors = [];
-      let score = 0;
-
-      // Factor 1: Fear & Greed 极值风险
-      const fg = S.fg ? parseInt(S.fg.value) : 50;
-      if (fg >= 85) {
-        score += 25;
-        factors.push({ icon: '😱', label: '极度贪婪 · 历史高位回调概率极高', weight: 25, color: 'var(--red)' });
-      } else if (fg >= 75) {
-        score += 12;
-        factors.push({ icon: '⚠️', label: '高度贪婪 · 追多风险上升', weight: 12, color: 'var(--amber)' });
-      } else if (fg <= 15) {
-        score += 20; // 极度恐惧 = 高波动
-        factors.push({ icon: '🫨', label: '极度恐惧 · 市场恐慌性抛售风险', weight: 20, color: 'var(--red)' });
-      } else if (fg <= 25) {
-        score += 8;
-        factors.push({ icon: '😨', label: '低迷情绪 · 可能继续下行', weight: 8, color: 'var(--amber)' });
-      }
-
-      // Factor 2: 资金费率极端
-      const fundingRate = S.lastSignal?.fundingRate || 0;
-      if (Math.abs(fundingRate) > 0.1) {
-        score += 20;
-        factors.push({ icon: '💸', label: `资金费率极端 ${fundingRate.toFixed(3)}% · 强制平仓风险`, weight: 20, color: 'var(--red)' });
-      } else if (Math.abs(fundingRate) > 0.06) {
-        score += 10;
-        factors.push({ icon: '💰', label: `资金费率偏高 ${fundingRate.toFixed(3)}%`, weight: 10, color: 'var(--amber)' });
-      }
-
-      // Factor 3: 高波动率扩张
-      const hv = S.lastSignal?.hv;
-      if (hv && hv.ratio > 1.8) {
-        score += 20;
-        factors.push({ icon: '📊', label: `波动率暴扩 ${(hv.ratio).toFixed(1)}× · 止损被扫风险极高`, weight: 20, color: 'var(--red)' });
-      } else if (hv && hv.ratio > 1.4) {
-        score += 10;
-        factors.push({ icon: '📈', label: `波动率扩张 ${(hv.ratio).toFixed(1)}×`, weight: 10, color: 'var(--amber)' });
-      }
-
-      // Factor 4: 多空信号严重分歧（消息面通常是原因）
-      const conflictRatio = S.lastSignal?.conflictRatio || 0;
-      if (conflictRatio > 0.55) {
-        score += 15;
-        factors.push({ icon: '⚔️', label: `信号严重分歧 ${(conflictRatio*100).toFixed(0)}% · 消息面干扰可能存在`, weight: 15, color: 'var(--red)' });
-      } else if (conflictRatio > 0.40) {
-        score += 7;
-        factors.push({ icon: '🤔', label: `信号分歧 ${(conflictRatio*100).toFixed(0)}%`, weight: 7, color: 'var(--amber)' });
-      }
-
-      // Factor 5: 时间因素 — 高风险时间窗口
-      const now = new Date();
-      const utcH = now.getUTCHours();
-      const utcMin = now.getUTCMinutes();
-      // FOMC: 周三14:00 ET = 19:00 UTC (美联储决策 = 最高风险)
-      // NFP: 第一个周五 8:30 ET = 13:30 UTC
-      // 周一开盘 = 隔周消息面冲击
-      const isWeekend = now.getUTCDay() === 0 || now.getUTCDay() === 6;
-      const isMondayOpen = now.getUTCDay() === 1 && utcH < 4; // 周一亚洲开盘
-      if (isMondayOpen) {
-        score += 12;
-        factors.push({ icon: '📅', label: '周一开盘窗口 · 隔周消息面冲击高风险', weight: 12, color: 'var(--amber)' });
-      }
-
-      // Factor 6: 月相极值（满月/新月 = 潜在转折）
-      const lunar = typeof getLunar === 'function' ? getLunar() : null;
-      if (lunar) {
-        const pf = parseFloat(lunar.pf);
-        if (pf >= 45 && pf <= 55) { // 满月
-          score += 5;
-          factors.push({ icon: '🌕', label: '满月时段 · 历史波动较大', weight: 5, color: 'var(--amber)' });
-        } else if (pf <= 5 || pf >= 95) { // 新月
-          score += 3;
-          factors.push({ icon: '🌑', label: '新月时段 · 方向转折概率较高', weight: 3, color: 'var(--muted)' });
-        }
-      }
-
-      // Factor 7: 事件锁定（手动报告）
-      if (this.eventLock) {
-        score += 40;
-        factors.push({ icon: '🔒', label: `手动事件锁定: ${this.eventLockReason}`, weight: 40, color: 'var(--red)' });
-      }
-
-      this.riskScore = Math.min(100, score);
-      this.factors = factors;
-      this.riskLevel = score >= 50 ? 'critical' : score >= 25 ? 'elevated' : 'normal';
-      this.lastUpdate = Date.now();
-      this._renderWarning();
-    } catch(e) {}
-  },
-
-  // ── 是否应该暂停入场 ──
-  shouldBlockEntry() {
-    return this.eventLock || this.riskScore >= 50;
-  },
-
-  shouldWarnEntry() {
-    return this.riskScore >= 25;
-  },
-
-  // ── 宏观风险建议 ──
-  getAdvice() {
-    if (this.shouldBlockEntry()) {
-      return {
-        level: 'block',
-        color: 'var(--red)',
-        icon: '🚫',
-        text: `宏观风险过高 (${this.riskScore}分)，建议暂缓入场，等待风险消退后再行动。`
-          + (this.eventLock ? ` 事件锁定中：${this.eventLockReason}` : ''),
-      };
-    }
-    if (this.shouldWarnEntry()) {
-      return {
-        level: 'warn',
-        color: 'var(--amber)',
-        icon: '⚠️',
-        text: `宏观风险偏高 (${this.riskScore}分)，建议减小仓位至正常的50%，并使用更宽的止损（+0.5×ATR）。`,
-      };
-    }
-    return {
-      level: 'ok',
-      color: 'var(--green)',
-      icon: '✅',
-      text: `宏观环境相对平稳 (${this.riskScore}分)，技术信号可参考入场。`,
-    };
-  },
-
-  // ── 渲染宏观风险警告条 ──
-  _renderWarning() {
-    const el = document.getElementById('finch_macro_warning');
-    if (!el) return;
-    const advice = this.getAdvice();
-    const factorHTML = this.factors.slice(0, 4).map(f =>
-      `<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:rgba(0,0,0,0.06);color:${f.color};border:1px solid ${f.color}30;white-space:nowrap;">${f.icon} ${f.label}</span>`
-    ).join('');
-
-    el.style.display = this.riskScore > 0 ? 'block' : 'none';
-    el.style.borderColor = advice.color;
-    el.style.background = this.riskLevel === 'critical' ? 'rgba(160,20,32,0.06)' :
-                          this.riskLevel === 'elevated' ? 'rgba(128,80,0,0.06)' : 'rgba(26,107,58,0.04)';
-
-    const remainMin = this.eventLock ? Math.max(0, Math.round((this.eventLockUntil - Date.now()) / 60000)) : 0;
-
-    el.innerHTML = `
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-        <div style="font-size:12px;font-weight:700;color:${advice.color};">${advice.icon} 宏观风险雷达 · MACRO RISK RADAR</div>
-        <div style="display:flex;align-items:center;gap:8px;">
-          <div style="font-size:14px;font-weight:700;color:${advice.color};">${this.riskScore}/100</div>
-          ${this.eventLock ? `<div style="font-size:10px;color:var(--red);background:rgba(160,20,32,0.1);border:1px solid rgba(160,20,32,0.3);padding:2px 6px;border-radius:10px;">🔒 锁定 ${remainMin}min</div>` : ''}
-          <button onclick="FINCH_MACRO.showDetail()" style="font-size:10px;padding:2px 7px;border:1px solid var(--line2);border-radius:3px;background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;">详情</button>
-        </div>
-      </div>
-      <div style="font-size:11px;color:var(--text);line-height:1.7;margin-bottom:6px;">${advice.text}</div>
-      <div style="display:flex;flex-wrap:wrap;gap:4px;">${factorHTML}</div>
-      <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
-        <button onclick="FINCH_MACRO._showEventLockInput()" style="font-size:10px;padding:3px 8px;border:1px solid var(--red);border-radius:3px;background:rgba(160,20,32,0.07);color:var(--red);cursor:pointer;font-family:inherit;font-weight:700;">⚡ 报告消息面风险</button>
-        ${this.eventLock ? `<button onclick="FINCH_MACRO.clearEventLock()" style="font-size:10px;padding:3px 8px;border:1px solid var(--green);border-radius:3px;background:rgba(26,107,58,0.07);color:var(--green);cursor:pointer;font-family:inherit;">✓ 解除锁定</button>` : ''}
-      </div>`;
-  },
-
-  _showEventLockInput() {
-    const preset = [
-      ['特朗普推文/声明', 60],
-      ['停战/开战/地缘冲突', 120],
-      ['FOMC/央行决策', 90],
-      ['监管新政/ETF消息', 60],
-      ['交易所暴雷/黑客', 180],
-      ['名人推文(Elon等)', 45],
-    ];
-    const presetHTML = preset.map(([label, mins]) =>
-      `<button onclick="FINCH_MACRO.triggerEventLock('${label}',${mins});document.getElementById('_macroLockModal').remove();"
-        style="padding:7px 12px;border:1px solid var(--line2);border-radius:5px;background:var(--bg1);font-family:inherit;font-size:12px;cursor:pointer;color:var(--text);text-align:left;transition:background .12s;"
-        onmouseenter="this.style.background='rgba(139,105,20,0.1)'" onmouseleave="this.style.background='var(--bg1)'"
-       >${label} <span style="color:var(--muted);font-size:10px">(${mins}min)</span></button>`
-    ).join('');
-
-    const modal = document.createElement('div');
-    modal.id = '_macroLockModal';
-    modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(20,12,0,0.6);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;';
-    modal.innerHTML = `
-      <div style="background:var(--bg1);border-radius:10px;padding:20px;width:min(400px,94vw);box-shadow:0 24px 80px rgba(0,0,0,0.4);">
-        <div style="font-size:14px;font-weight:700;color:var(--bright);margin-bottom:4px;">⚡ 报告消息面风险</div>
-        <div style="font-size:11px;color:var(--muted);margin-bottom:14px;line-height:1.6;">选择事件类型，FINCH将暂停入场信号并加宽止损缓冲。</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px;">${presetHTML}</div>
-        <div style="display:flex;gap:6px;">
-          <input id="_macroCustom" placeholder="自定义事件..." style="flex:1;background:var(--bg);border:1px solid var(--line2);border-radius:5px;padding:8px 10px;font-family:inherit;font-size:12px;color:var(--text);outline:none;">
-          <input id="_macroDur" type="number" placeholder="分钟" value="60" style="width:70px;background:var(--bg);border:1px solid var(--line2);border-radius:5px;padding:8px 10px;font-family:inherit;font-size:12px;color:var(--text);outline:none;">
-          <button onclick="const r=document.getElementById('_macroCustom').value;const d=parseInt(document.getElementById('_macroDur').value)||60;if(r){FINCH_MACRO.triggerEventLock(r,d);document.getElementById('_macroLockModal').remove();}"
-            style="padding:8px 14px;background:var(--red);border:none;border-radius:5px;color:#fff;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">锁定</button>
-        </div>
-        <button onclick="document.getElementById('_macroLockModal').remove()" style="margin-top:10px;width:100%;padding:8px;background:transparent;border:1px solid var(--line2);border-radius:5px;font-family:inherit;font-size:11px;color:var(--muted);cursor:pointer;">取消</button>
-      </div>`;
-    document.body.appendChild(modal);
-    modal.addEventListener('click', e => { if(e.target === modal) modal.remove(); });
-  },
-
-  showDetail() {
-    const el = document.getElementById('_macroDetailModal');
-    if(el) { el.remove(); return; }
-    const modal = document.createElement('div');
-    modal.id = '_macroDetailModal';
-    modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(20,12,0,0.6);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;';
-    const factorHTML = this.factors.map(f =>
-      `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);">
-        <div style="font-size:12px;color:${f.color};">${f.icon} ${f.label}</div>
-        <div style="font-size:12px;font-weight:700;color:${f.color};">+${f.weight}</div>
-       </div>`
-    ).join('') || '<div style="font-size:12px;color:var(--muted);text-align:center;padding:10px 0">无活跃风险因素</div>';
-
-    modal.innerHTML = `
-      <div style="background:var(--bg1);border-radius:10px;padding:20px;width:min(420px,96vw);max-height:80vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,0.4);">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-          <div style="font-size:14px;font-weight:700;color:var(--bright);">🌍 宏观风险详情</div>
-          <button onclick="document.getElementById('_macroDetailModal').remove()" style="padding:4px 10px;border:1px solid var(--line2);border-radius:4px;background:transparent;font-family:inherit;font-size:11px;color:var(--muted);cursor:pointer;">✕</button>
-        </div>
-        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:12px;">总风险评分: <span style="color:${this.riskLevel==='critical'?'var(--red)':this.riskLevel==='elevated'?'var(--amber)':'var(--green)'}">${this.riskScore}/100 · ${this.riskLevel==='critical'?'⚠️ 高风险':this.riskLevel==='elevated'?'🟡 中等风险':'✅ 正常'}</span></div>
-        ${factorHTML}
-        <div style="margin-top:14px;padding:10px;background:var(--bg2);border-radius:6px;font-size:11px;color:var(--muted);line-height:1.8;">
-          <strong style="color:var(--text);">如何使用宏观风险雷达：</strong><br>
-          • 评分 0-24：正常入场，遵循技术信号<br>
-          • 评分 25-49：⚠️ 建议减仓50%，加宽止损<br>
-          • 评分 50+：🚫 建议暂缓入场，等待信号重置<br>
-          • 手动事件锁定：在看到重大消息时立即使用，防止被黑天鹅扫出仓位
-        </div>
-      </div>`;
-    document.body.appendChild(modal);
-    modal.addEventListener('click', e => { if(e.target === modal) modal.remove(); });
-  }
-};
-
-// ── 定期计算宏观风险 ──
-function _macroTick() {
-  try { window.FINCH_MACRO.compute(); } catch(e) {}
-}
-
-// Auto-compute every 30 seconds
-setInterval(_macroTick, 30000);
-// Also compute when new signal arrives
-const _origRenderStrategy = typeof renderStrategy === 'function' ? renderStrategy : null;
-if (_origRenderStrategy) {
-  window.renderStrategy = function() {
-    _origRenderStrategy.apply(this, arguments);
-    setTimeout(_macroTick, 500);
-  };
-}
-setTimeout(_macroTick, 3000);
-
-})(); // end BLACK SWAN MODULE
-
-
-</script>
-<script>
-
-// ════════════════════════════════════════════════════════════
-// FINCH v45 — 末日思维引擎 · LAST DAY PHILOSOPHY ENGINE
-// "如果今天是世界最后一天，你会怎么操作？"
-// 灵感来源：抛开所有技术层面，以存在主义哲学视角审视市场
-// 结合巴菲特的价值观、老子的无为而治、禅宗的当下意识
-// ════════════════════════════════════════════════════════════
-(function() {
-
-window.FINCH_PHILOSOPHY = {
-  // 哲学流派权重（用户可调）
-  schools: {
-    stoic:     { name: '斯多葛派', desc: '专注可控之事，接受不可控', weight: 1.0 },
-    daoist:    { name: '道家无为', desc: '顺势而为，不强求结果', weight: 1.0 },
-    zen:       { name: '禅宗当下', desc: '活在当下，切断对结果的执念', weight: 1.0 },
-    buffett:   { name: '巴菲特主义', desc: '恐惧时贪婪，贪婪时恐惧', weight: 1.0 },
-    momentum:  { name: '动量哲学', desc: '跟随市场力量，不逆势而为', weight: 0.8 },
-  },
-
-  // 生成末日裁决
-  getLastDayVerdict() {
-    const sig = S.lastSignal;
-    const px  = S.lastPx || 0;
-    const fg  = S.fg ? parseInt(S.fg.value) : 50;
-    const sym = (S.sym || 'BTC').replace('USDT', '').replace('/USD','');
-    const macro = window.FINCH_MACRO;
-
-    if (!sig || !px) return null;
-
-    const isBull = sig.isBull;
-    const conf   = sig.conf || 50;
-    const rsi    = sig.rsi || 50;
-    const adx    = sig.adx?.adx || 20;
-    const trend  = sig.tr1d || 0;
-
-    // ── 斯多葛判断：我能控制什么？ ──
-    const stoicVerdict = {
-      insight: '斯多葛派问：此刻，你无法控制特朗普是否发推，无法控制战争是否停止，无法控制鲸鱼是否砸盘。你唯一能控制的，是你的仓位大小与止损纪律。',
-      action: macro && macro.shouldBlockEntry() ? '当前宏观风险过高，接受不确定性，等待。接受等待也是一种行动。' :
-              conf >= 65 ? `技术信号明确（置信度${conf}%），可以行动——但严格执行止损，无论结果如何都要接受。` :
-              '信号不够明确，斯多葛的智慧是：不确定时，什么都不做，也是最好的选择。',
-      score: conf >= 65 ? (isBull ? 70 : -70) : 0
-    };
-
-    // ── 道家无为判断：顺势而为 ──
-    const daoistVerdict = {
-      insight: '老子曰：为学日益，为道日损。损之又损，以至於无为。无为而无不为。——最强的交易者不是那些最勤奋分析的人，而是那些最清楚"不该做什么"的人。',
-      action: adx > 25 && Math.abs(trend) > 0 ?
-              `市场有明确方向（ADX ${adx.toFixed(0)}），道家会顺势行动：${isBull ? '顺势做多，如水流向低处' : '顺势做空，如秋叶落地'}。` :
-              '市场无明确方向（ADX弱）。道家会选择等待，如同水不强求流向，等待渠道自然形成。',
-      score: adx > 25 ? (isBull ? 65 : -65) : 0
-    };
-
-    // ── 禅宗判断：活在当下 ──
-    const zenVerdict = {
-      insight: '铃木俊隆说：初心里充满了各种可能性，专家的心里可能性很少。——忘掉你的盈亏历史，忘掉你的账户数字，此刻这根K线告诉你什么？',
-      action: `此刻价格是 ${px > 0 ? px.toFixed(2) : '--'}。RSI是${rsi.toFixed(0)}。这就是全部真相。${rsi < 35 ? '超卖的恐惧是机会的另一张面孔。' : rsi > 65 ? '超买的贪婪是风险的温床。' : '中性区间，禅宗建议观察而不行动。'}`,
-      score: rsi < 35 ? 60 : rsi > 65 ? -60 : 0
-    };
-
-    // ── 巴菲特判断：情绪反指 ──
-    const buffettVerdict = {
-      insight: `巴菲特规则：别人贪婪时我恐惧，别人恐惧时我贪婪。当前市场恐惧贪婪指数：${fg}。`,
-      action: fg >= 80 ? `市场极度贪婪(${fg})——巴菲特会卖出，或至少不追高。此刻做多如同接刀。` :
-              fg <= 20 ? `市场极度恐惧(${fg})——历史上这是最好的买入时机之一。巴菲特会在血流成河时入场。` :
-              `市场情绪中性(${fg})，没有明显的反向信号，巴菲特会耐心等待更极端的时机。`,
-      score: fg <= 20 ? 75 : fg >= 80 ? -75 : 0
-    };
-
-    // ── 综合哲学评分 ──
-    const scores = [stoicVerdict.score, daoistVerdict.score, zenVerdict.score, buffettVerdict.score];
-    const validScores = scores.filter(s => s !== 0);
-    const avgScore = validScores.length > 0 ? validScores.reduce((a,b) => a+b, 0) / validScores.length : 0;
-
-    let philosophyVerdict, philosophyColor, philosophyAction;
-    if (avgScore >= 50) {
-      philosophyVerdict = '📈 哲学共识：做多';
-      philosophyColor = 'var(--green)';
-      philosophyAction = `综合${validScores.length}个哲学流派，市场环境倾向看多。但记住：哲学给你方向，技术给你时机，风险管理保护你继续存在于市场中。`;
-    } else if (avgScore <= -50) {
-      philosophyVerdict = '📉 哲学共识：做空/离场';
-      philosophyColor = 'var(--red)';
-      philosophyAction = `综合${validScores.length}个哲学流派，市场环境倾向谨慎。保存资本，等待下一次机会——在市场中生存，就是最重要的哲学。`;
-    } else {
-      philosophyVerdict = '🔄 哲学分歧：观望';
-      philosophyColor = 'var(--amber)';
-      philosophyAction = '哲学流派无共识。这本身就是最重要的信号：不确定时，不行动是最好的行动。';
-    }
-
-    return {
-      sym, px, fg, conf, rsi, adx, isBull,
-      stoic: stoicVerdict,
-      daoist: daoistVerdict,
-      zen: zenVerdict,
-      buffett: buffettVerdict,
-      verdict: philosophyVerdict,
-      color: philosophyColor,
-      action: philosophyAction,
-      avgScore
-    };
-  },
-
-  // 渲染到UI
-  render(containerId) {
-    const el = document.getElementById(containerId);
-    if (!el) return;
-
-    const v = this.getLastDayVerdict();
-    if (!v) {
-      el.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:10px">等待市场数据加载...</div>';
-      return;
-    }
-
-    el.innerHTML = `
-      <!-- 末日问题 -->
-      <div style="text-align:center;padding:14px;background:linear-gradient(135deg,rgba(139,105,20,0.08),rgba(88,24,144,0.08));border-radius:8px;margin-bottom:14px;border:1px solid var(--iching-bd);">
-        <div style="font-family:'Noto Serif SC',serif;font-size:16px;color:var(--iching);letter-spacing:2px;margin-bottom:8px;">如果今天是世界最后一天</div>
-        <div style="font-size:12px;color:var(--muted);line-height:1.8;">你会如何操作 ${v.sym}？<br>放下所有技术分析，放下盈亏压力，只问内心。</div>
-      </div>
-
-      <!-- 哲学裁决 -->
-      <div style="background:${v.color}18;border:2px solid ${v.color};border-radius:8px;padding:14px;margin-bottom:12px;text-align:center;">
-        <div style="font-size:20px;font-weight:700;color:${v.color};margin-bottom:6px;">${v.verdict}</div>
-        <div style="font-size:12px;color:var(--text);line-height:1.8;">${v.action}</div>
-      </div>
-
-      <!-- 四大哲学流派 -->
-      <div style="display:flex;flex-direction:column;gap:8px;">
-
-        <div style="background:var(--card);border:1px solid var(--card-bd);border-radius:6px;padding:12px;border-left:3px solid var(--blue);">
-          <div style="font-size:11px;font-weight:700;letter-spacing:1px;color:var(--blue);margin-bottom:5px;">🏛️ 斯多葛派 · STOICISM</div>
-          <div style="font-size:11px;color:var(--text);line-height:1.8;margin-bottom:5px;">${v.stoic.insight}</div>
-          <div style="font-size:11px;font-weight:700;color:var(--text);">→ ${v.stoic.action}</div>
-        </div>
-
-        <div style="background:var(--card);border:1px solid var(--card-bd);border-radius:6px;padding:12px;border-left:3px solid var(--teal);">
-          <div style="font-size:11px;font-weight:700;letter-spacing:1px;color:var(--teal);margin-bottom:5px;">☯️ 道家 · DAOISM</div>
-          <div style="font-size:11px;color:var(--text);line-height:1.8;margin-bottom:5px;">${v.daoist.insight}</div>
-          <div style="font-size:11px;font-weight:700;color:var(--text);">→ ${v.daoist.action}</div>
-        </div>
-
-        <div style="background:var(--card);border:1px solid var(--card-bd);border-radius:6px;padding:12px;border-left:3px solid var(--violet);">
-          <div style="font-size:11px;font-weight:700;letter-spacing:1px;color:var(--violet);margin-bottom:5px;">🧘 禅宗 · ZEN</div>
-          <div style="font-size:11px;color:var(--text);line-height:1.8;margin-bottom:5px;">${v.zen.insight}</div>
-          <div style="font-size:11px;font-weight:700;color:var(--text);">→ ${v.zen.action}</div>
-        </div>
-
-        <div style="background:var(--card);border:1px solid var(--card-bd);border-radius:6px;padding:12px;border-left:3px solid var(--gold);">
-          <div style="font-size:11px;font-weight:700;letter-spacing:1px;color:var(--gold);margin-bottom:5px;">💼 巴菲特主义 · VALUE</div>
-          <div style="font-size:11px;color:var(--text);line-height:1.8;margin-bottom:5px;">${v.buffett.insight}</div>
-          <div style="font-size:11px;font-weight:700;color:var(--text);">→ ${v.buffett.action}</div>
-        </div>
-
-      </div>
-
-      <div style="text-align:center;margin-top:10px;font-size:10px;color:var(--dim);line-height:1.8;">
-        哲学裁决不是交易建议 · 它是当技术失效时的内心罗盘<br>
-        市场永远存在，你的资本才是最稀缺的资源
-      </div>
-    `;
-  }
-};
-
-// Auto-render when loaded
-setTimeout(() => {
-  try { window.FINCH_PHILOSOPHY.render('philosophy_body'); } catch(e) {}
-}, 4000);
-
-// Re-render on signal update
-const _pOrigRender = typeof renderStrategy === 'function' ? renderStrategy : null;
-if (_pOrigRender && !window._philosophyHooked) {
-  window._philosophyHooked = true;
-  window.renderStrategy = function() {
-    _pOrigRender.apply(this, arguments);
-    setTimeout(() => {
-      try { window.FINCH_PHILOSOPHY.render('philosophy_body'); } catch(e) {}
-    }, 1000);
-  };
-}
-
-})(); // end PHILOSOPHY MODULE
-
-</script>
-<script>
-
-// ════════════════════════════════════════════════════════════
-// FINCH v45 — 动态止损防抖系统
-// 在高宏观风险 / 高波动率环境下自动加宽SL缓冲区
-// 避免被正常市场噪音（如特朗普推文引发的短暂波动）扫出
-// ════════════════════════════════════════════════════════════
-(function() {
-
-window.FINCH_DYNAMIC_SL = {
-  // 根据当前环境计算SL加宽倍数
-  // 返回: 1.0 = 不加宽, 1.5 = 加宽50%, 2.0 = 加宽100%
-  getSlMultiplier() {
-    let mult = 1.0;
-    const reasons = [];
-
-    // Macro risk加宽
-    const macro = window.FINCH_MACRO;
-    if (macro) {
-      if (macro.riskScore >= 50) {
-        mult += 0.5;
-        reasons.push(`宏观风险高(+50%)`);
-      } else if (macro.riskScore >= 25) {
-        mult += 0.25;
-        reasons.push(`宏观风险中(+25%)`);
-      }
-      if (macro.eventLock) {
-        mult += 0.5;
-        reasons.push(`事件锁定(+50%)`);
-      }
-    }
-
-    // 波动率加宽
-    const hv = S.lastSignal?.hv;
-    if (hv) {
-      if (hv.ratio > 1.8) { mult += 0.4; reasons.push(`波动率暴扩(+40%)`); }
-      else if (hv.ratio > 1.4) { mult += 0.2; reasons.push(`波动率扩张(+20%)`); }
-    }
-
-    // 时间风险加宽（周一开盘）
-    const utcDay = new Date().getUTCDay();
-    const utcH   = new Date().getUTCHours();
-    if (utcDay === 1 && utcH < 4) { mult += 0.2; reasons.push('周一开盘(+20%)'); }
-
-    return { mult: Math.min(2.5, mult), reasons };
-  },
-
-  // 应用到SL价格
-  applyToSL(slPrice, entryPrice, direction) {
-    const { mult, reasons } = this.getSlMultiplier();
-    if (mult <= 1.0) return { price: slPrice, mult: 1.0, reasons: [] };
-
-    const slDist = Math.abs(slPrice - entryPrice);
-    const newDist = slDist * mult;
-    const newSL = direction === 'long'
-      ? entryPrice - newDist
-      : entryPrice + newDist;
-
-    return { price: newSL, mult, reasons };
-  },
-
-  // 渲染SL加宽信息
-  getInfoHTML() {
-    const { mult, reasons } = this.getSlMultiplier();
-    if (mult <= 1.0) return '';
-    const col = mult >= 1.75 ? 'var(--red)' : 'var(--amber)';
-    return `<div style="font-size:10px;color:${col};padding:4px 8px;background:${col}15;border-radius:3px;border:1px solid ${col}40;margin-top:4px;">
-      🛡️ 动态SL加宽 ×${mult.toFixed(2)} · ${reasons.join(' · ')}
-    </div>`;
-  }
-};
-
-})(); // end DYNAMIC SL MODULE
-
-</script>
 </body>
 </html>
