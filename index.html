@@ -1171,7 +1171,7 @@ canvas.main-c{width:100%!important;}
   <div class="brand-wrap">
     <div style="display:flex;flex-direction:column;justify-content:center;">
       <div class="brand">FINCH</div>
-      <div class="brand-sub">全维度市场分析 v44</div>
+      <div class="brand-sub">全维度市场分析 v41</div>
     </div>
   </div>
 
@@ -10600,17 +10600,11 @@ function renderHistory(){
 }
 
 function exportPaperTrades(){
-  if(!PT.history.length){alert('暂无交易记录可导出');return;}
-  try{
-  const q=v=>`"${String(v??'').replace(/"/g,'""')}"`;
   const h=['ID','Symbol','Dir','Entry','Exit','Size','Lev','PnL','PnL%','R:R','Reason','Note','Open','Close','TF','Confidence'];
-  const rows=PT.history.map(t=>[t.id,t.sym,t.dir,t.entry,t.exit,t.size,t.lev,(t.pnl||0).toFixed(2),(t.pnlPct||0).toFixed(2),(t.rrActual||0).toFixed(2),t.reason||'',t.note||'',new Date(t.openTime).toISOString(),new Date(t.closeTime).toISOString(),t.signal?.tf||'',t.signal?.conf||'']);
-  const csv=[h,...rows].map(r=>r.map(q).join(',')).join('\n');
-  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');a.href=url;a.download='finch_paper_trades.csv';
-  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
-  }catch(e){alert('导出失败: '+e.message);}
+  const rows=PT.history.map(t=>[t.id,t.sym,t.dir,t.entry,t.exit,t.size,t.lev,t.pnl.toFixed(2),t.pnlPct.toFixed(2),t.rrActual.toFixed(2),t.reason,t.note||'',new Date(t.openTime).toISOString(),new Date(t.closeTime).toISOString(),t.signal?.tf||'',t.signal?.conf||'']);
+  const csv=[h,...rows].map(r=>r.join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='finch_paper_trades.csv';a.click();
 }
 
 // ─── ANALYTICS ───
@@ -10773,18 +10767,15 @@ function buildWAText(){
   const sym=S.sym.replace('USDT','');const res=S.lastSignal;
   const now=new Date().toUTCString().slice(0,22);
   if(!res)return`🐦 FINCH — ${sym}/USDT\n${now}\n⏳ 加载中...`;
-  try{
-  const score=res.score||0;
   return`🐦 FINCH · ${sym}/USDT
-⏰ ${now} UTC | ${res.tf||'--'}
-${res.isBull?'🟢 LONG':'🔴 SHORT'} · ${res.conf||'--'}% · Score:${score>0?'+':''}${score.toFixed(1)}
-💰 Entry: ${fmtP(res.entry)} [${(res.entryType||'').toUpperCase()}]
-🎯 TP1:${fmtP(res.tps?.[0]?.p||0)} TP2:${fmtP(res.tps?.[1]?.p||0)} TP3:${fmtP(res.tps?.[2]?.p||0)}
-🛑 SL1:${fmtP(res.sls?.[0]?.p||0)} SL2:${fmtP(res.sls?.[1]?.p||0)}
-⚖️ R:R=${(res.rr||0).toFixed(2)}:1
-📊 RSI:${(res.rsi||0).toFixed(0)} MACD:${res.macdD?.hist>0?'▲':'▼'} Vegas:${res.vegas?res.vegas.above?'▲':res.vegas.below?'▼':'⚡':'--'}
+⏰ ${now} UTC | ${res.tf}
+${res.isBull?'🟢 LONG':'🔴 SHORT'} · ${res.conf}% · Score:${res.score>0?'+':''}${res.score.toFixed(1)}
+💰 Entry: ${fmtP(res.entry)} [${res.entryType.toUpperCase()}]
+🎯 TP1:${fmtP(res.tps[0].p)} TP2:${fmtP(res.tps[1].p)} TP3:${fmtP(res.tps[2].p)}
+🛑 SL1:${fmtP(res.sls[0].p)} SL2:${fmtP(res.sls[1].p)}
+⚖️ R:R=${res.rr.toFixed(2)}:1
+📊 RSI:${res.rsi.toFixed(0)} MACD:${res.macdD.hist>0?'▲':'▼'} Vegas:${res.vegas?res.vegas.above?'▲':res.vegas.below?'▼':'⚡':'--'}
 🐦 FINCH Analysis`;
-  }catch(e){return`🐦 FINCH · ${sym}/USDT\n${now}\n⚠️ 数据加载中，请稍后重试`;}
 }
 function sendWA(){if(!S.waPhone){alert('请先设置手机号');return;}window.open(`https://wa.me/${S.waPhone}?text=${encodeURIComponent(buildWAText())}`,'_blank');}
 
@@ -11943,7 +11934,7 @@ async function init(){
 
   // Fix version badge
   document.querySelectorAll('.brand-sub').forEach(el=>{
-    if(el.textContent.includes('全维度市场分析'))el.textContent='全维度市场分析 v'+FINCH_VERSION;
+    if(el.textContent.includes('v3'))el.textContent=el.textContent.replace(/v\d+/,'v40');
   });
 
   // ── Step 0: Probe Binance endpoints in parallel ──
@@ -14004,7 +13995,6 @@ function exportBacktestResult() {
 
 // ── 2.2 Export / Import learned weights ──
 function exportLearnedWeights() {
-  try {
   loadLearnedWeights();
   const data = {
     version:   FINCH_VERSION,
@@ -14021,7 +14011,6 @@ function exportLearnedWeights() {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  } catch(e) { alert('导出权重失败: ' + e.message); }
 }
 
 function importLearnedWeights() {
@@ -14146,8 +14135,8 @@ resetLearnedWeights = function() {
 };
 
 // ── 3.3 Version constants + console branding ──
-const FINCH_VERSION = '44.0';
-const FINCH_BUILD   = '2026-03-24';
+const FINCH_VERSION = '39.0';
+const FINCH_BUILD   = '2026-03-18';
 
 // Console welcome banner
 setTimeout(() => {
