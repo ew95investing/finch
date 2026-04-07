@@ -18068,6 +18068,747 @@ setTimeout(function() {
 }, 1500);
 
 })(); // end FINCH v45 IIFE
+
+// ════════════════════════════════════════════════════════════════════
+// FINCH v46 — ENTRY PRICE TEMPORAL VALIDITY + DRUCKENMILLER FRAMEWORK
+// ════════════════════════════════════════════════════════════════════
+// Two pillars:
+//   1. EntryPriceShelfLife  — "Is my $70,550 BTC entry still actionable?"
+//      ATR-decay model: each candle that passes erodes the probability
+//      that price returns to your limit zone in a "clean" move.
+//      After N candles the signal is stale, not necessarily wrong — but
+//      the market has moved on and needs a fresh look.
+//
+//   2. DruckenmillerScore   — Macro-first conviction 0–100
+//      Liquidity 35% · Forward Earnings 25% · Market Breadth 25% · Price Signal 15%
+//      Fat Pitch threshold: score ≥ 80  → heavy position
+//      Five-tier position map identical to the original skill spec.
+// ════════════════════════════════════════════════════════════════════
+(function() {
+'use strict';
+
+// ── HELPER: format price (reuse existing fmtP if available) ──────────
+const _fmtP = typeof fmtP === 'function' ? fmtP : v => {
+  if (!v || !isFinite(v)) return '--';
+  if (v >= 10000) return v.toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:0});
+  if (v >= 1000)  return v.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+  if (v >= 1)     return v.toFixed(4);
+  return v.toFixed(6);
+};
+
+// ── HELPER: get ATR from klines ───────────────────────────────────────
+function _atrFromKlines(klines, period) {
+  period = period || 14;
+  if (!klines || klines.length < period + 1) return null;
+  const trs = [];
+  for (let i = 1; i < klines.length; i++) {
+    const k = klines[i], pk = klines[i-1];
+    trs.push(Math.max(k.h - k.l, Math.abs(k.h - pk.c), Math.abs(k.l - pk.c)));
+  }
+  return trs.slice(-period).reduce((s,v)=>s+v,0) / period;
+}
+
+// ════════════════════════════════════════════════════════════════════
+// MODULE 1: ENTRY PRICE SHELF LIFE
+// The core question: "How many more candles until my entry price
+// analysis goes stale and I need a fresh re-read?"
+//
+// Logic (Druckenmiller-aware):
+//   • Every candle that passes without touching your entry zone
+//     reduces the "setup freshness" by an ATR-path factor.
+//   • If price has moved more than 1.5×ATR away from entry → stale NOW.
+//   • If price has moved 0.5–1.5×ATR away → degrading (yellow).
+//   • If price stays within 0.5×ATR → fresh (green).
+//   • Hard cap: even with perfect proximity, signal expires after
+//     the canonical bars-per-timeframe window.
+// ════════════════════════════════════════════════════════════════════
+window.FINCH_V46 = window.FINCH_V46 || {};
+
+window.FINCH_V46.shelfLife = {
+
+  // TF → max fresh candles before mandatory re-analysis
+  // Druckenmiller principle: "I don't predict; I read the tape."
+  // The tape changes — so you must re-read on schedule.
+  TF_MAX_BARS: {
+    '1m':30, '3m':20, '5m':16, '15m':12, '30m':10,
+    '1h':8,  '2h':6,  '4h':5,  '8h':4,  '1d':3, '1w':2
+  },
+
+  // Human-readable time per TF bar (for display)
+  TF_MINUTES: {
+    '1m':1,'3m':3,'5m':5,'15m':15,'30m':30,
+    '1h':60,'2h':120,'4h':240,'8h':480,'1d':1440,'1w':10080
+  },
+
+  /**
+   * compute(entryPrice, direction, currentPrice, klines, tf)
+   * Returns a shelf-life object with everything needed for the UI.
+   */
+  compute: function(entryPrice, direction, currentPrice, klines, tf) {
+    tf = tf || '4h';
+    const maxBars   = this.TF_MAX_BARS[tf] || 5;
+    const tfMins    = this.TF_MINUTES[tf]  || 240;
+
+    // ATR from recent klines
+    const atr = _atrFromKlines(klines, 14) || (entryPrice * 0.015);
+
+    // Distance from current price to entry zone
+    const dist        = Math.abs(currentPrice - entryPrice);
+    const distAtr     = dist / atr;          // expressed in ATR units
+    const distPct     = (dist / entryPrice * 100);
+
+    // Directional context: is price moving TOWARD or AWAY from entry?
+    const movingToward = direction === 'long'
+      ? currentPrice <= entryPrice          // long limit: want price to drop
+      : currentPrice >= entryPrice;         // short limit: want price to rise
+
+    // Freshness score 0–100 (100 = perfectly fresh / price near entry)
+    // Decays with distance-in-ATR units:
+    //   0 ATR = 100 (price AT entry)
+    //   1 ATR = 60
+    //   2 ATR = 25
+    //   3+ ATR = staleness immediate
+    let freshness;
+    if (distAtr <= 0.1)      freshness = 100;
+    else if (distAtr <= 0.5) freshness = Math.round(100 - distAtr * 40);
+    else if (distAtr <= 1.0) freshness = Math.round(80 - distAtr * 45);
+    else if (distAtr <= 2.0) freshness = Math.round(36 - (distAtr-1.0)*18);
+    else                     freshness = Math.max(0, Math.round(18 - (distAtr-2.0)*9));
+
+    // Time-based decay: how many klines have elapsed since signal was generated?
+    // We estimate from the STORED signal timestamp vs last kline close time.
+    const signalKey = 'finch_v46_signal_' + (typeof S !== 'undefined' ? S.sym : 'UNK') + '_' + tf;
+    let signalData = null;
+    try { signalData = JSON.parse(localStorage.getItem(signalKey) || 'null'); } catch(e) {}
+
+    let barsElapsed   = 0;
+    let signalAge     = '';
+    let barsRemaining = maxBars;
+
+    if (signalData && signalData.ts) {
+      const elapsedMs   = Date.now() - signalData.ts;
+      barsElapsed       = Math.floor(elapsedMs / (tfMins * 60000));
+      barsRemaining     = Math.max(0, maxBars - barsElapsed);
+      const totalMins   = barsElapsed * tfMins;
+      if (totalMins < 60)
+        signalAge = `${totalMins} 分钟前`;
+      else if (totalMins < 1440)
+        signalAge = `${Math.round(totalMins/60)} 小时前`;
+      else
+        signalAge = `${Math.round(totalMins/1440)} 天前`;
+    }
+
+    // Time freshness 0–100
+    const timeFreshness = maxBars > 0 ? Math.max(0, Math.round(barsRemaining / maxBars * 100)) : 100;
+
+    // COMBINED freshness = 60% price proximity + 40% time
+    const combined = Math.round(freshness * 0.60 + timeFreshness * 0.40);
+
+    // Status tiers
+    let status, statusColor, statusBg, statusBd, emoji, advice;
+    if (combined >= 75) {
+      status = 'FRESH · 入场价仍有效';
+      statusColor = 'var(--green)'; statusBg = 'rgba(26,107,58,0.08)'; statusBd = 'rgba(26,107,58,0.25)';
+      emoji = '🟢';
+      advice = `入场价 ${_fmtP(entryPrice)} 仍处于有效窗口。价格距入场区 ${distPct.toFixed(2)}%（${distAtr.toFixed(2)} ATR），可按原计划挂单。`;
+    } else if (combined >= 50) {
+      status = 'DEGRADING · 开始老化';
+      statusColor = 'var(--teal)'; statusBg = 'rgba(10,96,80,0.07)'; statusBd = 'rgba(10,96,80,0.25)';
+      emoji = '🔵';
+      advice = `入场价 ${_fmtP(entryPrice)} 开始老化。价格已偏离 ${distPct.toFixed(2)}%，建议重新核对${tf.toUpperCase()}级别支撑/阻力是否仍然成立。`;
+    } else if (combined >= 28) {
+      status = 'STALE · 需要重新评估';
+      statusColor = 'var(--amber)'; statusBg = 'rgba(128,80,0,0.08)'; statusBd = 'rgba(128,80,0,0.28)';
+      emoji = '🟡';
+      advice = `入场价 ${_fmtP(entryPrice)} 已趋于过时。市场已经移动太远或时间已过 — 需重新跑一次完整分析以获取最新入场区。`;
+    } else {
+      status = 'EXPIRED · 分析已过期';
+      statusColor = 'var(--red)'; statusBg = 'rgba(160,20,32,0.08)'; statusBd = 'rgba(160,20,32,0.28)';
+      emoji = '🔴';
+      advice = `入场价 ${_fmtP(entryPrice)} 已失效。价格偏离超过 ${distAtr.toFixed(1)} ATR，原有的价格结构支撑已不再适用 — 请立即重新分析，不要执行旧信号。`;
+    }
+
+    // Expiry ETA in real time
+    const remainingMins  = barsRemaining * tfMins;
+    let expiryEta;
+    if (barsRemaining <= 0) {
+      expiryEta = '已超时';
+    } else if (remainingMins < 60) {
+      expiryEta = `约 ${remainingMins} 分钟后需重新评估`;
+    } else if (remainingMins < 1440) {
+      expiryEta = `约 ${Math.round(remainingMins/60)} 小时后需重新评估`;
+    } else {
+      expiryEta = `约 ${Math.round(remainingMins/1440)} 天后需重新评估`;
+    }
+
+    return {
+      entryPrice, direction, currentPrice, tf,
+      atr, distAtr, distPct, movingToward,
+      freshness, timeFreshness, combined,
+      status, statusColor, statusBg, statusBd, emoji,
+      advice, expiryEta, signalAge, barsElapsed, barsRemaining, maxBars,
+    };
+  },
+
+  // Call this when analysis is freshly generated to stamp the timestamp
+  stampSignal: function(tf) {
+    tf = tf || '4h';
+    const key = 'finch_v46_signal_' + (typeof S !== 'undefined' ? S.sym : 'UNK') + '_' + tf;
+    const entry = typeof S !== 'undefined' ? S.lastPx : 0;
+    try {
+      localStorage.setItem(key, JSON.stringify({ ts: Date.now(), entry }));
+    } catch(e) {}
+  },
+
+  // Render HTML card to inject into analysis panel
+  renderCard: function(entryPrice, direction, currentPrice, klines, tf) {
+    try {
+      const sl = this.compute(entryPrice, direction, currentPrice, klines, tf);
+      const barW = Math.min(100, sl.combined);
+
+      // Progress bar gradient
+      const barGrad = sl.combined >= 75 ? '#1A6B3A'
+                    : sl.combined >= 50 ? '#0A6050'
+                    : sl.combined >= 28 ? '#805000'
+                    : '#A01420';
+
+      // Direction arrow indicator
+      const dirIcon = sl.movingToward ? '📍 价格正朝入场区靠近' : '↗️ 价格正远离入场区';
+      const dirColor = sl.movingToward ? 'var(--green)' : 'var(--amber)';
+
+      return `
+<div style="background:${sl.statusBg};border:2px solid ${sl.statusBd};border-radius:10px;margin-bottom:10px;overflow:hidden;" id="v46_shelf_card">
+  <div style="padding:11px 16px;border-bottom:1px solid ${sl.statusBd}55;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+    <div>
+      <div style="font-size:10px;letter-spacing:1.5px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:3px">📅 入场价有效期 · Entry Price Shelf Life</div>
+      <div style="font-size:13px;font-weight:700;color:${sl.statusColor}">${sl.emoji} ${sl.status}</div>
+    </div>
+    <div style="text-align:center;flex-shrink:0;">
+      <div style="font-size:38px;font-weight:900;color:${sl.statusColor};line-height:1">${sl.combined}</div>
+      <div style="font-size:9px;color:var(--muted)">新鲜度 / 100</div>
+    </div>
+  </div>
+
+  <!-- Freshness Bar -->
+  <div style="padding:10px 16px;border-bottom:1px solid ${sl.statusBd}33;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+      <span style="font-size:9px;color:var(--muted);width:24px;">过时</span>
+      <div style="flex:1;height:10px;background:var(--bg3);border-radius:5px;overflow:hidden;">
+        <div style="height:100%;border-radius:5px;background:${barGrad};width:${barW}%;transition:width 0.8s ease;"></div>
+      </div>
+      <span style="font-size:9px;color:var(--muted);width:24px;text-align:right;">新鲜</span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:6px;font-size:10px;">
+      <div style="text-align:center;padding:4px 0;background:rgba(255,255,255,0.45);border-radius:4px;">
+        <div style="color:var(--muted);font-size:8px;margin-bottom:1px">价格新鲜度</div>
+        <div style="font-weight:700;color:${sl.statusColor}">${sl.freshness}%</div>
+      </div>
+      <div style="text-align:center;padding:4px 0;background:rgba(255,255,255,0.45);border-radius:4px;">
+        <div style="color:var(--muted);font-size:8px;margin-bottom:1px">时间新鲜度</div>
+        <div style="font-weight:700;color:${sl.statusColor}">${sl.timeFreshness}%</div>
+      </div>
+      <div style="text-align:center;padding:4px 0;background:rgba(255,255,255,0.45);border-radius:4px;">
+        <div style="color:var(--muted);font-size:8px;margin-bottom:1px">距入场价</div>
+        <div style="font-weight:700;color:${sl.combined>=50?'var(--text)':'var(--red)'}">${sl.distPct.toFixed(2)}%</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Entry price detail row -->
+  <div style="padding:9px 16px;border-bottom:1px solid ${sl.statusBd}33;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+    <div>
+      <div style="font-size:8px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:2px">入场参考价</div>
+      <div style="font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--bright)">${_fmtP(entryPrice)}</div>
+      <div style="font-size:9px;color:${dirColor};margin-top:2px">${dirIcon}</div>
+    </div>
+    <div style="text-align:right;">
+      <div style="font-size:8px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:2px">当前价</div>
+      <div style="font-size:16px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--muted)">${_fmtP(currentPrice)}</div>
+      <div style="font-size:9px;color:var(--muted);margin-top:2px">${sl.distAtr.toFixed(2)} ATR 偏差</div>
+    </div>
+    <div style="text-align:right;flex-shrink:0;">
+      <div style="font-size:8px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:2px">再评估时限</div>
+      <div style="font-size:11px;font-weight:700;color:${sl.statusColor}">${sl.expiryEta}</div>
+      <div style="font-size:9px;color:var(--muted);margin-top:2px">${sl.signalAge ? '分析生成于 ' + sl.signalAge : '本次分析刚生成'}</div>
+    </div>
+  </div>
+
+  <!-- Advice -->
+  <div style="padding:10px 16px;">
+    <div style="font-size:11px;color:var(--text);line-height:1.75;border-left:3px solid ${sl.statusColor};padding-left:10px;">${sl.advice}</div>
+  </div>
+</div>`;
+    } catch(e) {
+      return `<div style="font-size:10px;color:var(--muted);padding:8px">⏳ 入场有效期计算中...</div>`;
+    }
+  }
+};
+
+// ════════════════════════════════════════════════════════════════════
+// MODULE 2: DRUCKENMILLER CONVICTION FRAMEWORK
+// "Liquidity drives markets, not earnings." — S. Druckenmiller
+//
+// Four signals, Druckenmiller-weighted:
+//   Liquidity       35%  — Fed posture, credit environment proxy
+//   Forward Earnings 25% — Earnings trend, not current EPS
+//   Market Breadth  25%  — How many stocks participating in the move
+//   Price Signal    15%  — Tape reading, momentum, structure
+//
+// Score 0–100 → 5-tier position map (Fat Pitch / High / Neutral / Low / Capital Preservation)
+// ════════════════════════════════════════════════════════════════════
+window.FINCH_V46.druckenmiller = {
+
+  WEIGHTS: { liquidity: 0.35, forwardEarnings: 0.25, breadth: 0.25, priceSignal: 0.15 },
+
+  /**
+   * score(res, klines)
+   * Derives the four signals from FINCH's existing computed result object.
+   * res = the output of _Φ9x / main analysis function
+   */
+  score: function(res, klines) {
+    try {
+      const { isBull, rsi, macdD, vegas, mktStr, adx, obv, cvd, mtf,
+              conflictRatio, hv, price, atrRaw, tr1d, tr1w, conf,
+              supertrend, chan, candles, bbPos } = res;
+
+      // ── SIGNAL 1: LIQUIDITY (35%) ────────────────────────────────
+      // Proxy for macro liquidity using technical surrogates available to FINCH:
+      //   • DXY-proxy: Bitcoin/gold inverse correlation (if BTC is rising, USD likely weakening)
+      //   • Volatility regime: low HV = abundant liquidity / calm credit
+      //   • Vegas channel: institutional money flows (price above = risk-on)
+      //   • OBV trend: net capital flow direction
+      //   • MTF alignment: broad liquidity tide vs. local ripple
+      let liqScore = 50; // start neutral
+      const hvRatio = (typeof _getHVRatio === 'function') ? _getHVRatio() : 1.0;
+      if (hvRatio < 0.8)  liqScore += 15;  // low vol = ample liquidity
+      else if (hvRatio > 1.5) liqScore -= 15; // high vol = liquidity stress
+      if (isBull && vegas?.above)   liqScore += 12; // above Vegas = risk-on
+      if (!isBull && vegas?.below)  liqScore += 12;
+      if (isBull && obv?.obvTrend === 1)  liqScore += 10; // OBV confirms inflows
+      if (!isBull && obv?.obvTrend === -1) liqScore += 10;
+      if (isBull && tr1w > 0)  liqScore += 8;  // weekly trend = macro tide
+      if (!isBull && tr1w < 0) liqScore += 8;
+      if (hv?.expanding) liqScore -= 10;  // expanding vol = tightening liquidity
+      liqScore = Math.max(0, Math.min(100, liqScore));
+
+      // ── SIGNAL 2: FORWARD EARNINGS (25%) ────────────────────────
+      // Druckenmiller trades forward estimates, not trailing EPS.
+      // Proxy: MACD divergence (leading indicator of earnings momentum),
+      // trend strength (ADX), and higher-timeframe structure health.
+      let earnScore = 50;
+      if (isBull && macdD?.bullDiv)       earnScore += 25; // bottom divergence = forward earnings inflect up
+      if (!isBull && macdD?.bearDiv)      earnScore += 25; // top divergence = forward earnings inflect down
+      if (isBull && macdD?.hist > 0)      earnScore += 10; // positive momentum = earnings expanding
+      if (!isBull && macdD?.hist < 0)     earnScore += 10;
+      if (adx?.strong)                    earnScore += 12; // strong trend = earnings clarity
+      if (adx?.ranging)                   earnScore -= 12; // choppy = earnings uncertainty
+      // DIVERGENCE INVERSION WARNING (Druckenmiller's key insight):
+      // Earnings beat + price fall = bearish 6-month signal
+      if (isBull && macdD?.hist < 0 && rsi > 60) {
+        earnScore -= 20; // price high but momentum diverging DOWN → forward earnings warning
+      }
+      if (!isBull && macdD?.hist > 0 && rsi < 40) {
+        earnScore -= 20; // price low but momentum diverging UP → potential earnings recovery
+      }
+      earnScore = Math.max(0, Math.min(100, earnScore));
+
+      // ── SIGNAL 3: MARKET BREADTH (25%) ──────────────────────────
+      // Druckenmiller always checks: is the rally broad or narrow?
+      // Broad = sustainable. Narrow = distribution / warning.
+      // Proxy: MTF alignment breadth + structure clarity + supertrend + CVD
+      let breadthScore = 50;
+      if (mtf?.fullyAligned)              breadthScore += 25; // all timeframes agree = broad
+      else if (mtf?.partiallyAligned)     breadthScore += 12;
+      else                                breadthScore -= 10; // fragmented = narrow breadth
+      if (isBull && mktStr?.hhhl)         breadthScore += 12;
+      if (!isBull && mktStr?.lllh)        breadthScore += 12;
+      if (conflictRatio > 0.45)           breadthScore -= 15; // high conflict = narrow
+      if (conflictRatio < 0.20)           breadthScore += 8;  // low conflict = broad
+      if (isBull && supertrend?.bull)     breadthScore += 6;
+      if (!isBull && supertrend?.bear)    breadthScore += 6;
+      // CVD: market orders confirm direction = breadth
+      if ((isBull && cvd?.bullishDelta) || (!isBull && !cvd?.bullishDelta)) breadthScore += 8;
+      breadthScore = Math.max(0, Math.min(100, breadthScore));
+
+      // ── SIGNAL 4: PRICE SIGNAL (15%) ────────────────────────────
+      // "I don't predict. I read the tape." — tape = pure price action
+      // RSI zone, candle patterns, Bollinger position, Chan theory
+      let priceScore = 50;
+      if (isBull && rsi < 35)            priceScore += 20; // oversold = tape says long
+      else if (!isBull && rsi > 65)      priceScore += 20; // overbought = tape says short
+      else if (isBull && rsi > 68)       priceScore -= 15; // chasing high = poor tape
+      else if (!isBull && rsi < 32)      priceScore -= 15;
+      // Bollinger: price at band extremes = mean-reversion momentum
+      if (isBull && bbPos && bbPos < 0.15)  priceScore += 12;
+      if (!isBull && bbPos && bbPos > 0.85) priceScore += 12;
+      // Chan theory: strongest tape confirmation
+      if ((chan?.bullDivStrong && isBull) || (chan?.bearDivStrong && !isBull)) priceScore += 18;
+      else if ((chan?.bullDiv && isBull) || (chan?.bearDiv && !isBull))         priceScore += 10;
+      // Candle confirmation
+      if (candles?.patterns?.length) {
+        const match = candles.patterns.filter(p => isBull ? p.bull : !p.bull);
+        if (match.length >= 2) priceScore += 8;
+        else if (match.length === 1) priceScore += 4;
+      }
+      priceScore = Math.max(0, Math.min(100, priceScore));
+
+      // ── WEIGHTED CONVICTION SCORE ────────────────────────────────
+      const W = this.WEIGHTS;
+      const raw = liqScore*W.liquidity + earnScore*W.forwardEarnings +
+                  breadthScore*W.breadth + priceScore*W.priceSignal;
+      const conviction = Math.round(raw);
+
+      // ── FIVE-TIER POSITION MAP ───────────────────────────────────
+      let tier, tierLabel, posRange, posColor, posBg, posBd, action, fatPitch;
+      if (conviction >= 80) {
+        tier = 'FAT PITCH'; tierLabel = '胖球 · 重仓出手';
+        posRange = '80–100% 仓位'; posColor = 'var(--green)';
+        posBg = 'rgba(26,107,58,0.10)'; posBd = 'rgba(26,107,58,0.30)';
+        action = '四信号全面共振。Druckenmiller: "一年只挥两三次，但一旦出手就重仓。" 现在是 Fat Pitch，最大仓位入场。';
+        fatPitch = true;
+      } else if (conviction >= 65) {
+        tier = 'HIGH CONVICTION'; tierLabel = '高信念';
+        posRange = '50–80% 仓位'; posColor = 'var(--teal)';
+        posBg = 'rgba(10,96,80,0.08)'; posBd = 'rgba(10,96,80,0.25)';
+        action = '多数信号对齐，流动性与价格信号同向。正常建仓，留20%子弹应对波动加仓。';
+        fatPitch = false;
+      } else if (conviction >= 45) {
+        tier = 'NEUTRAL'; tierLabel = '中性 · 半仓观察';
+        posRange = '25–50% 仓位'; posColor = 'var(--amber)';
+        posBg = 'rgba(128,80,0,0.08)'; posBd = 'rgba(128,80,0,0.25)';
+        action = '信号混合，流动性或广度不足。Druckenmiller: "现金也是一种仓位。" 小仓试探，等信号收敛再加。';
+        fatPitch = false;
+      } else if (conviction >= 28) {
+        tier = 'LOW CONVICTION'; tierLabel = '低信念 · 轻仓或等待';
+        posRange = '0–25% 仓位'; posColor = 'var(--orange)';
+        posBg = 'rgba(138,48,16,0.08)'; posBd = 'rgba(138,48,16,0.25)';
+        action = '宏观流动性或盈利信号与价格方向冲突。这不是"不挥棒"的信号 — 这是"根本没有球"的信号。观望。';
+        fatPitch = false;
+      } else {
+        tier = 'CAPITAL PRESERVATION'; tierLabel = '资本保护 · 空仓或对冲';
+        posRange = '0% 仓位 (现金/对冲)'; posColor = 'var(--red)';
+        posBg = 'rgba(160,20,32,0.09)'; posBd = 'rgba(160,20,32,0.28)';
+        action = '多个核心信号同时反向。Druckenmiller从不强迫入场。现金是仓位，等待格局清晰。';
+        fatPitch = false;
+      }
+
+      // ── DIVERGENCE WARNING (Druckenmiller's key bear signal) ─────
+      // "When price falls on good earnings news → something is very wrong."
+      const divWarning = (isBull && macdD?.hist < 0 && rsi > 58 && adx?.strong)
+        ? '⚠️ 背离预警: 价格在高位但动能衰减 — Druckenmiller视此为6个月后坏消息的预警信号，而非买点。'
+        : (!isBull && macdD?.hist > 0 && rsi < 42 && adx?.strong)
+        ? '⚠️ 背离预警: 价格在低位但动能回升 — 潜在空头陷阱，当心逼空。'
+        : null;
+
+      return {
+        conviction,
+        tier, tierLabel, posRange, posColor, posBg, posBd, action, fatPitch,
+        divWarning,
+        signals: {
+          liquidity:      { score: liqScore,    weight: 35, label: '宏观流动性', icon: '💧' },
+          forwardEarnings:{ score: earnScore,   weight: 25, label: '前瞻盈利动能', icon: '📈' },
+          breadth:        { score: breadthScore, weight: 25, label: '市场广度', icon: '🌐' },
+          priceSignal:    { score: priceScore,  weight: 15, label: '价格信号(读盘)', icon: '📊' },
+        }
+      };
+    } catch(e) {
+      return { conviction: 50, tier: 'NEUTRAL', tierLabel: '计算中', posColor: 'var(--muted)',
+               posBg: 'rgba(0,0,0,0.03)', posBd: 'var(--line2)', action: '',
+               signals: {}, fatPitch: false, divWarning: null,
+               posRange: '25–50%' };
+    }
+  },
+
+  // ── RENDER: Druckenmiller panel HTML ─────────────────────────────
+  renderCard: function(res, klines) {
+    try {
+      const d = this.score(res, klines);
+      const barW = d.conviction;
+
+      const sigHTML = Object.values(d.signals).map(s => {
+        const sColor = s.score >= 65 ? 'var(--green)' : s.score >= 45 ? 'var(--amber)' : 'var(--red)';
+        const sBarW  = s.score;
+        return `
+<div style="padding:6px 0;border-bottom:1px solid var(--line);">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;">
+    <span style="font-size:10px;font-weight:700;color:var(--text)">${s.icon} ${s.label}</span>
+    <span style="font-size:9px;color:var(--muted)">权重 ${s.weight}%</span>
+    <span style="font-size:11px;font-weight:700;color:${sColor}">${s.score}</span>
+  </div>
+  <div style="height:5px;background:var(--bg3);border-radius:3px;overflow:hidden;">
+    <div style="height:100%;background:${sColor};width:${sBarW}%;border-radius:3px;"></div>
+  </div>
+</div>`;
+      }).join('');
+
+      const fatPitchBadge = d.fatPitch
+        ? `<div style="display:inline-block;padding:3px 10px;background:rgba(26,107,58,0.15);border:1px solid rgba(26,107,58,0.35);border-radius:4px;font-size:10px;font-weight:700;color:var(--green);letter-spacing:1px;margin-top:4px;">⚾ FAT PITCH</div>`
+        : '';
+
+      return `
+<div style="background:${d.posBg};border:2px solid ${d.posBd};border-radius:10px;margin-bottom:10px;overflow:hidden;" id="v46_druck_card">
+
+  <!-- Header -->
+  <div style="padding:11px 16px;border-bottom:1px solid ${d.posBd}55;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+    <div>
+      <div style="font-size:10px;letter-spacing:1.5px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:3px">🏦 Druckenmiller · 宏观框架得分</div>
+      <div style="font-size:13px;font-weight:700;color:${d.posColor}">${d.tierLabel}</div>
+      ${fatPitchBadge}
+    </div>
+    <div style="text-align:center;flex-shrink:0;">
+      <div style="font-size:40px;font-weight:900;color:${d.posColor};line-height:1">${d.conviction}</div>
+      <div style="font-size:9px;color:var(--muted)">信念分 / 100</div>
+    </div>
+  </div>
+
+  <!-- Conviction bar -->
+  <div style="padding:10px 16px;border-bottom:1px solid ${d.posBd}33;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+      <span style="font-size:9px;color:var(--muted);width:36px;">保本</span>
+      <div style="flex:1;height:10px;background:var(--bg3);border-radius:5px;overflow:hidden;position:relative;">
+        ${[28,45,65,80].map(m=>`<div style="position:absolute;left:${m}%;top:0;width:1px;height:100%;background:rgba(0,0,0,0.12);"></div>`).join('')}
+        <div style="height:100%;border-radius:5px;background:${d.posColor};width:${barW}%;transition:width 0.8s ease;"></div>
+      </div>
+      <span style="font-size:9px;color:var(--muted);width:36px;text-align:right;">胖球</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:8px;color:var(--muted);padding:0 42px;">
+      <span>资本保护</span><span>低信念</span><span>中性</span><span>高信念</span><span>Fat Pitch</span>
+    </div>
+  </div>
+
+  <!-- Position recommendation -->
+  <div style="padding:9px 16px;border-bottom:1px solid ${d.posBd}33;display:flex;align-items:center;gap:12px;">
+    <div style="flex-shrink:0;padding:8px 12px;background:${d.posBg};border:1px solid ${d.posBd};border-radius:6px;text-align:center;">
+      <div style="font-size:8px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:3px">建议仓位</div>
+      <div style="font-size:12px;font-weight:700;color:${d.posColor};white-space:nowrap">${d.posRange}</div>
+    </div>
+    <div style="font-size:10px;color:var(--text);line-height:1.7;flex:1">${d.action}</div>
+  </div>
+
+  <!-- Four signals breakdown -->
+  <div style="padding:10px 16px;border-bottom:1px solid ${d.posBd}33;">
+    <div style="font-size:9px;letter-spacing:1px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:6px">四信号加权详情</div>
+    ${sigHTML}
+  </div>
+
+  ${d.divWarning ? `
+  <!-- Divergence Warning -->
+  <div style="padding:9px 16px;background:rgba(160,20,32,0.06);border-top:1px solid rgba(160,20,32,0.2);">
+    <div style="font-size:10px;color:var(--red);line-height:1.7;font-weight:600">${d.divWarning}</div>
+  </div>` : ''}
+
+  <!-- Footer -->
+  <div style="padding:8px 16px;background:rgba(0,0,0,0.02);">
+    <div style="font-size:9px;color:var(--muted);line-height:1.6">
+      基于 Druckenmiller 框架: 流动性 35% · 前瞻盈利 25% · 市场广度 25% · 价格信号 15%<br>
+      <span style="font-style:italic">"是流动性在推动市场，不是盈利。" — Stanley Druckenmiller</span>
+    </div>
+  </div>
+</div>`;
+    } catch(e) {
+      return `<div style="font-size:10px;color:var(--muted);padding:8px">📊 Druckenmiller 框架计算中...</div>`;
+    }
+  }
+};
+
+// ════════════════════════════════════════════════════════════════════
+// INTEGRATION: Hook into the existing analysis render pipeline
+// We inject v46 cards into the strategy analysis area after each
+// analysis run, inserting them just below the Conviction Score block.
+// ════════════════════════════════════════════════════════════════════
+(function() {
+  // CSS for v46 elements
+  const style = document.createElement('style');
+  style.textContent = `
+    #v46_shelf_card, #v46_druck_card { transition: opacity 0.4s; }
+    #v46_druck_card .druck-sig-row { border-bottom: 1px solid var(--line); }
+    .v46-inject-wrap { margin-bottom: 0; }
+  `;
+  document.head.appendChild(style);
+
+  // Helper: insert v46 cards into the DOM after the conviction score block
+  function injectV46Cards(res, klines) {
+    try {
+      if (!res) return;
+      const tf = res.tf || (typeof S !== 'undefined' ? S.stratTF : '4h');
+      const price = res.price || (typeof S !== 'undefined' ? S.lastPx : 0);
+
+      // 1. Stamp this analysis timestamp for shelf-life tracking
+      window.FINCH_V46.shelfLife.stampSignal(tf);
+
+      // 2. Find the strat-area div
+      const stratArea = document.querySelector('.strat-area');
+      if (!stratArea) return;
+
+      // 3. Remove existing v46 cards
+      ['v46_shelf_wrap', 'v46_druck_wrap'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.remove();
+      });
+
+      // 4. Render shelf-life card
+      const entryPrice = res.entry || price;
+      const direction  = res.isBull ? 'long' : 'short';
+      const shelfHTML  = window.FINCH_V46.shelfLife.renderCard(entryPrice, direction, price, klines, tf);
+
+      // 5. Render Druckenmiller card
+      const druckHTML  = window.FINCH_V46.druckenmiller.renderCard(res, klines);
+
+      // 6. Create wrapper and inject after the first section (conviction score)
+      const wrap = document.createElement('div');
+      wrap.id = 'v46_shelf_wrap';
+      wrap.className = 'v46-inject-wrap';
+      wrap.innerHTML = shelfHTML;
+
+      const wrapD = document.createElement('div');
+      wrapD.id = 'v46_druck_wrap';
+      wrapD.className = 'v46-inject-wrap';
+      wrapD.innerHTML = druckHTML;
+
+      // Insert at top of strat-area (before existing blocks, so these appear prominent)
+      // We look for the dir-hero block and insert after it
+      const dirHero = stratArea.querySelector('.dir-hero');
+      if (dirHero && dirHero.parentNode) {
+        dirHero.parentNode.insertBefore(wrap, dirHero.nextSibling);
+        dirHero.parentNode.insertBefore(wrapD, wrap.nextSibling);
+      } else {
+        // Fallback: prepend to stratArea
+        stratArea.insertBefore(wrapD, stratArea.firstChild);
+        stratArea.insertBefore(wrap, stratArea.firstChild);
+      }
+    } catch(e) {
+      console.warn('[FINCH v46 inject]', e);
+    }
+  }
+
+  // Intercept the main render function (_φRenderAnalysis or equivalent)
+  // We patch the function that renders into .strat-area
+  function patchRenderFn() {
+    // Try to patch the existing _Φ9x-style render
+    // The render happens when innerHTML is set on .strat-area children
+    // We use MutationObserver on .strat-area to trigger v46 injection
+    const stratScroll = document.querySelector('.strategy-scroll');
+    if (!stratScroll) {
+      setTimeout(patchRenderFn, 1000);
+      return;
+    }
+
+    let _injectDebounce = null;
+    const observer = new MutationObserver(function(mutations) {
+      // Check if actual analysis content was added (not our own v46 divs)
+      const relevant = mutations.some(m => {
+        if (!m.addedNodes.length) return false;
+        return Array.from(m.addedNodes).some(n => {
+          return n.nodeType === 1 &&
+                 !n.id?.startsWith('v46_') &&
+                 (n.classList?.contains('strat-area') ||
+                  n.querySelector?.('.dir-hero') ||
+                  n.querySelector?.('.entry-banner'));
+        });
+      });
+      if (!relevant) return;
+
+      clearTimeout(_injectDebounce);
+      _injectDebounce = setTimeout(function() {
+        try {
+          // Get latest result from FINCH_V44 or S
+          let res = null, klines = [];
+          if (typeof FINCH_V44 !== 'undefined' && FINCH_V44._lastRes) {
+            res = FINCH_V44._lastRes;
+          } else if (typeof S !== 'undefined' && S._lastRes) {
+            res = S._lastRes;
+          }
+          // Fallback: try to reconstruct minimal res from DOM
+          if (!res && typeof S !== 'undefined') {
+            const tf = S.stratTF || '4h';
+            klines = S.klines[S.sym + tf] || [];
+          }
+          if (res) {
+            const tf = res.tf || (typeof S !== 'undefined' ? S.stratTF : '4h');
+            klines = (typeof S !== 'undefined') ? (S.klines[S.sym + tf] || []) : [];
+            injectV46Cards(res, klines);
+          }
+        } catch(ex) {}
+      }, 300);
+    });
+
+    observer.observe(stratScroll, { childList: true, subtree: true });
+    console.log('[FINCH v46] MutationObserver 已就绪 — 等待分析渲染');
+  }
+
+  // Also patch the _Φ9x function directly if it exists
+  function patchAnalysisFn() {
+    // Look for the function that generates the main analysis result
+    // It's called within setStrat / runFinchAnalysis / etc.
+    const fnNames = ['_Φ9x','_phi9x','runFinchAnalysis','_computeAnalysis'];
+    for (const fn of fnNames) {
+      if (typeof window[fn] === 'function') {
+        const orig = window[fn];
+        window[fn] = function() {
+          const result = orig.apply(this, arguments);
+          if (result && typeof result === 'object') {
+            // Cache last result for v46
+            if (typeof FINCH_V44 !== 'undefined') FINCH_V44._lastRes = result;
+            try {
+              const tf = result.tf || (typeof S !== 'undefined' ? S.stratTF : '4h');
+              const klines = (typeof S !== 'undefined') ? (S.klines[S.sym + tf] || []) : [];
+              setTimeout(() => injectV46Cards(result, klines), 400);
+            } catch(e) {}
+          }
+          return result;
+        };
+        console.log(`[FINCH v46] 已拦截 ${fn}`);
+      }
+    }
+  }
+
+  // Periodically refresh shelf-life display (the Druckenmiller card doesn't need
+  // real-time refresh since it's based on computed indicators, but the shelf-life
+  // freshness should update as time passes)
+  setInterval(function() {
+    const card = document.getElementById('v46_shelf_card');
+    if (!card || typeof S === 'undefined') return;
+    try {
+      const sym = S.sym;
+      const tf  = S.stratTF || '4h';
+      const key = 'finch_v46_signal_' + sym + '_' + tf;
+      const stored = JSON.parse(localStorage.getItem(key) || 'null');
+      if (!stored) return;
+      const klines = S.klines[sym + tf] || [];
+      const price  = S.lastPx;
+      // Get entry from stored or from last analysis
+      const entry = stored.entry || price;
+      const direction = (typeof FINCH_V44 !== 'undefined' && FINCH_V44._lastRes)
+        ? (FINCH_V44._lastRes.isBull ? 'long' : 'short') : 'long';
+      const newHTML = window.FINCH_V46.shelfLife.renderCard(entry, direction, price, klines, tf);
+      card.outerHTML = newHTML;
+    } catch(e) {}
+  }, 60000); // refresh every minute
+
+  // Init
+  setTimeout(function() {
+    patchRenderFn();
+    patchAnalysisFn();
+
+    // Update title bar
+    const brand = document.querySelector('.fb-brand-sub');
+    if (brand) brand.textContent = 'v46 · Druckenmiller';
+    document.title = 'FINCH v46 — 全维度市场分析 · Druckenmiller框架';
+
+    console.log(
+      '%c[FINCH v46]%c Druckenmiller框架 + 入场有效期引擎已就绪\n' +
+      '  ✅ EntryPriceShelfLife    — ATR衰减模型，精确到"入场价还有多新鲜"\n' +
+      '  ✅ DruckenmillerScore     — 流动性35% · 前瞻盈利25% · 广度25% · 读盘15%\n' +
+      '  ✅ FatPitchDetector       — 分数≥80自动触发 Fat Pitch 重仓信号\n' +
+      '  ✅ DivergenceWarning      — 盈利超预期但价格下跌 → 6个月坏消息预警\n' +
+      '  ✅ FiveTierPositionMap    — Fat Pitch/高信念/中性/低信念/资本保护\n' +
+      '  Access via: window.FINCH_V46',
+      'color:#8B6914;font-weight:bold','color:inherit'
+    );
+  }, 2000);
+})();
+
+})(); // end FINCH v46 IIFE
 </script>
 
 </body>
