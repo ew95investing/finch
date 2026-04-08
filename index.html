@@ -17,7 +17,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://fonts.googleapis.com https://fonts.gstatic.com https://api.binance.com https://api1.binance.com https://api2.binance.com https://api3.binance.com https://api4.binance.com https://data-api.binance.vision https://data-stream.binance.vision https://fapi.binance.com https://api.alternative.me https://api.coingecko.com https://api.llama.fi https://corsproxy.io https://api.allorigins.win https://thingproxy.freeboard.io https://api.anthropic.com https://api.blockchain.info https://www.alphavantage.co https://cdn.jsdelivr.net https://open.er-api.com wss://stream.binance.com wss://data-stream.binance.vision; connect-src 'self' https: wss: data: blob:; frame-ancestors 'none';">
 <meta http-equiv="X-Frame-Options" content="DENY">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>FINCH v45 — 全维度市场分析 · 智能入场时机</title>
+<title>FINCH v48 — 全维度市场分析 · 信号窗口追踪</title>
 
 <!-- ═══ PWA / iOS APP META ═══ -->
 <meta name="mobile-web-app-capable" content="yes">
@@ -1171,7 +1171,7 @@ canvas.main-c{width:100%!important;}
   <div class="brand-wrap">
     <div style="display:flex;flex-direction:column;justify-content:center;">
       <div class="brand">FINCH</div>
-      <div class="brand-sub">全维度市场分析 v45</div>
+      <div class="brand-sub">全维度市场分析 v47</div>
     </div>
   </div>
 
@@ -1224,7 +1224,7 @@ canvas.main-c{width:100%!important;}
     <span style="font-size:18px">🦅</span>
     <div>
       <div class="fb-brand-text">FINCH</div>
-      <div class="fb-brand-sub">v45 · 智能分析</div>
+      <div class="fb-brand-sub">v48 · 信号窗口</div>
     </div>
   </div>
   <div class="fb-stat">
@@ -1244,7 +1244,7 @@ canvas.main-c{width:100%!important;}
     <div class="fb-stat-k">建议入场</div>
   </div>
   <div class="fb-pos-strip" id="fbAlertStrip">
-    <div class="fb-empty" id="fbAlertMsg">🦅 FINCH v45 · 智能入场时机 + 全面分析已就绪</div>
+    <div class="fb-empty" id="fbAlertMsg">🦅 FINCH v47 · 实时信号追踪 + 全面分析已就绪</div>
   </div>
   <div class="fb-status">
     <div class="fb-status-dot active" id="fbStatusDot"></div>
@@ -3190,6 +3190,31 @@ function connectWS(sym){
           if(cpi)cpi.textContent=fmtP(wsPrice);
           if(cci){cci.textContent=fmtPct(change);cci.className='chart-price-chg '+pctC(change);}
           const ep2=document.getElementById('expChartPrice');if(ep2)ep2.textContent=fmtP(wsPrice);
+          // v47: on every WS tick, check if shelf is critically stale (>1.5 ATR)
+          // This is lightweight — only fires full check if needed
+          try {
+            if(window.FINCH_V46&&window.FINCH_V46.shelfLife&&S.lastSignal){
+              const _tf=S.stratTF||'4h';
+              const _key='finch_v46_signal_'+sym+'_'+_tf;
+              const _stored=JSON.parse(localStorage.getItem(_key)||'null');
+              if(_stored&&_stored.entry){
+                const _kl=S.klines[sym+_tf]||[];
+                if(_kl.length>=14){
+                  const _atr=_atrFromKlines(_kl,14)||(wsPrice*0.015);
+                  const _dist=Math.abs(wsPrice-_stored.entry);
+                  // If >2×ATR drift: force immediate shelf refresh (don't wait 5s)
+                  if(_dist/_atr>2.0){
+                    const _card=document.getElementById('v46_shelf_card');
+                    if(_card&&typeof _v47_refreshShelf==='function'){
+                      clearTimeout(window._v47_wsDebounce);
+                      window._v47_wsDebounce=setTimeout(_v47_refreshShelf,300);
+                    }
+                  }
+                }
+              }
+            }
+          }catch(_e){}
+
         }catch(err){console.warn('WS parse error:',err);}
       };
       ws.onerror=()=>{clearTimeout(tmo);S.wsOk=false;updConn(false);tryNext();};
@@ -15564,7 +15589,7 @@ switchMobileModTab = function(tab, btn) {
 </style>
 
 <!-- ╔══════════════════════════════════════════════════════════════════════╗
-     ║  FINCH v43 UPGRADE ENGINE — 量化分析平台升级包                       ║
+     ║  FINCH v47 UPGRADE ENGINE — 量化分析平台升级包                       ║
      ║  Modules: Bayesian Aggregator · Market Regime · Signal Quality       ║
      ║           Dynamic Position Sizer · Adaptive Weights · Data Validator ║
      ║           Strategy Monitor · Walk-Forward · Signal Explainability    ║
@@ -16316,7 +16341,7 @@ if (_orig_Phi9x) {
 
       FINCH_V43._lastAnalysis = { sym, tf, ts: Date.now(), regime, quality, posSize };
     } catch(e) {
-      console.warn('[FINCH v43 upgrade]', e);
+      console.warn('[FINCH v47 upgrade]', e);
     }
     return res;
   };
@@ -16377,7 +16402,7 @@ if (_orig_renderSummary) {
         ${dataWarn}${degradeWarn}
         <div style="background:var(--card);border:1px solid var(--card-bd);border-radius:6px;padding:11px 13px;margin-bottom:8px;box-shadow:var(--shadow);">
           <div style="font-size:10px;font-weight:700;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:8px;border-bottom:1px solid var(--line);padding-bottom:5px;">
-            FINCH v43 · 量化增强分析
+            FINCH v47 · 量化增强分析
           </div>
 
           <!-- 状态行 -->
@@ -16429,7 +16454,7 @@ if (_orig_renderSummary) {
           </div>` : ''}
         </div>`;
     } catch(e) {
-      console.warn('[FINCH v43 renderSummary patch]', e);
+      console.warn('[FINCH v47 renderSummary patch]', e);
     }
   };
 }
@@ -16454,7 +16479,7 @@ if (_orig_learnFromBacktest) {
           );
         });
       }
-    } catch(e) { console.warn('[FINCH v43 backtest patch]', e); }
+    } catch(e) { console.warn('[FINCH v47 backtest patch]', e); }
   };
 }
 
@@ -16465,7 +16490,7 @@ function _injectV43Badge() {
   if (document.getElementById('finch_v43_badge')) return;
   const badge = document.createElement('div');
   badge.id = 'finch_v43_badge';
-  badge.title = 'FINCH v43 升级包已加载: 贝叶斯聚合 · 市场状态分类 · 动态仓位 · 信号质量评估';
+  badge.title = 'FINCH v47 升级包已加载: 贝叶斯聚合 · 市场状态分类 · 动态仓位 · 信号质量评估';
   badge.style.cssText = `
     position:fixed; bottom:12px; left:12px; z-index:9900;
     background:var(--gold,#8B6914); color:#fff;
@@ -16473,7 +16498,7 @@ function _injectV43Badge() {
     padding:3px 7px; border-radius:3px; opacity:0.75; cursor:default;
     pointer-events:none; user-select:none;
   `;
-  badge.textContent = 'FINCH v43';
+  badge.textContent = 'FINCH v47';
   document.body.appendChild(badge);
 }
 
@@ -16483,7 +16508,7 @@ function _injectV43Badge() {
 function _v43Init() {
   _injectV43Badge();
   console.log(
-    '%c[FINCH v43]%c 量化增强包已就绪\n' +
+    '%c[FINCH v47]%c 量化增强包已就绪\n' +
     '  ✅ BayesianSignalAggregator  — 贝叶斯信号聚合\n' +
     '  ✅ MarketRegimeClassifier    — 市场状态分类 (Hurst+ADX)\n' +
     '  ✅ SignalQualityAssessor     — 信号质量评级 A/B/C/D\n' +
@@ -18050,10 +18075,10 @@ setTimeout(function() {
 
   // Update topbar label
   const brand = document.querySelector('.fb-brand-sub');
-  if (brand) brand.textContent = 'v45 · 智能分析';
+  if (brand) brand.textContent = 'v48 · 信号窗口';
 
   // Update title
-  document.title = 'FINCH v45 — 全维度市场分析 · 智能入场时机';
+  document.title = 'FINCH v48 — 全维度市场分析 · 信号窗口追踪';
 
   console.log(
     '%c[FINCH v45]%c 智能入场时机引擎已就绪\n' +
@@ -18109,7 +18134,7 @@ function _atrFromKlines(klines, period) {
 }
 
 // ════════════════════════════════════════════════════════════════════
-// MODULE 1: ENTRY PRICE SHELF LIFE
+// MODULE 1: ENTRY SIGNAL WINDOW
 // The core question: "How many more candles until my entry price
 // analysis goes stale and I need a fresh re-read?"
 //
@@ -18142,7 +18167,7 @@ window.FINCH_V46.shelfLife = {
 
   /**
    * compute(entryPrice, direction, currentPrice, klines, tf)
-   * Returns a shelf-life object with everything needed for the UI.
+   * Returns a signal-window object with everything needed for the UI.
    */
   compute: function(entryPrice, direction, currentPrice, klines, tf) {
     tf = tf || '4h';
@@ -18163,17 +18188,18 @@ window.FINCH_V46.shelfLife = {
       : currentPrice >= entryPrice;         // short limit: want price to rise
 
     // Freshness score 0–100 (100 = perfectly fresh / price near entry)
-    // Decays with distance-in-ATR units:
-    //   0 ATR = 100 (price AT entry)
-    //   1 ATR = 60
-    //   2 ATR = 25
-    //   3+ ATR = staleness immediate
+    // v47 tightened thresholds (crypto moves fast):
+    //   0–0.1 ATR  = 100 (at entry)
+    //   0.5 ATR    = 60
+    //   1.0 ATR    = 25  ← was 35; tightened
+    //   1.5 ATR    = 5   ← was 18; near-expired
+    //   2+ ATR     = 0   ← force EXPIRED immediately
     let freshness;
     if (distAtr <= 0.1)      freshness = 100;
     else if (distAtr <= 0.5) freshness = Math.round(100 - distAtr * 40);
-    else if (distAtr <= 1.0) freshness = Math.round(80 - distAtr * 45);
-    else if (distAtr <= 2.0) freshness = Math.round(36 - (distAtr-1.0)*18);
-    else                     freshness = Math.max(0, Math.round(18 - (distAtr-2.0)*9));
+    else if (distAtr <= 1.0) freshness = Math.round(80 - distAtr * 55);
+    else if (distAtr <= 1.5) freshness = Math.round(25 - (distAtr-1.0)*40);
+    else                     freshness = 0;
 
     // Time-based decay: how many klines have elapsed since signal was generated?
     // We estimate from the STORED signal timestamp vs last kline close time.
@@ -18207,22 +18233,22 @@ window.FINCH_V46.shelfLife = {
     // Status tiers
     let status, statusColor, statusBg, statusBd, emoji, advice;
     if (combined >= 75) {
-      status = 'FRESH · 入场价仍有效';
+      status = 'VALID · 入场窗口有效';
       statusColor = 'var(--green)'; statusBg = 'rgba(26,107,58,0.08)'; statusBd = 'rgba(26,107,58,0.25)';
       emoji = '🟢';
       advice = `入场价 ${_fmtP(entryPrice)} 仍处于有效窗口。价格距入场区 ${distPct.toFixed(2)}%（${distAtr.toFixed(2)} ATR），可按原计划挂单。`;
     } else if (combined >= 50) {
-      status = 'DEGRADING · 开始老化';
+      status = 'FADING · 窗口收窄';
       statusColor = 'var(--teal)'; statusBg = 'rgba(10,96,80,0.07)'; statusBd = 'rgba(10,96,80,0.25)';
       emoji = '🔵';
       advice = `入场价 ${_fmtP(entryPrice)} 开始老化。价格已偏离 ${distPct.toFixed(2)}%，建议重新核对${tf.toUpperCase()}级别支撑/阻力是否仍然成立。`;
     } else if (combined >= 28) {
-      status = 'STALE · 需要重新评估';
+      status = 'STALE · 需重新评估';
       statusColor = 'var(--amber)'; statusBg = 'rgba(128,80,0,0.08)'; statusBd = 'rgba(128,80,0,0.28)';
       emoji = '🟡';
       advice = `入场价 ${_fmtP(entryPrice)} 已趋于过时。市场已经移动太远或时间已过 — 需重新跑一次完整分析以获取最新入场区。`;
     } else {
-      status = 'EXPIRED · 分析已过期';
+      status = 'EXPIRED · 信号窗口关闭';
       statusColor = 'var(--red)'; statusBg = 'rgba(160,20,32,0.08)'; statusBd = 'rgba(160,20,32,0.28)';
       emoji = '🔴';
       advice = `入场价 ${_fmtP(entryPrice)} 已失效。价格偏离超过 ${distAtr.toFixed(1)} ATR，原有的价格结构支撑已不再适用 — 请立即重新分析，不要执行旧信号。`;
@@ -18276,66 +18302,106 @@ window.FINCH_V46.shelfLife = {
       const dirIcon = sl.movingToward ? '📍 价格正朝入场区靠近' : '↗️ 价格正远离入场区';
       const dirColor = sl.movingToward ? 'var(--green)' : 'var(--amber)';
 
+      // ── Trend alignment block (底层逻辑) ──────────────────────────────
+      // Pull from last analysis result for HTF trend context
+      const lastR = (typeof FINCH_V44 !== 'undefined' && FINCH_V44._lastRes)
+                  ? FINCH_V44._lastRes
+                  : (typeof S !== 'undefined' && S.lastSignal ? S.lastSignal : null);
+      let trendBlock = '';
+      if (lastR) {
+        const isBull   = lastR.isBull;
+        const mktStr   = lastR.mktStr;
+        const structBias = mktStr ? mktStr.bias : (isBull ? 'bull' : 'bear');
+        const hasCHoCH  = mktStr && (mktStr.bullCHoCH || mktStr.bearCHoCH);
+        const chochDir  = mktStr && mktStr.bullCHoCH ? 'bull' : 'bear';
+        // Does signal direction agree with market structure?
+        const signalDir = direction;
+        const structAgree = (signalDir === 'long' && structBias === 'bull') ||
+                            (signalDir === 'short' && structBias === 'bear');
+        const trendAgreeColor = structAgree ? 'var(--green)' : 'var(--red)';
+        const trendAgreeIcon  = structAgree ? '✅' : '⚠️';
+        const trendAgreeLabel = structAgree ? '信号与趋势一致' : '信号逆势 — 需额外谨慎';
+        const structLabel = structBias === 'bull' ? 'HH/HL · 多头结构'
+                          : structBias === 'bear' ? 'LL/LH · 空头结构' : '中性整理';
+        const chochNote = hasCHoCH
+          ? `<span style="font-size:9px;color:var(--violet);margin-left:6px;">⚡ CHoCH ${chochDir === 'bull' ? '多头反转' : '空头反转'}</span>`
+          : '';
+        trendBlock = `
+  <!-- Trend alignment — 底层逻辑 -->
+  <div style="padding:8px 16px;border-bottom:1px solid ${sl.statusBd}33;background:rgba(0,0,0,0.025);">
+    <div style="font-size:9px;letter-spacing:1px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:5px;">📊 趋势底层逻辑 · Trend Context</div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:11px;">
+      <span style="font-weight:700;color:${isBull?'var(--green)':'var(--red)'};">${isBull?'▲ 做多方向':'▼ 做空方向'}</span>
+      <span style="color:var(--muted)">|</span>
+      <span style="color:var(--text);">市场结构: <b>${structLabel}</b>${chochNote}</span>
+      <span style="color:var(--muted)">|</span>
+      <span style="font-weight:700;color:${trendAgreeColor};">${trendAgreeIcon} ${trendAgreeLabel}</span>
+    </div>
+  </div>`;
+      }
+
       return `
 <div style="background:${sl.statusBg};border:2px solid ${sl.statusBd};border-radius:10px;margin-bottom:10px;overflow:hidden;" id="v46_shelf_card">
   <div style="padding:11px 16px;border-bottom:1px solid ${sl.statusBd}55;display:flex;align-items:center;justify-content:space-between;gap:8px;">
     <div>
-      <div style="font-size:10px;letter-spacing:1.5px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:3px">📅 入场价有效期 · Entry Price Shelf Life</div>
-      <div style="font-size:13px;font-weight:700;color:${sl.statusColor}">${sl.emoji} ${sl.status}</div>
+      <div style="font-size:10px;letter-spacing:1.5px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:3px">📍 入场窗口评估 · Signal Window</div>
+      <div data-sw="status" style="font-size:13px;font-weight:700;color:${sl.statusColor}">${sl.emoji} ${sl.status}</div>
     </div>
     <div style="text-align:center;flex-shrink:0;">
-      <div style="font-size:38px;font-weight:900;color:${sl.statusColor};line-height:1">${sl.combined}</div>
-      <div style="font-size:9px;color:var(--muted)">新鲜度 / 100</div>
+      <div data-sw="score" style="font-size:38px;font-weight:900;color:${sl.statusColor};line-height:1">${sl.combined}</div>
+      <div style="font-size:9px;color:var(--muted)">有效度 / 100</div>
     </div>
   </div>
 
-  <!-- Freshness Bar -->
+  <!-- Signal Window Bar -->
   <div style="padding:10px 16px;border-bottom:1px solid ${sl.statusBd}33;">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
-      <span style="font-size:9px;color:var(--muted);width:24px;">过时</span>
+      <span style="font-size:9px;color:var(--muted);width:24px;">失效</span>
       <div style="flex:1;height:10px;background:var(--bg3);border-radius:5px;overflow:hidden;">
-        <div style="height:100%;border-radius:5px;background:${barGrad};width:${barW}%;transition:width 0.8s ease;"></div>
+        <div data-sw="bar" style="height:100%;border-radius:5px;background:${barGrad};width:${barW}%;transition:width 0.8s ease;"></div>
       </div>
-      <span style="font-size:9px;color:var(--muted);width:24px;text-align:right;">新鲜</span>
+      <span style="font-size:9px;color:var(--muted);width:24px;text-align:right;">有效</span>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:6px;font-size:10px;">
       <div style="text-align:center;padding:4px 0;background:rgba(255,255,255,0.45);border-radius:4px;">
-        <div style="color:var(--muted);font-size:8px;margin-bottom:1px">价格新鲜度</div>
-        <div style="font-weight:700;color:${sl.statusColor}">${sl.freshness}%</div>
+        <div style="color:var(--muted);font-size:8px;margin-bottom:1px">价格有效度</div>
+        <div data-sw="priceFresh" style="font-weight:700;color:${sl.statusColor}">${sl.freshness}%</div>
       </div>
       <div style="text-align:center;padding:4px 0;background:rgba(255,255,255,0.45);border-radius:4px;">
-        <div style="color:var(--muted);font-size:8px;margin-bottom:1px">时间新鲜度</div>
-        <div style="font-weight:700;color:${sl.statusColor}">${sl.timeFreshness}%</div>
+        <div style="color:var(--muted);font-size:8px;margin-bottom:1px">时间有效度</div>
+        <div data-sw="timeFresh" style="font-weight:700;color:${sl.statusColor}">${sl.timeFreshness}%</div>
       </div>
       <div style="text-align:center;padding:4px 0;background:rgba(255,255,255,0.45);border-radius:4px;">
         <div style="color:var(--muted);font-size:8px;margin-bottom:1px">距入场价</div>
-        <div style="font-weight:700;color:${sl.combined>=50?'var(--text)':'var(--red)'}">${sl.distPct.toFixed(2)}%</div>
+        <div data-sw="distPct" style="font-weight:700;color:${sl.combined>=50?'var(--text)':'var(--red)'}">${sl.distPct.toFixed(2)}%</div>
       </div>
     </div>
   </div>
+
+  ${trendBlock}
 
   <!-- Entry price detail row -->
   <div style="padding:9px 16px;border-bottom:1px solid ${sl.statusBd}33;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
     <div>
       <div style="font-size:8px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:2px">入场参考价</div>
       <div style="font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--bright)">${_fmtP(entryPrice)}</div>
-      <div style="font-size:9px;color:${dirColor};margin-top:2px">${dirIcon}</div>
+      <div data-sw="dirIcon" style="font-size:9px;color:${dirColor};margin-top:2px">${dirIcon}</div>
     </div>
     <div style="text-align:right;">
       <div style="font-size:8px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:2px">当前价</div>
-      <div style="font-size:16px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--muted)">${_fmtP(currentPrice)}</div>
-      <div style="font-size:9px;color:var(--muted);margin-top:2px">${sl.distAtr.toFixed(2)} ATR 偏差</div>
+      <div data-sw="currentPx" style="font-size:16px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--muted)">${_fmtP(currentPrice)}</div>
+      <div data-sw="distAtr" style="font-size:9px;color:var(--muted);margin-top:2px">${sl.distAtr.toFixed(2)} ATR 偏差</div>
     </div>
     <div style="text-align:right;flex-shrink:0;">
       <div style="font-size:8px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:2px">再评估时限</div>
-      <div style="font-size:11px;font-weight:700;color:${sl.statusColor}">${sl.expiryEta}</div>
+      <div data-sw="expiry" style="font-size:11px;font-weight:700;color:${sl.statusColor}">${sl.expiryEta}</div>
       <div style="font-size:9px;color:var(--muted);margin-top:2px">${sl.signalAge ? '分析生成于 ' + sl.signalAge : '本次分析刚生成'}</div>
     </div>
   </div>
 
   <!-- Advice -->
   <div style="padding:10px 16px;">
-    <div style="font-size:11px;color:var(--text);line-height:1.75;border-left:3px solid ${sl.statusColor};padding-left:10px;">${sl.advice}</div>
+    <div data-sw="advice" style="font-size:11px;color:var(--text);line-height:1.75;border-left:3px solid ${sl.statusColor};padding-left:10px;">${sl.advice}</div>
   </div>
 </div>`;
     } catch(e) {
@@ -18633,7 +18699,7 @@ window.FINCH_V46.druckenmiller = {
       const tf = res.tf || (typeof S !== 'undefined' ? S.stratTF : '4h');
       const price = res.price || (typeof S !== 'undefined' ? S.lastPx : 0);
 
-      // 1. Stamp this analysis timestamp for shelf-life tracking
+      // 1. Stamp this analysis timestamp for signal-window tracking
       window.FINCH_V46.shelfLife.stampSignal(tf);
 
       // 2. Find the strat-area div
@@ -18646,7 +18712,7 @@ window.FINCH_V46.druckenmiller = {
         if (el) el.remove();
       });
 
-      // 4. Render shelf-life card
+      // 4. Render signal-window card
       const entryPrice = res.entry || price;
       const direction  = res.isBull ? 'long' : 'short';
       const shelfHTML  = window.FINCH_V46.shelfLife.renderCard(entryPrice, direction, price, klines, tf);
@@ -18694,6 +18760,7 @@ window.FINCH_V46.druckenmiller = {
     }
 
     let _injectDebounce = null;
+    let _injectInProgress = false;  // v48: guard against double-fire
     const observer = new MutationObserver(function(mutations) {
       // Check if actual analysis content was added (not our own v46 divs)
       const relevant = mutations.some(m => {
@@ -18701,15 +18768,18 @@ window.FINCH_V46.druckenmiller = {
         return Array.from(m.addedNodes).some(n => {
           return n.nodeType === 1 &&
                  !n.id?.startsWith('v46_') &&
+                 !n.id?.startsWith('v47_') &&
                  (n.classList?.contains('strat-area') ||
                   n.querySelector?.('.dir-hero') ||
                   n.querySelector?.('.entry-banner'));
         });
       });
-      if (!relevant) return;
+      if (!relevant || _injectInProgress) return;
 
       clearTimeout(_injectDebounce);
       _injectDebounce = setTimeout(function() {
+        if (_injectInProgress) return;
+        _injectInProgress = true;
         try {
           // Get latest result from FINCH_V44 or S
           let res = null, klines = [];
@@ -18718,7 +18788,6 @@ window.FINCH_V46.druckenmiller = {
           } else if (typeof S !== 'undefined' && S._lastRes) {
             res = S._lastRes;
           }
-          // Fallback: try to reconstruct minimal res from DOM
           if (!res && typeof S !== 'undefined') {
             const tf = S.stratTF || '4h';
             klines = S.klines[S.sym + tf] || [];
@@ -18729,17 +18798,18 @@ window.FINCH_V46.druckenmiller = {
             injectV46Cards(res, klines);
           }
         } catch(ex) {}
-      }, 300);
+        setTimeout(function() { _injectInProgress = false; }, 1000); // release guard after 1s
+      }, 600);  // v48: 600ms debounce (was 300ms) — avoids race with auto-reanalysis
     });
 
     observer.observe(stratScroll, { childList: true, subtree: true });
-    console.log('[FINCH v46] MutationObserver 已就绪 — 等待分析渲染');
+    console.log('[FINCH v48] MutationObserver 已就绪 — 等待分析渲染');
   }
 
   // Also patch the _Φ9x function directly if it exists
+  // v48: REMOVED the setTimeout(injectV46Cards) here — MutationObserver already handles it.
+  // Keeping function only to cache _lastRes.
   function patchAnalysisFn() {
-    // Look for the function that generates the main analysis result
-    // It's called within setStrat / runFinchAnalysis / etc.
     const fnNames = ['_Φ9x','_phi9x','runFinchAnalysis','_computeAnalysis'];
     for (const fn of fnNames) {
       if (typeof window[fn] === 'function') {
@@ -18747,43 +18817,136 @@ window.FINCH_V46.druckenmiller = {
         window[fn] = function() {
           const result = orig.apply(this, arguments);
           if (result && typeof result === 'object') {
-            // Cache last result for v46
+            // Cache last result only — injection handled by MutationObserver
             if (typeof FINCH_V44 !== 'undefined') FINCH_V44._lastRes = result;
-            try {
-              const tf = result.tf || (typeof S !== 'undefined' ? S.stratTF : '4h');
-              const klines = (typeof S !== 'undefined') ? (S.klines[S.sym + tf] || []) : [];
-              setTimeout(() => injectV46Cards(result, klines), 400);
-            } catch(e) {}
           }
           return result;
         };
-        console.log(`[FINCH v46] 已拦截 ${fn}`);
+        console.log(`[FINCH v48] 已拦截 ${fn} (仅缓存结果)`);
       }
     }
   }
 
-  // Periodically refresh shelf-life display (the Druckenmiller card doesn't need
-  // real-time refresh since it's based on computed indicators, but the shelf-life
-  // freshness should update as time passes)
-  setInterval(function() {
+  // ── v47: REAL-TIME signal-window refresh + auto-reanalysis ────────────────────
+  // Refresh every 5 seconds (synced to WS tick rhythm).
+  // If price drifts >1×ATR from stored entry → trigger a full re-analysis
+  // automatically so the user never acts on a stale signal.
+  var _v47_lastReanalysisTs = 0;
+  var _v47_reanalysisCooldown = 180000; // v48: 180s cooldown (was 90s) — prevents cascade
+
+  // ── v48 FIX: in-place field update (no DOM replaceChild → no flicker/crash) ──
+  // Only touch the text/color fields inside the existing card nodes.
+  // Full card re-injection only happens when renderStrategy fires (via MutationObserver).
+  function _v48_refreshSignalWindow() {
     const card = document.getElementById('v46_shelf_card');
     if (!card || typeof S === 'undefined') return;
     try {
       const sym = S.sym;
       const tf  = S.stratTF || '4h';
       const key = 'finch_v46_signal_' + sym + '_' + tf;
-      const stored = JSON.parse(localStorage.getItem(key) || 'null');
+      let stored = null;
+      try { stored = JSON.parse(localStorage.getItem(key) || 'null'); } catch(e) {}
       if (!stored) return;
       const klines = S.klines[sym + tf] || [];
-      const price  = S.lastPx;
-      // Get entry from stored or from last analysis
+      if (klines.length < 14) return;
+      const price = S.lastPx;
+      if (!price || price <= 0) return;
       const entry = stored.entry || price;
-      const direction = (typeof FINCH_V44 !== 'undefined' && FINCH_V44._lastRes)
-        ? (FINCH_V44._lastRes.isBull ? 'long' : 'short') : 'long';
-      const newHTML = window.FINCH_V46.shelfLife.renderCard(entry, direction, price, klines, tf);
-      card.outerHTML = newHTML;
+      const lastRes = (typeof FINCH_V44 !== 'undefined' && FINCH_V44._lastRes) ? FINCH_V44._lastRes : null;
+      const direction = lastRes ? (lastRes.isBull ? 'long' : 'short') : 'long';
+
+      const sl = window.FINCH_V46.shelfLife.compute(entry, direction, price, klines, tf);
+
+      // ── Auto-reanalysis: only fetch+renderStrategy, NOT the cascade ──────
+      // Cooldown 180s. Only triggers if card exists (analysis ran at least once).
+      const shouldRerun = (
+        sl.combined < 45 &&
+        sl.distAtr > 1.0 &&
+        (Date.now() - _v47_lastReanalysisTs) > _v47_reanalysisCooldown
+      );
+      if (shouldRerun) {
+        _v47_lastReanalysisTs = Date.now();
+        // Show non-blocking toast (no card DOM mutation)
+        const existing = document.getElementById('v47_reanalysis_toast');
+        if (!existing) {
+          const note = document.createElement('div');
+          note.id = 'v47_reanalysis_toast';
+          note.style.cssText = 'position:fixed;bottom:70px;left:50%;transform:translateX(-50%);' +
+            'background:rgba(139,105,20,0.92);color:#fff;padding:8px 18px;border-radius:20px;' +
+            'font-size:12px;font-weight:700;z-index:9999;pointer-events:none;';
+          note.textContent = '⚡ 价格偏离 >1×ATR — 重新分析中...';
+          document.body.appendChild(note);
+          setTimeout(function() { try { note.remove(); } catch(e){} }, 4000);
+        }
+        // Only renderStrategy — avoid cascade that caused crash
+        if (typeof fetchKlines === 'function') {
+          fetchKlines(sym, tf, 300).then(function() {
+            try { if (typeof renderStrategy === 'function') renderStrategy(); } catch(e) {}
+            window.FINCH_V46.shelfLife.stampSignal(tf);
+          }).catch(function() {});
+        }
+        return;
+      }
+
+      // ── In-place field update (no replaceChild, no flicker) ──────────────
+      // Update only the specific text nodes / style properties inside the card.
+      const barW = Math.min(100, sl.combined);
+      const barGrad = sl.combined >= 75 ? '#1A6B3A'
+                    : sl.combined >= 50 ? '#0A6050'
+                    : sl.combined >= 28 ? '#805000' : '#A01420';
+      const dirIcon  = sl.movingToward ? '📍 价格正朝入场区靠近' : '↗️ 价格正远离入场区';
+      const dirColor = sl.movingToward ? 'var(--green)' : 'var(--amber)';
+
+      function _setText(sel, txt) {
+        const el = card.querySelector(sel);
+        if (el && el.textContent !== txt) el.textContent = txt;
+      }
+      function _setHtml(sel, html) {
+        const el = card.querySelector(sel);
+        if (el) el.innerHTML = html;
+      }
+      function _setStyle(sel, prop, val) {
+        const el = card.querySelector(sel);
+        if (el) el.style[prop] = val;
+      }
+
+      // Score number + status label
+      _setText('[data-sw="score"]',  String(sl.combined));
+      _setText('[data-sw="status"]', sl.emoji + ' ' + sl.status);
+      _setStyle('[data-sw="status"]', 'color', sl.statusColor);
+      _setStyle('[data-sw="score"]',  'color', sl.statusColor);
+
+      // Progress bar width
+      const bar = card.querySelector('[data-sw="bar"]');
+      if (bar) { bar.style.width = barW + '%'; bar.style.background = barGrad; }
+
+      // Sub-scores
+      _setText('[data-sw="priceFresh"]',  sl.freshness + '%');
+      _setText('[data-sw="timeFresh"]',   sl.timeFreshness + '%');
+      _setText('[data-sw="distPct"]',     sl.distPct.toFixed(2) + '%');
+
+      // Direction indicator
+      _setText('[data-sw="dirIcon"]',  dirIcon);
+      _setStyle('[data-sw="dirIcon"]', 'color', dirColor);
+
+      // Prices (only update if changed significantly)
+      _setText('[data-sw="currentPx"]', _fmtP(price));
+      _setText('[data-sw="distAtr"]',   sl.distAtr.toFixed(2) + ' ATR 偏差');
+      _setText('[data-sw="expiry"]',    sl.expiryEta);
+      _setStyle('[data-sw="expiry"]',   'color', sl.statusColor);
+
+      // Advice text
+      _setText('[data-sw="advice"]', sl.advice);
+      _setStyle('[data-sw="advice"]', 'borderLeftColor', sl.statusColor);
+
+      // Card border + background
+      card.style.borderColor  = sl.statusBd;
+      card.style.background   = sl.statusBg;
+
     } catch(e) {}
-  }, 60000); // refresh every minute
+  }
+
+  setInterval(_v48_refreshSignalWindow, 10000); // 10s — less aggressive than v47's 5s
 
   // Init
   setTimeout(function() {
@@ -18792,16 +18955,17 @@ window.FINCH_V46.druckenmiller = {
 
     // Update title bar
     const brand = document.querySelector('.fb-brand-sub');
-    if (brand) brand.textContent = 'v46 · Druckenmiller';
-    document.title = 'FINCH v46 — 全维度市场分析 · Druckenmiller框架';
+    if (brand) brand.textContent = 'v48 · 信号窗口';
+    document.title = 'FINCH v48 — 全维度市场分析 · 信号窗口追踪';
 
     console.log(
-      '%c[FINCH v46]%c Druckenmiller框架 + 入场有效期引擎已就绪\n' +
-      '  ✅ EntryPriceShelfLife    — ATR衰减模型，精确到"入场价还有多新鲜"\n' +
-      '  ✅ DruckenmillerScore     — 流动性35% · 前瞻盈利25% · 广度25% · 读盘15%\n' +
-      '  ✅ FatPitchDetector       — 分数≥80自动触发 Fat Pitch 重仓信号\n' +
-      '  ✅ DivergenceWarning      — 盈利超预期但价格下跌 → 6个月坏消息预警\n' +
-      '  ✅ FiveTierPositionMap    — Fat Pitch/高信念/中性/低信念/资本保护\n' +
+      '%c[FINCH v48]%c 信号窗口引擎已就绪\n' +
+      '  ✅ SignalWindow (replaces "shelf life") — 10秒原地更新 (无DOM替换/无闪退)\n' +
+      '  ✅ In-place field update              — data-sw属性定向更新，不替换节点\n' +
+      '  ✅ Double-inject guard                — _injectInProgress锁 + 600ms debounce\n' +
+      '  ✅ Auto-reanalysis cooldown 180s      — 仅触发renderStrategy，不级联\n' +
+      '  ✅ Trend context block                — 市场结构/CHoCH/趋势一致性显示\n' +
+      '  ✅ DruckenmillerScore                 — 流动性35% · 前瞻盈利25% · 广度25% · 读盘15%\n' +
       '  Access via: window.FINCH_V46',
       'color:#8B6914;font-weight:bold','color:inherit'
     );
