@@ -8593,7 +8593,9 @@ function _doRenderStrategy(res){
   }
 
   const isTDSym = isTDAsset(res.sym||S.sym);
-  const mockBanner=res.isMock&&!isTDSym?`<div style="background:rgba(128,80,0,0.08);border:1px solid rgba(128,80,0,0.25);border-radius:6px;padding:8px 12px;margin-bottom:10px;font-size:11px;color:var(--amber)">⚠️ <strong>模拟数据</strong> — 连接中，请稍候。<button onclick="loadAll(S.sym)" style="margin-left:8px;padding:3px 10px;border:1px solid var(--amber);border-radius:3px;background:transparent;color:var(--amber);cursor:pointer;font-family:inherit;font-size:11px">🔄 重试</button></div>`:'';
+  // v59: also surface _isFallback (fires when klines unavailable but kl._isMock is false)
+  const _isFallbackRes = !!(res._isFallback);
+  const mockBanner=(res.isMock||_isFallbackRes)&&!isTDSym?`<div style="background:rgba(128,80,0,0.08);border:1px solid rgba(128,80,0,0.25);border-radius:6px;padding:8px 12px;margin-bottom:10px;font-size:11px;color:var(--amber)">⚠️ <strong>${_isFallbackRes?'保底模式':'模拟数据'}</strong> — ${_isFallbackRes?'无法获取真实 K 线，信号仅供参考。':'连接中，请稍候。'}<button onclick="loadAll(S.sym)" style="margin-left:8px;padding:3px 10px;border:1px solid var(--amber);border-radius:3px;background:transparent;color:var(--amber);cursor:pointer;font-family:inherit;font-size:11px">🔄 重试</button></div>`:'';
 
   // FIX_v55 P1: Direction is authoritative from _Φ9x/res.isBull — _Ψ7v is used ONLY
   // for narrative content (riskFlags, scenarios, watchFor). It must NOT override isBull.
@@ -21930,11 +21932,11 @@ window._Φ9x = function(tf) {
           {p: Math.round(entry*1.035*10000)/10000, pct:3.5, note:'宽止损', riskPct:'3.50'},
         ];
         res = {
-          isBull, score: isBull?2:-2, conf: 45,
+          isBull, score: isBull?2:-2, conf: 35,  // v59: fallback conf capped at 35
           entry, entryMin: entry*0.998, entryMax: entry*1.002,
-          entryType: 'market', entryNote: '保底信号 · 数据加载中', entryZone: '现价附近',
+          entryType: 'market', entryNote: '⚠️ 保底信号 · 无真实K线数据', entryZone: '现价附近',
           tps, sls, rr: 1.5,
-          sigs: [{l:'⚙️ 简化动量引擎', c:'sig-neut'},{l: isBull?'MA5>MA20多头':'MA5<MA20空头', c: isBull?'sig-bull':'sig-bear'}],
+          sigs: [{l:'⚠️ 保底模式 · 数据加载中', c:'sig-neut'},{l:'⚙️ 简化动量引擎', c:'sig-neut'},{l: isBull?'MA5>MA20多头':'MA5<MA20空头', c: isBull?'sig-bull':'sig-bear'}],
           rsi: 50, macdD: {hist:0,bullDiv:false,bearDiv:false,histArr:[]},
           atr: atrEst, atrRaw: atrEst, atrPct: 0.015,
           tf, price, isMock: !!(kl && kl._isMock),
