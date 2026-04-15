@@ -1,7 +1,7 @@
 <!-- FINCH — 全维度市场分析系统 (加密 · 黄金 · 白银 · 石油)
-  v61 — NaN ATR修复 · 入场窗口重置修复 · refreshLoop性能优化
+  v62 — NaN ATR修复 · 入场窗口重置修复 · refreshLoop性能优化 · scaledTargets/Kelly NaN修复
   ═══════════════════════════════════════════════════════════════════════════
-  FINCH v61 核心修复 (2025-04-15):
+  FINCH v62 核心修复 (2025-04-15):
   ✓ NaN ATR彻底消灭 — stamp()/evaluate()双层防御，四重保底逻辑
   ✓ 入场窗口"接近失效"BUG修复 — 每次新分析强制重新stamp，新鲜度从100%开始
   ✓ refreshLoop性能优化 — 改用buildStrategyMemo，仅信号对象真正变化时才重渲染
@@ -16,7 +16,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://fonts.googleapis.com https://fonts.gstatic.com https://api.binance.com https://api1.binance.com https://api2.binance.com https://api3.binance.com https://api4.binance.com https://data-api.binance.vision https://data-stream.binance.vision https://fapi.binance.com https://api.alternative.me https://api.coingecko.com https://api.llama.fi https://corsproxy.io https://api.allorigins.win https://thingproxy.freeboard.io https://api.blockchain.info https://www.alphavantage.co https://cdn.jsdelivr.net https://open.er-api.com wss://stream.binance.com wss://data-stream.binance.vision; connect-src 'self' https: wss: data: blob:; frame-ancestors 'none';">
 <meta http-equiv="X-Frame-Options" content="DENY">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>FINCH v61 — 全维度市场分析 · NaN修复·窗口修复·性能优化</title>
+<title>FINCH v62 — 全维度市场分析 · NaN修复·窗口修复·性能优化</title>
 
 <!-- ═══ PWA / iOS APP META ═══ -->
 <meta name="mobile-web-app-capable" content="yes">
@@ -20789,11 +20789,17 @@ function _v53_scaledTargets(res) {
   try {
     const tf = res.tf || '4h';
     const sc = (TF_SCALE_V53[tf] || TF_SCALE_V53['4h']).scale;
-    const base = res.atrRaw || res.atr || res.price * 0.02;
+    const _price = res.price || 0;
+    const base = (res.atrRaw && isFinite(res.atrRaw) && res.atrRaw > 0) ? res.atrRaw
+                : (res.atr && isFinite(res.atr) && res.atr > 0) ? res.atr
+                : _price * 0.02;
     // 归一化到4H为基准（scale=4.00）：除以4，乘以目标时框scale
     const norm = sc / 4.00;
     const mult = base * 2.0 * norm;  // baseMove = 2×ATR×scale_ratio
-    const { entry, isBull } = res;
+    // v62: fallback entry → price to prevent NaN cascade when entry not yet set
+    const entry = (res.entry && isFinite(res.entry) && res.entry > 0) ? res.entry : _price;
+    const isBull = res.isBull;
+    if (!entry || entry <= 0) return null;
 
     const tpScaled = [0.6, 1.0, 1.5].map(r => {
       const p = isBull ? entry + mult * r : entry - mult * r;
@@ -21011,12 +21017,17 @@ class DynamicPositionSizer_V53 {
   calculate(res, sigTracker) {
     if (!res) return null;
     try {
-      const { conf, rr, price, atrRaw, atr, isBull } = res;
-      const atrV = atrRaw || atr || price * 0.02;
+      const { price, atrRaw, atr, isBull } = res;
+      // v62: guard conf and rr — both may be undefined/NaN when entry window not yet computed
+      const conf = (res.conf !== undefined && isFinite(res.conf)) ? res.conf : 50;
+      const rr   = (res.rr   !== undefined && isFinite(res.rr)   && res.rr > 0) ? res.rr : 1.5;
+      const atrV = (atrRaw && isFinite(atrRaw) && atrRaw > 0) ? atrRaw
+                 : (atr && isFinite(atr) && atr > 0) ? atr
+                 : (price > 0 ? price * 0.02 : 1);
 
       // 胜率：从置信度+信号质量估算（35%–72%范围）
       const winRate = Math.min(0.72, Math.max(0.35, 0.35 + (conf - 22) / (90 - 22) * 0.37));
-      const rrSafe = Math.max(1.0, rr || 1.5);
+      const rrSafe = Math.max(1.0, rr);
 
       // Kelly: f = W - (1-W)/R
       const kelly = Math.max(0, winRate - (1 - winRate) / rrSafe);
@@ -21340,7 +21351,7 @@ function _v53_injectPanels() {
         return `<div style="display:flex;align-items:center;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--line);font-size:10px;">
           <span style="font-weight:700;color:${c}">${label}</span>
           <span style="font-weight:700;color:${c};font-variant-numeric:tabular-nums">${fmtPFn(t.p)}</span>
-          <span style="color:var(--muted)">${(t.pct > 0 ? '+' : '') + t.pct.toFixed(2)}%</span>
+          <span style="color:var(--muted)">${isFinite(t.pct) ? ((t.pct > 0 ? '+' : '') + t.pct.toFixed(2) + '%') : '--'}</span>
         </div>`;
       }).join('');
       const slRows = scaled.slScaled.map((s,i) => {
@@ -21348,7 +21359,7 @@ function _v53_injectPanels() {
         return `<div style="display:flex;align-items:center;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--line);font-size:10px;">
           <span style="font-weight:700;color:var(--red)">${label}</span>
           <span style="font-weight:700;color:var(--red);font-variant-numeric:tabular-nums">${fmtPFn(s.p)}</span>
-          <span style="color:var(--muted)">${s.pct.toFixed(2)}%</span>
+          <span style="color:var(--muted)">${isFinite(s.pct) ? s.pct.toFixed(2) + '%' : '--'}</span>
         </div>`;
       }).join('');
       scaledHTML = `<div style="background:rgba(255,255,255,0.6);border:1px solid var(--card-bd);border-radius:10px;padding:12px 14px;margin-bottom:10px;box-shadow:var(--shadow);">
