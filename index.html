@@ -9057,323 +9057,324 @@ function _doRenderStrategy(res){
   $html('stratArea',`
   ${mockBanner}
 
-  <!-- ══════════════════════════════════════ -->
-  <!-- BLOCK 1: MAIN VERDICT CARD            -->
-  <!-- ══════════════════════════════════════ -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- LAYER 0 · COMMAND CARD — 方向 · 入场 · SL1 · TP1/2/3 一眼看懂    -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
   <div style="border:2px solid ${actionBorder};border-radius:12px;background:${actionBg};margin-bottom:10px;overflow:hidden;">
 
-    <!-- Header row: direction + confidence -->
-    <div style="padding:16px 18px 12px;display:flex;align-items:flex-start;justify-content:space-between;border-bottom:1px solid ${actionBorder}20;">
+    <!-- Row A: Direction + Confidence -->
+    <div style="padding:14px 16px 10px;display:flex;align-items:flex-start;justify-content:space-between;gap:10px;border-bottom:1px solid ${actionBorder}30;">
       <div>
-        <div style="font-size:10px;letter-spacing:2.5px;color:var(--muted);text-transform:uppercase;margin-bottom:6px">🦅 FINCH 综合裁决 · ${tm.lbl}</div>
-        <div style="font-size:20px;font-weight:600;color:${actionColor};line-height:1;letter-spacing:0">${actionIcon} ${actionWord}</div>
-        <div style="display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap;">
-          <span style="font-size:11px;color:var(--muted)">评分 <strong style="color:var(--text)">${res.score>0?'+':''}${res.score.toFixed(1)}</strong></span>
-          <span style="font-size:11px;color:var(--muted)">·</span>
-          <span style="font-size:11px;font-weight:700;color:${verdict?.urgency==='high'?'var(--red)':verdict?.urgency==='medium'?'var(--amber)':'var(--muted)'}">${urgencyMap[verdict?.urgency||'low']}</span>
-        </div>
+        <div style="font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:4px">🦅 FINCH · ${tm.lbl}</div>
+        <div style="font-size:26px;font-weight:800;color:${actionColor};line-height:1;letter-spacing:-0.5px">${actionIcon} ${actionWord}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:5px">净票 ${res.score>0?'+':''}${res.score.toFixed(1)} · ${allTFs_chk.filter(t=>tfResults[t]===true).length}多 ${allTFs_chk.filter(t=>tfResults[t]===false).length}空</div>
       </div>
       <div style="text-align:right;flex-shrink:0">
-        <div style="font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px">置信度</div>
-        <div style="font-size:30px;font-weight:700;color:${conf>=70?'var(--green)':conf>=55?'var(--amber)':'var(--red)'};line-height:1">${conf}%</div>
-        <div style="height:5px;background:var(--bg3);border-radius:3px;margin-top:6px;width:90px;overflow:hidden;margin-left:auto">
-          <div style="height:100%;width:${conf}%;background:${conf>=70?'var(--green)':conf>=55?'var(--amber)':'var(--red)'};border-radius:3px;transition:width .6s"></div>
+        <div style="font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:3px">置信度</div>
+        <div style="font-size:36px;font-weight:800;color:${conf>=70?'var(--green)':conf>=55?'var(--amber)':'var(--red)'};line-height:1">${conf}%</div>
+        <div style="height:4px;background:var(--bg3);border-radius:2px;margin-top:5px;width:80px;overflow:hidden;margin-left:auto">
+          <div style="height:100%;width:${conf}%;background:${conf>=70?'var(--green)':conf>=55?'var(--amber)':'var(--red)'};border-radius:2px"></div>
         </div>
+        <div style="font-size:10px;color:var(--muted);margin-top:3px">历史胜率 <strong style="color:${conf>=70?'var(--green)':conf>=55?'var(--amber)':'var(--red)'}">${conf}%</strong></div>
       </div>
     </div>
 
-    <!-- Market scenario narrative -->
-    <div style="padding:13px 18px;background:rgba(255,255,255,0.5);border-bottom:1px solid ${actionBorder}15;">
-      <div style="font-size:11px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:6px">📖 行情研判</div>
-      <div style="font-size:13px;color:var(--text);line-height:1.85;">${scenarioText}</div>
+    ${!isWait ? `
+    <!-- Row B: Entry zone -->
+    <div style="padding:10px 16px 8px;border-bottom:1px solid ${actionBorder}20;">
+      <div style="font-size:9px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:5px">📍 入场区</div>
+      <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;">
+        <span style="font-size:26px;font-weight:800;color:${actionColor};font-variant-numeric:tabular-nums">${fmtP(entry)}</span>
+        ${res.entryMin&&res.entryMax&&Math.abs(res.entryMin-res.entryMax)>0.0001?`<span style="font-size:12px;color:var(--muted)">区间 ${fmtP(res.entryMin)} – ${fmtP(res.entryMax)}</span>`:''}
+        <span style="font-size:10px;padding:2px 8px;border-radius:8px;background:${entryType==='market'?'rgba(26,107,58,0.12)':'rgba(128,80,0,0.1)'};color:${entryType==='market'?'var(--green)':'var(--amber)'};font-weight:700">${entryType==='market'?'市价入场':'限价挂单'}</span>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:2px">${entryNote}</div>
     </div>
 
-    <!-- Entry zone + key levels -->
-    <div style="padding:13px 18px;${!isWait?'border-bottom:1px solid '+actionBorder+'15;':''}">
-      ${!isWait?`
-      <div style="font-size:11px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:8px">📍 入场区间</div>
-      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px;">
-        <div>
-          <span style="font-size:26px;font-weight:700;color:${actionColor};font-variant-numeric:tabular-nums">${fmtP(entry)}</span>
-          ${res.entryMin&&res.entryMax&&Math.abs(res.entryMin-res.entryMax)>0.01?
-            `<span style="font-size:12px;color:var(--muted);margin-left:8px">区间 ${fmtP(res.entryMin)}–${fmtP(res.entryMax)}</span>`:''}
-        </div>
-        <span style="font-size:11px;padding:3px 10px;border-radius:10px;background:${entryType==='market'?'rgba(26,107,58,0.12)':entryType==='limit-wait'?'rgba(128,80,0,0.1)':'rgba(26,58,138,0.1)'};color:${entryType==='market'?'var(--green)':entryType==='limit-wait'?'var(--amber)':'var(--blue)'};font-weight:700">${entryType==='market'?'💫 市价立即入场':entryType==='limit-wait'?'⏳ 限价等待':' 📋 限价挂单'}</span>
-        ${res.entryValidityLabel?`<span style="font-size:10px;padding:3px 9px;border-radius:8px;background:rgba(0,0,0,0.04);color:var(--muted);border:1px solid var(--line2);font-variant-numeric:tabular-nums" title="价格指示有效窗口 — 超时或偏离0.5×ATR后需重新分析">⏱ 价格有效 ${res.entryValidityLabel}</span>`:''}
+    <!-- Row C: TP grid + SL1 strip -->
+    <div style="padding:10px 16px 6px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin-bottom:7px;">
+        ${tps.map((t,i)=>{
+          const valid=isBull?t.p>entry:t.p<entry;
+          if(!valid||!t.p||!isFinite(t.p))return'';
+          const tpC=['var(--teal)','var(--green)','var(--blue)'];
+          const tpBG=['rgba(10,96,80,0.07)','rgba(26,107,58,0.07)','rgba(26,58,138,0.07)'];
+          const tpBD=['rgba(10,96,80,0.22)','var(--green-bd)','rgba(26,58,138,0.22)'];
+          const rrV=(Math.abs(t.p-entry)/Math.max(Math.abs(sls[0].p-entry),0.001)).toFixed(1);
+          return '<div style="background:'+tpBG[i]+';border:1px solid '+tpBD[i]+';border-radius:7px;padding:7px 8px;">'
+            +'<div style="font-size:9px;font-weight:700;color:'+tpC[i]+';letter-spacing:1px;margin-bottom:2px">TP'+(i+1)+'<span style="font-weight:400;font-size:9px;margin-left:4px;color:var(--muted)">'+rrV+'R</span></div>'
+            +'<div style="font-size:15px;font-weight:700;color:'+tpC[i]+';font-variant-numeric:tabular-nums;line-height:1.1">'+fmtP(t.p)+'</div>'
+            +'<div style="font-size:11px;font-weight:700;color:'+tpC[i]+';margin-top:1px">'+fmtPct(t.pct)+'</div>'
+            +'</div>';
+        }).join('')}
       </div>
-      <div style="font-size:11px;color:var(--muted);margin-bottom:8px">${entryNote}</div>
-      <div style="display:flex;gap:16px;font-size:12px;flex-wrap:wrap;">
-        <span>最近支撑 <strong style="color:var(--green)">${fmtP(res.nearestSupport||sls[0].p)}</strong></span>
-        <span>最近阻力 <strong style="color:var(--red)">${fmtP(res.nearestResist||tps[0].p)}</strong></span>
-        <span>VWAP <strong style="color:${res.vwapBull?'var(--green)':'var(--red)'}">${fmtP(res.vwap)} ${res.vwapBull?'↑':'↓'}</strong></span>
-        <span>R:R <strong style="color:${rr>=2?'var(--green)':rr>=1.5?'var(--amber)':'var(--red)'}">${rr.toFixed(2)}:1</strong></span>
-      </div>`
-      :`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-        <div style="padding:12px;background:rgba(26,107,58,0.07);border:1px solid var(--green-bd);border-radius:8px;text-align:center;">
-          <div style="font-size:10px;color:var(--green);font-weight:700;margin-bottom:4px;letter-spacing:1px">▲ 突破此价位 → 做多</div>
+      <!-- SL1 recommended strip -->
+      ${(()=>{
+        const sl1=sls[0];
+        const sl1Valid=sl1&&isFinite(sl1.p)&&(isBull?sl1.p<entry:sl1.p>entry);
+        if(!sl1Valid)return'';
+        const riskPct=Math.abs((sl1.p-entry)/entry*100).toFixed(2);
+        const rrV=(tps[0]&&isFinite(tps[0].p)?Math.abs(tps[0].p-entry)/Math.max(Math.abs(sl1.p-entry),0.001):0).toFixed(2);
+        return '<div style="display:grid;grid-template-columns:auto 1fr auto;gap:6px;align-items:center;padding:8px 10px;background:rgba(160,20,32,0.06);border:1px solid rgba(160,20,32,0.18);border-radius:7px;margin-bottom:8px;">'
+          +'<div style="font-size:9px;font-weight:700;color:var(--red);letter-spacing:1px;white-space:nowrap">🛡️ SL1<br><span style="font-weight:400;color:var(--muted)">推荐</span></div>'
+          +'<div style="text-align:center"><span style="font-size:18px;font-weight:700;color:var(--red);font-variant-numeric:tabular-nums">'+fmtP(sl1.p)+'</span><span style="font-size:12px;font-weight:700;color:var(--red);margin-left:5px">'+fmtPct(sl1.pct)+'</span></div>'
+          +'<div style="text-align:right"><div style="font-size:12px;font-weight:700;color:'+(parseFloat(rrV)>=2?'var(--green)':parseFloat(rrV)>=1.5?'var(--amber)':'var(--red)')+'">R:R '+rrV+'</div><div style="font-size:10px;color:var(--muted)">风险 '+riskPct+'%</div></div>'
+          +'</div>';
+      })()}
+    </div>
+
+    <!-- Risk flags + watchFor -->
+    ${verdict?.riskFlags?.length?`<div style="padding:0 16px 8px;display:flex;flex-wrap:wrap;gap:4px;">${verdict.riskFlags.map(f=>`<span style="font-size:10px;padding:2px 7px;border-radius:8px;background:rgba(128,80,0,0.08);color:var(--amber);border:1px solid rgba(128,80,0,0.22);font-weight:700">${f}</span>`).join('')}</div>`:''}
+    ${verdict?.watchFor?`<div style="padding:0 16px 12px;"><div style="font-size:11px;color:var(--text);padding:7px 11px;border-left:3px solid ${actionColor};background:rgba(255,255,255,0.4);border-radius:0 5px 5px 0;line-height:1.75">${verdict.watchFor}</div></div>`:''}
+    ` : `
+    <!-- WAIT: breakout levels -->
+    <div style="padding:12px 16px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+        <div style="padding:10px;background:var(--green-bg);border:1px solid var(--green-bd);border-radius:7px;text-align:center;">
+          <div style="font-size:9px;color:var(--green);font-weight:700;margin-bottom:4px;letter-spacing:1px">▲ 突破 → 做多</div>
           <div style="font-size:20px;font-weight:700;color:var(--green)">${fmtP(tps[0].p)}</div>
           <div style="font-size:10px;color:var(--muted);margin-top:2px">放量收盘确认</div>
         </div>
-        <div style="padding:12px;background:rgba(160,20,32,0.07);border:1px solid var(--red-bd);border-radius:8px;text-align:center;">
-          <div style="font-size:10px;color:var(--red);font-weight:700;margin-bottom:4px;letter-spacing:1px">▼ 跌破此价位 → 做空</div>
+        <div style="padding:10px;background:var(--red-bg);border:1px solid var(--red-bd);border-radius:7px;text-align:center;">
+          <div style="font-size:9px;color:var(--red);font-weight:700;margin-bottom:4px;letter-spacing:1px">▼ 跌破 → 做空</div>
           <div style="font-size:20px;font-weight:700;color:var(--red)">${fmtP(sls[0].p)}</div>
           <div style="font-size:10px;color:var(--muted);margin-top:2px">收盘确认，不追</div>
         </div>
-      </div>`}
-    </div>
-
-    <!-- Mini Backtest result -->
-    ${(()=>{
-      const kl2=S.klines[S.sym+res.tf]||[];
-      const bt=kl2.length>=100?runMiniBacktest(res,kl2):null;
-      if(!bt)return'';
-      const barCol=bt.winRate>=60?'var(--green)':bt.winRate>=45?'var(--amber)':'var(--red)';
-      return '<div style="padding:10px 18px 0;">'
-        +'<div style="background:rgba(255,255,255,0.45);border:1px solid var(--line2);border-radius:8px;padding:10px 13px;">'
-        +'<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:6px;">'
-        +'<div><div style="font-size:10px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:2px">📈 历史回测 · 多条件相似信号统计</div>'
-        +'<div style="font-size:11px;color:var(--muted)">过去 '+bt.tested+' 次 · 过滤器: '+(bt.filterStr||'RSI+趋势+MACD')+'</div></div>'
-        +'<div style="display:flex;align-items:center;gap:14px;">'
-        +'<div style="text-align:center"><div style="font-size:22px;font-weight:700;color:'+barCol+'">'+bt.winRate+'%</div><div style="font-size:10px;color:var(--muted)">历史胜率</div></div>'
-        +'<div style="text-align:center"><div style="font-size:15px;font-weight:700;color:'+(bt.expectancy>=0?'var(--green)':'var(--red)')+'">'+(bt.expectancy>=0?'+':'')+bt.expectancy+'%</div><div style="font-size:10px;color:var(--muted)">期望值/笔</div></div>'
-        +'<div style="text-align:center"><div style="font-size:12px;font-weight:700;color:'+barCol+'">'+bt.label+'</div><div style="font-size:10px;color:var(--muted)">'+bt.wins+'胜 '+bt.losses+'败</div></div>'
-        +'</div></div>'
-        +'<div style="height:4px;background:var(--bg3);border-radius:2px;overflow:hidden">'
-        +'<div style="height:100%;width:'+bt.winRate+'%;background:'+barCol+';border-radius:2px"></div></div>'
-        +'<div style="font-size:10px;color:var(--dim);margin-top:5px">基于本币历史K线回测 · 相同TP/SL比例 · 不代表未来表现</div>'
-        +'</div></div>';
-    })()}
-
-    <!-- Leverage recommendation row -->
-    ${!isWait?`
-    <div style="padding:12px 18px;background:rgba(255,255,255,0.4);border-bottom:1px solid ${actionBorder}15;">
-      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
-        <div>
-          <div style="font-size:11px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:4px">⚡ 建议杠杆倍数</div>
-          <div style="display:flex;align-items:center;gap:8px;">
-            <span style="font-size:28px;font-weight:700;color:${levRec.color}">${levRec.lev}×</span>
-            <div>
-              ${[1,2,3,5,10].map(l=>`<span style="display:inline-block;width:22px;height:22px;border-radius:4px;text-align:center;line-height:22px;font-size:10px;font-weight:700;margin-right:3px;background:${l<=levRec.lev?levRec.color+'22':'rgba(0,0,0,0.05)'};color:${l<=levRec.lev?levRec.color:'var(--dim)'};border:1px solid ${l<=levRec.lev?levRec.color+'44':'var(--line2)'}">${l}×</span>`).join('')}
-            </div>
-          </div>
-          <div style="font-size:10px;color:var(--muted);margin-top:3px">${levRec.reasons.length?levRec.reasons.join(' · '):'综合评估后建议倍数'}</div>
-        </div>
-        <div style="text-align:right">
-          <div style="font-size:10px;color:var(--muted);margin-bottom:3px">多周期一致性</div>
-          <div style="display:flex;gap:3px;flex-wrap:wrap;justify-content:flex-end;">
-            ${allTFs_chk.map(t=>{const v=tfResults[t];if(v===undefined)return`<span style="font-size:10px;padding:2px 6px;border-radius:8px;background:var(--bg3);color:var(--muted)">${t}</span>`;return`<span style="font-size:10px;padding:2px 6px;border-radius:8px;font-weight:700;background:${v?'var(--green-bg)':'var(--red-bg)'};color:${v?'var(--green)':'var(--red)'};border:1px solid ${v?'var(--green-bd)':'var(--red-bd)'}">${t}${v?'▲':'▼'}</span>`;}).join('')}
-          </div>
-          <div style="font-size:11px;font-weight:700;color:${agreement>=0.8?'var(--green)':agreement>=0.6?'var(--amber)':'var(--red)'};margin-top:4px">${Math.round(agreement*100)}% 方向一致</div>
-        </div>
       </div>
-    </div>`:''}
-
-    <!-- Risk flags -->
-    ${verdict?.riskFlags?.length?`
-    <div style="padding:10px 18px;display:flex;flex-wrap:wrap;gap:5px;">
-      ${verdict.riskFlags.map(f=>`<span style="font-size:10px;padding:3px 9px;border-radius:10px;background:rgba(128,80,0,0.08);color:var(--amber);border:1px solid rgba(128,80,0,0.25);font-weight:700">${f}</span>`).join('')}
-    </div>`:''}
-
-    <!-- watchFor tip -->
-    ${verdict?.watchFor&&!isWait?`
-    <div style="padding:0 18px 13px;">
-      <div style="font-size:12px;color:var(--text);padding:8px 12px;border-left:3px solid ${actionColor};background:rgba(255,255,255,0.5);border-radius:0 6px 6px 0;line-height:1.7">${verdict.watchFor}</div>
-    </div>`:''}
+      <div style="font-size:11px;color:var(--muted);text-align:center;line-height:1.6">${verdict?.watchFor||''}</div>
+    </div>
+    `}
   </div>
 
-  <!-- ══════════════════════════════════════════════════════════════════ -->
-  <!-- BLOCK 1A: 🏛️ ENTRY CONVICTION SCORE — 入场论据强度              -->
-  <!-- ══════════════════════════════════════════════════════════════════ -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- LAYER 1A · TP/SL 三级目标详情 (collapsible)                       -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  ${!isWait?(()=>{
+    const tpC=['var(--teal)','var(--green)','var(--blue)'];
+    const tpBG=['rgba(10,96,80,0.06)','rgba(26,107,58,0.06)','rgba(26,58,138,0.06)'];
+    const tpBD=['rgba(10,96,80,0.2)','var(--green-bd)','rgba(26,58,138,0.2)'];
+    const probs=[68,45,28];
+    const tpActions=['TP1到达：平50%，止损移成本','TP2到达：再平30%，持有余量','TP3到达：全部止盈或挂单离场'];
+    const slDesc=['紧 · 新手推荐，1-1.5×ATR','中 · 常规，避开假突破','宽 · 长线，3-4×ATR大仓位'];
+    const rows=[0,1,2].map(idx=>{
+      const tp=tps[idx],sl=sls[idx];
+      const sl1=sls[0];
+      const vTP=tp&&isFinite(tp.p)&&(isBull?tp.p>entry:tp.p<entry);
+      const vSL=sl&&isFinite(sl.p)&&(isBull?sl.p<entry:sl.p>entry);
+      const et=vTP?estTime(tp.p,barMsVal):{label:'--'};
+      const rrV=vTP&&sl1&&isFinite(sl1.p)?((Math.abs(tp.p-entry)/Math.max(Math.abs(sl1.p-entry),0.001)).toFixed(1)):'—';
+      const slRisk=vSL?Math.abs((sl.p-entry)/entry*100).toFixed(2):'—';
+      const rowBg=idx%2===0?'transparent':'rgba(0,0,0,0.015)';
+      const tpCell=vTP
+        ?'<div style="display:flex;align-items:center;gap:4px;margin-bottom:3px"><span style="font-size:9px;font-weight:700;padding:2px 5px;border-radius:4px;background:'+tpBG[idx]+';color:'+tpC[idx]+';border:1px solid '+tpBD[idx]+'">TP'+(idx+1)+'</span><span style="font-size:9px;font-weight:700;color:'+tpC[idx]+'">'+rrV+'R</span><span style="font-size:9px;color:var(--dim)">'+probs[idx]+'%</span></div>'
+          +'<div style="font-size:17px;font-weight:700;color:'+tpC[idx]+';font-variant-numeric:tabular-nums">'+fmtP(tp.p)+'</div>'
+          +'<div style="font-size:11px;font-weight:700;color:'+tpC[idx]+'">'+fmtPct(tp.pct)+'</div>'
+          +'<div style="font-size:10px;color:var(--muted);margin-top:3px">⏱ '+et.label+'</div>'
+          +'<div style="font-size:10px;color:var(--blue);margin-top:2px;line-height:1.4">'+tpActions[idx]+'</div>'
+        :'<span style="color:var(--muted);font-size:11px">—</span>';
+      const slCell=vSL
+        ?'<div style="display:flex;align-items:center;gap:4px;margin-bottom:3px"><span style="font-size:9px;font-weight:700;padding:2px 5px;border-radius:4px;background:var(--red-bg);color:var(--red);border:1px solid var(--red-bd)">SL'+(idx+1)+'</span><span style="font-size:9px;color:var(--muted)">'+slDesc[idx]+'</span></div>'
+          +'<div style="font-size:17px;font-weight:700;color:var(--red);font-variant-numeric:tabular-nums">'+fmtP(sl.p)+'</div>'
+          +'<div style="font-size:11px;font-weight:700;color:var(--red)">'+fmtPct(sl.pct)+'</div>'
+          +'<div style="font-size:10px;color:var(--muted);margin-top:3px">风险 -'+slRisk+'%</div>'
+          +(sl.invalidate?'<div style="font-size:9px;color:var(--red);margin-top:2px">⚠ '+sl.invalidate+'</div>':'')
+        :'<span style="color:var(--muted);font-size:11px">—</span>';
+      return '<div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--line);background:'+rowBg+'">'
+        +'<div style="padding:9px 12px;border-right:1px solid var(--line)">'+tpCell+'</div>'
+        +'<div style="padding:9px 12px">'+slCell+'</div>'
+        +'</div>';
+    }).join('');
+
+    return '<details style="margin-bottom:8px">'
+      +'<summary style="list-style:none;cursor:pointer;padding:10px 14px;background:var(--card);border:1px solid var(--card-bd);border-radius:8px;display:flex;align-items:center;justify-content:space-between;user-select:none;box-shadow:var(--shadow);">'
+      +'<div><span style="font-size:11px;font-weight:700;color:var(--text)">🎯 TP/SL 三级止盈止损详情</span>'
+      +'<div style="font-size:10px;color:var(--muted);margin-top:1px">TP1 '+fmtP(tps[0]?.p||0)+' · TP2 '+(tps[1]?.p?fmtP(tps[1].p):'—')+' · TP3 '+(tps[2]?.p?fmtP(tps[2].p):'—')+' | SL1 '+fmtP(sls[0]?.p||0)+'（推荐）</div></div>'
+      +'<span style="font-size:10px;color:var(--muted)">展开 ▼</span></summary>'
+      +'<div style="margin-top:3px;background:var(--card);border:1px solid var(--card-bd);border-radius:8px;overflow:hidden;box-shadow:var(--shadow);">'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:2px solid var(--line2);">'
+      +'<div style="padding:7px 12px;background:rgba(26,107,58,0.04);border-right:1px solid var(--line)"><div style="font-size:9px;letter-spacing:1.5px;color:var(--green);font-weight:700;text-transform:uppercase">🎯 止盈 TP</div><div style="font-size:9px;color:var(--muted);margin-top:1px">价格 · 幅度 · R倍数 · 预计时间</div></div>'
+      +'<div style="padding:7px 12px;background:rgba(160,20,32,0.04)"><div style="font-size:9px;letter-spacing:1.5px;color:var(--red);font-weight:700;text-transform:uppercase">🛡️ 止损 SL</div><div style="font-size:9px;color:var(--muted);margin-top:1px">SL1紧→SL2中→SL3宽，按风格选</div></div>'
+      +'</div>'
+      +rows
+      +'<div style="padding:7px 12px;background:rgba(0,0,0,0.02);border-top:1px solid var(--line);">'
+      +'<div style="font-size:10px;color:var(--muted);line-height:1.7">📌 <strong style="color:var(--text)">执行节奏：</strong>TP1→平50%后止损移至成本（保底）→TP2→再平30%→TP3→余20%续持至信号反转 | <strong style="color:var(--text)">止损原则：</strong>触及即离，不加仓不等反弹</div>'
+      +'</div></div></details>';
+  })():''}
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- LAYER 1B · 综合裁决依据 (collapsible)                             -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <details style="margin-bottom:8px">
+    <summary style="list-style:none;cursor:pointer;padding:10px 14px;background:var(--card);border:1px solid var(--card-bd);border-radius:8px;display:flex;align-items:center;justify-content:space-between;user-select:none;box-shadow:var(--shadow);">
+      <div style="flex:1;min-width:0">
+        <span style="font-size:11px;font-weight:700;color:var(--text)">📖 综合裁决依据 · 8因子 · 多周期</span>
+        <div style="font-size:10px;color:var(--muted);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(()=>{const s=(scenarioText||'').replace(/<[^>]+>/g,'');return s.length>90?s.slice(0,90)+'…':s;})()}</div>
+      </div>
+      <span style="font-size:10px;color:var(--muted);flex-shrink:0;margin-left:8px">展开 ▼</span>
+    </summary>
+    <div style="margin-top:3px;background:var(--card);border:1px solid var(--card-bd);border-radius:8px;overflow:hidden;box-shadow:var(--shadow);">
+      <!-- Narrative -->
+      <div style="padding:11px 14px;border-bottom:1px solid var(--line);background:rgba(255,255,255,0.4);">
+        <div style="font-size:9px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:5px">📖 行情研判</div>
+        <div style="font-size:12px;color:var(--text);line-height:1.85">${scenarioText}</div>
+      </div>
+      <!-- 8-factor signals -->
+      <div style="padding:10px 14px;border-bottom:1px solid var(--line);">
+        <div style="font-size:9px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:6px">📡 8因子投票</div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px">${sigs.map(s=>`<span class="sig ${s.c}" style="font-size:10px">${s.l}</span>`).join('')}</div>
+      </div>
+      <!-- Multi-TF alignment -->
+      <div style="padding:10px 14px;border-bottom:1px solid var(--line);">
+        <div style="font-size:9px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:5px">🕐 多周期一致性</div>
+        <div style="display:flex;gap:3px;flex-wrap:wrap;margin-bottom:4px">
+          ${allTFs_chk.map(t=>{const v=tfResults[t];if(v===undefined)return`<span style="font-size:10px;padding:2px 6px;border-radius:6px;background:var(--bg3);color:var(--muted)">${t}</span>`;return`<span style="font-size:10px;padding:2px 6px;border-radius:6px;font-weight:700;background:${v?'var(--green-bg)':'var(--red-bg)'};color:${v?'var(--green)':'var(--red)'};border:1px solid ${v?'var(--green-bd)':'var(--red-bd)'}">${t}${v?'▲':'▼'}</span>`;}).join('')}
+        </div>
+        <div style="font-size:11px;font-weight:700;color:${agreement>=0.8?'var(--green)':agreement>=0.6?'var(--amber)':'var(--red)'}">${Math.round(agreement*100)}% 方向一致</div>
+      </div>
+      <!-- Scenarios -->
+      ${verdict?.scenarios?`<div style="padding:10px 14px;border-bottom:1px solid var(--line);">
+        <div style="font-size:9px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:5px">📐 三种情景</div>
+        ${verdict.scenarios.map(s=>`<div style="display:flex;align-items:flex-start;gap:6px;padding:5px 0;border-bottom:1px solid var(--line);">
+          <div style="width:3px;min-height:28px;background:${s.color};border-radius:2px;flex-shrink:0;margin-top:2px"></div>
+          <div style="flex:1"><div style="font-size:11px;font-weight:700;color:var(--bright)">${s.name} <span style="color:${s.prob==='高'?'var(--green)':s.prob==='中'?'var(--amber)':'var(--muted)'};font-size:10px">概率${s.prob}</span></div><div style="font-size:10px;color:var(--muted);margin-top:1px">${s.trigger}</div></div>
+          <div style="font-size:10px;color:var(--muted);text-align:right;flex-shrink:0">${s.target}</div>
+        </div>`).join('')}
+      </div>`:''}
+      <!-- Backtest + Leverage -->
+      <div style="padding:10px 14px;${(()=>{const kl2=S.klines[S.sym+res.tf]||[];return kl2.length>=100?'border-bottom:1px solid var(--line)':'';})()}">
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          ${!isWait?`<div>
+            <div style="font-size:9px;color:var(--muted);margin-bottom:2px">⚡ 建议杠杆</div>
+            <div style="display:flex;align-items:center;gap:6px">
+              <span style="font-size:22px;font-weight:700;color:${levRec.color}">${levRec.lev}×</span>
+              <div style="font-size:10px;color:var(--muted)">${levRec.reasons.slice(0,2).join(' · ')||'综合评估'}</div>
+            </div>
+          </div>
+          <div style="margin-left:auto;text-align:right">
+            <div style="font-size:10px;color:var(--muted);margin-bottom:2px">关键价位</div>
+            <div style="font-size:11px;color:var(--text)">支撑 <strong style="color:var(--green)">${fmtP(res.nearestSupport||sls[0].p)}</strong> · 阻力 <strong style="color:var(--red)">${fmtP(res.nearestResist||tps[0].p)}</strong></div>
+            <div style="font-size:11px;color:${res.vwapBull?'var(--green)':'var(--red)'}">VWAP ${fmtP(res.vwap)} ${res.vwapBull?'↑多头':'↓空头'} · R:R <strong>${rr.toFixed(2)}</strong></div>
+          </div>`:''}
+        </div>
+      </div>
+      ${(()=>{
+        const kl2=S.klines[S.sym+res.tf]||[];
+        const bt=kl2.length>=100?runMiniBacktest(res,kl2):null;
+        if(!bt)return'';
+        const barCol=bt.winRate>=60?'var(--green)':bt.winRate>=45?'var(--amber)':'var(--red)';
+        return '<div style="padding:9px 14px;background:rgba(0,0,0,0.02);">'
+          +'<div style="font-size:9px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:5px">📈 历史回测</div>'
+          +'<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">'
+          +'<div style="text-align:center"><div style="font-size:20px;font-weight:700;color:'+barCol+'">'+bt.winRate+'%</div><div style="font-size:9px;color:var(--muted)">胜率</div></div>'
+          +'<div style="text-align:center"><div style="font-size:14px;font-weight:700;color:'+(bt.expectancy>=0?'var(--green)':'var(--red)')+'">'+bt.expectancy+'%</div><div style="font-size:9px;color:var(--muted)">期望值</div></div>'
+          +'<div style="font-size:10px;color:var(--muted)">共 '+bt.tested+' 次 · '+bt.wins+'胜 '+bt.losses+'败</div>'
+          +'</div></div>';
+      })()}
+    </div>
+  </details>
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- LAYER 1C · 入场论据强度 Conviction (collapsible)                  -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
   ${(()=>{
     const cv=conviction;
-    const scoreBg=cv.grade==='A'?'rgba(26,107,58,0.06)':cv.grade==='B'?'rgba(10,96,80,0.05)':cv.grade==='C'?'rgba(128,80,0,0.06)':cv.grade==='D'?'rgba(138,48,16,0.06)':'rgba(160,20,32,0.07)';
-    const scoreBd=cv.grade==='A'?'rgba(26,107,58,0.3)':cv.grade==='B'?'rgba(10,96,80,0.25)':cv.grade==='C'?'rgba(128,80,0,0.3)':cv.grade==='D'?'rgba(138,48,16,0.3)':'rgba(160,20,32,0.3)';
-
-    // Pillar bars (top 6 by weight)
-    const topPillars = [...cv.pillars].sort((a,b)=>b.weight-a.weight).slice(0,6);
-    const topWeaknesses = cv.weaknesses.filter(w=>w.severity!=='low').slice(0,3);
-
-    const pillarHTML = topPillars.map(p =>
-      '<div style="display:flex;align-items:center;gap:6px;padding:3px 0;">'
-      +'<div style="width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0;"></div>'
-      +'<div style="flex:1;min-width:0;">'
-      +'<div style="font-size:10px;font-weight:700;color:var(--text)">'+p.name+'</div>'
-      +'<div style="font-size:9px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+p.detail+'</div>'
+    const topPillars=[...cv.pillars].sort((a,b)=>b.weight-a.weight).slice(0,5);
+    const topWeak=cv.weaknesses.filter(w=>w.severity!=='low').slice(0,3);
+    return '<details style="margin-bottom:8px">'
+      +'<summary style="list-style:none;cursor:pointer;padding:10px 14px;background:var(--card);border:1px solid var(--card-bd);border-radius:8px;display:flex;align-items:center;justify-content:space-between;user-select:none;box-shadow:var(--shadow);">'
+      +'<div><span style="font-size:11px;font-weight:700;color:var(--text)">🏛️ 入场论据强度</span>'
+      +'<div style="font-size:10px;color:var(--muted);margin-top:1px">'+cv.pillars.length+'项支撑 · '+cv.weaknesses.length+'项弱点 · '+cv.gradeLabel+'</div></div>'
+      +'<div style="display:flex;align-items:center;gap:8px"><span style="font-size:26px;font-weight:900;color:'+cv.gradeColor+'">'+cv.grade+'</span><span style="font-size:10px;color:var(--muted)">展开 ▼</span></div></summary>'
+      +'<div style="margin-top:3px;background:var(--card);border:1px solid var(--card-bd);border-radius:8px;overflow:hidden;box-shadow:var(--shadow);">'
+      +'<div style="padding:10px 14px;border-bottom:1px solid var(--line)">'
+      +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">'
+      +'<span style="font-size:10px;color:var(--muted)">0</span>'
+      +'<div style="flex:1;height:8px;background:var(--bg3);border-radius:4px;overflow:hidden"><div style="height:100%;border-radius:4px;background:'+cv.gradeColor+';width:'+cv.score+'%;transition:width 0.8s ease"></div></div>'
+      +'<span style="font-size:13px;font-weight:700;color:'+cv.gradeColor+'">'+cv.score+'</span></div>'
+      +'<div style="font-size:10px;color:'+cv.gradeColor+';font-weight:700">'+cv.gradeLabel+'</div></div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;">'
+      +'<div style="padding:9px 12px;border-right:1px solid var(--line)">'
+      +'<div style="font-size:9px;letter-spacing:1px;color:var(--green);font-weight:700;text-transform:uppercase;margin-bottom:5px">✓ 支撑 ('+cv.pillars.length+')</div>'
+      +(topPillars.map(p=>'<div style="display:flex;align-items:flex-start;gap:5px;padding:2px 0"><div style="width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0;margin-top:3px"></div><div style="flex:1;min-width:0"><div style="font-size:10px;font-weight:700;color:var(--text)">'+p.name+'</div><div style="font-size:9px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+p.detail+'</div></div><div style="font-size:9px;font-weight:700;color:var(--green);flex-shrink:0">+'+p.weight+'</div></div>').join('')||'<div style="font-size:10px;color:var(--muted)">暂无</div>')
       +'</div>'
-      +'<div style="font-size:9px;font-weight:700;color:var(--green);flex-shrink:0">+'+p.weight+'</div>'
-      +'</div>'
-    ).join('');
-
-    const weakHTML = topWeaknesses.map(w =>
-      '<div style="display:flex;align-items:center;gap:6px;padding:3px 0;">'
-      +'<div style="width:8px;height:8px;border-radius:50%;background:'+(w.severity==='high'?'var(--red)':'var(--amber)')+';flex-shrink:0;"></div>'
-      +'<div style="flex:1;min-width:0;">'
-      +'<div style="font-size:10px;font-weight:700;color:'+(w.severity==='high'?'var(--red)':'var(--amber)')+'">'+w.name+'</div>'
-      +'<div style="font-size:9px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+w.detail+'</div>'
-      +'</div>'
-      +'</div>'
-    ).join('');
-
-    return '<div style="background:'+scoreBg+';border:2px solid '+scoreBd+';border-radius:10px;margin-bottom:10px;overflow:hidden;">'
-
-    // Header with grade
-    +'<div style="padding:11px 16px;border-bottom:1px solid '+scoreBd+'55;display:flex;align-items:center;justify-content:space-between;gap:10px;">'
-    +'<div>'
-    +'<div style="font-size:10px;letter-spacing:1.5px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:3px">🏛️ 入场论据强度 · Conviction Score</div>'
-    +'<div style="font-size:12px;color:var(--muted)">'+cv.pillars.length+'根支撑柱 · '+cv.weaknesses.length+'个弱点</div>'
-    +'</div>'
-    +'<div style="text-align:center;flex-shrink:0;">'
-    +'<div style="font-size:40px;font-weight:900;color:'+cv.gradeColor+';line-height:1;">'+cv.grade+'</div>'
-    +'<div style="font-size:10px;font-weight:700;color:'+cv.gradeColor+';white-space:nowrap">'+cv.gradeLabel+'</div>'
-    +'</div>'
-    +'</div>'
-
-    // Score bar
-    +'<div style="padding:10px 16px;border-bottom:1px solid '+scoreBd+'33;">'
-    +'<div style="display:flex;align-items:center;gap:8px;">'
-    +'<span style="font-size:10px;color:var(--muted);width:24px;text-align:right">0</span>'
-    +'<div style="flex:1;height:10px;background:var(--bg3);border-radius:5px;overflow:hidden;position:relative;">'
-    +[30,45,60,75].map(mark=>'<div style="position:absolute;left:'+mark+'%;top:0;width:1px;height:100%;background:rgba(0,0,0,0.12);"></div>').join('')
-    +'<div style="height:100%;border-radius:5px;background:'+cv.gradeColor+';width:'+cv.score+'%;transition:width 0.8s ease;"></div>'
-    +'</div>'
-    +'<span style="font-size:14px;font-weight:700;color:'+cv.gradeColor+';width:36px;">'+cv.score+'</span>'
-    +'</div>'
-    +'<div style="display:flex;justify-content:space-between;font-size:9px;color:var(--muted);margin-top:3px;padding:0 32px;">'
-    +'<span>F 极弱</span><span>D 很弱</span><span>C 弱</span><span>B 中</span><span>A 强</span>'
-    +'</div>'
-    +'</div>'
-
-    // Two-column: pillars vs weaknesses
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:0;">'
-    +'<div style="padding:10px 14px;border-right:1px solid '+scoreBd+'33;">'
-    +'<div style="font-size:9px;letter-spacing:1px;color:var(--green);font-weight:700;text-transform:uppercase;margin-bottom:6px">✓ 支撑柱 ('+cv.pillars.length+')</div>'
-    +(pillarHTML||'<div style="font-size:10px;color:var(--muted)">暂无强支撑</div>')
-    +'</div>'
-    +'<div style="padding:10px 14px;">'
-    +'<div style="font-size:9px;letter-spacing:1px;color:var(--red);font-weight:700;text-transform:uppercase;margin-bottom:6px">✗ 弱点 ('+cv.weaknesses.length+')</div>'
-    +(weakHTML||'<div style="font-size:10px;color:var(--green)">✅ 无主要弱点</div>')
-    +'</div>'
-    +'</div>'
-
-    // Actionable advice
-    +'<div style="padding:10px 16px;background:rgba(255,255,255,0.5);border-top:1px solid '+scoreBd+'33;">'
-    +'<div style="font-size:11px;color:var(--text);line-height:1.75;border-left:3px solid '+cv.gradeColor+';padding-left:10px;">'+cv.actionable+'</div>'
-    +'</div>'
-
-    +'</div>';
+      +'<div style="padding:9px 12px">'
+      +'<div style="font-size:9px;letter-spacing:1px;color:var(--red);font-weight:700;text-transform:uppercase;margin-bottom:5px">✗ 弱点 ('+cv.weaknesses.length+')</div>'
+      +(topWeak.map(w=>'<div style="display:flex;align-items:flex-start;gap:5px;padding:2px 0"><div style="width:6px;height:6px;border-radius:50%;background:'+(w.severity==='high'?'var(--red)':'var(--amber)')+';flex-shrink:0;margin-top:3px"></div><div style="flex:1;min-width:0"><div style="font-size:10px;font-weight:700;color:'+(w.severity==='high'?'var(--red)':'var(--amber)')+'">'+w.name+'</div><div style="font-size:9px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+w.detail+'</div></div></div>').join('')||'<div style="font-size:10px;color:var(--green)">✅ 无主要弱点</div>')
+      +'</div></div>'
+      +'<div style="padding:9px 14px;background:rgba(255,255,255,0.45);border-top:1px solid var(--line)"><div style="font-size:11px;color:var(--text);line-height:1.75;border-left:3px solid '+cv.gradeColor+';padding-left:9px">'+cv.actionable+'</div></div>'
+      +'</div></details>';
   })()}
 
-  <!-- ══════════════════════════════════════════════════════════════ -->
-  <!-- BLOCK 1C: 🏦 SMART MONEY · OB / FVG / SWEEP / VOL PROFILE   -->
-  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- LAYER 1D · 🏦 Smart Money · OB / FVG / Sweep / VP (collapsible)  -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
   ${(()=>{
     const smData=res.sm;
     const vp=res.volProf;
     if(!smData&&!vp)return'';
-    const hasOB=(smData?.orderBlocks||[]).filter(o=>o.active||(!o.used)).length>0;
-    const hasSweep=(smData?.sweeps||[]).length>0;
-    const hasFVG=(smData?.fvgs||[]).length>0;
-    const hasVP=vp&&vp.poc>0;
-    if(!hasOB&&!hasSweep&&!hasFVG&&!hasVP)return'';
-    let html='<div style="margin:0 0 2px 0;background:rgba(255,255,255,0.55);border:1px solid rgba(26,58,138,0.18);border-radius:10px;overflow:hidden;">'
-      +'<div style="padding:9px 15px 7px;border-bottom:1px solid rgba(26,58,138,0.1);display:flex;align-items:center;justify-content:space-between;">'
-      +'<div style="font-size:10px;letter-spacing:1.5px;font-weight:700;color:var(--indigo);text-transform:uppercase;">🏦 Smart Money · 机构足迹</div>'
-      +'<div style="font-size:10px;color:var(--muted)">OB · FVG · 流动性猎杀 · 量价分布</div>'
-      +'</div>';
-
-    // ── ORDER BLOCKS ──
     const obs=(smData?.orderBlocks||[]).filter(o=>!o.used);
+    const sweeps=(smData?.sweeps||[]).filter(s=>s.age<=5);
+    const fvgs=(smData?.fvgs||[]).slice(0,2);
+    const hasVP=vp&&vp.poc>0;
+    if(!obs.length&&!sweeps.length&&!fvgs.length&&!hasVP)return'';
+    const activeOB=obs.find(o=>o.active);
+    const activeSweep=sweeps[0];
+    const summaryParts=[];
+    if(activeOB)summaryParts.push((activeOB.type==='bull'?'多头OB':'空头OB')+' 强度'+activeOB.strength);
+    if(activeSweep)summaryParts.push(activeSweep.type==='bull'?'空头止损已猎':'多头止损已猎');
+    if(hasVP&&vp.poc)summaryParts.push('POC '+fmtP(vp.poc));
+    if(!summaryParts.length)summaryParts.push('查看OB/FVG/量价详情');
+    let inner='';
     if(obs.length){
-      html+='<div style="padding:8px 15px 6px;border-bottom:1px solid rgba(0,0,0,0.05);">'
-        +'<div style="font-size:9px;letter-spacing:1.2px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:5px;">订单块 Order Blocks</div>';
-      obs.forEach(ob=>{
-        const col=ob.type==='bull'?'var(--green)':'var(--red)';
-        const bg=ob.type==='bull'?'rgba(26,107,58,0.07)':'rgba(160,20,32,0.07)';
-        const bd=ob.type==='bull'?'rgba(26,107,58,0.25)':'rgba(160,20,32,0.25)';
-        const tag=ob.active?'<span style="font-size:9px;font-weight:700;padding:1px 5px;border-radius:2px;background:'+col+'22;color:'+col+';border:1px solid '+col+'44">● 当前在OB内</span>':'';
-        html+='<div style="background:'+bg+';border:1px solid '+bd+';border-radius:6px;padding:7px 10px;margin-bottom:5px;display:flex;align-items:center;justify-content:space-between;gap:8px;">'
-          +'<div>'
-          +'<div style="font-size:11px;font-weight:700;color:'+col+';">'+(ob.type==='bull'?'📦 多头OB':'📦 空头OB')+'&nbsp;'+tag+'</div>'
-          +'<div style="font-size:10px;color:var(--muted);margin-top:2px;">'+ob.note+'</div>'
-          +'</div>'
-          +'<div style="text-align:right;flex-shrink:0;">'
-          +'<div style="font-size:11px;font-weight:700;color:'+col+';">强度 '+ob.strength+'</div>'
-          +'<div style="font-size:10px;color:var(--dim);">'+ob.age+'根K线前</div>'
-          +'</div>'
-          +'</div>';
-      });
-      html+='</div>';
+      inner+='<div style="padding:8px 13px;border-bottom:1px solid var(--line)"><div style="font-size:9px;letter-spacing:1px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:5px">📦 订单块 Order Blocks</div>';
+      obs.forEach(ob=>{const col=ob.type==='bull'?'var(--green)':'var(--red)';const bg=ob.type==='bull'?'rgba(26,107,58,0.07)':'rgba(160,20,32,0.07)';const bd=ob.type==='bull'?'rgba(26,107,58,0.25)':'rgba(160,20,32,0.25)';const tag=ob.active?'<span style="font-size:9px;font-weight:700;padding:1px 4px;border-radius:2px;background:'+col+'22;color:'+col+'"> ● 价格在内</span>':'';inner+='<div style="background:'+bg+';border:1px solid '+bd+';border-radius:5px;padding:6px 9px;margin-bottom:4px;display:flex;align-items:center;justify-content:space-between;gap:6px"><div><div style="font-size:11px;font-weight:700;color:'+col+'">'+(ob.type==='bull'?'多头OB':'空头OB')+tag+'</div><div style="font-size:10px;color:var(--muted);margin-top:1px">'+ob.note+'</div></div><div style="text-align:right;flex-shrink:0"><div style="font-size:11px;font-weight:700;color:'+col+'">强度 '+ob.strength+'</div><div style="font-size:9px;color:var(--dim)">'+ob.age+'根前</div></div></div>';});
+      inner+='</div>';
     }
-
-    // ── LIQUIDITY SWEEPS ──
-    const recentSweeps=(smData?.sweeps||[]).filter(s=>s.age<=5);
-    if(recentSweeps.length){
-      html+='<div style="padding:8px 15px 6px;border-bottom:1px solid rgba(0,0,0,0.05);">'
-        +'<div style="font-size:9px;letter-spacing:1.2px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:5px;">⚡ 流动性猎杀 Liquidity Sweep</div>';
-      recentSweeps.forEach(sw=>{
-        const col=sw.type==='bull'?'var(--green)':'var(--red)';
-        const bg=sw.type==='bull'?'rgba(26,107,58,0.07)':'rgba(160,20,32,0.07)';
-        const bd=sw.type==='bull'?'rgba(26,107,58,0.25)':'rgba(160,20,32,0.25)';
-        html+='<div style="background:'+bg+';border:1px solid '+bd+';border-radius:6px;padding:7px 10px;margin-bottom:5px;">'
-          +'<div style="font-size:11px;font-weight:700;color:'+col+';margin-bottom:2px;">'
-          +(sw.type==='bull'?'🎯 空头止损被猎 → 多头机会':'🎯 多头止损被猎 → 空头机会')
-          +' <span style="font-size:10px;font-weight:400;color:var(--dim);">'+sw.age+'根前 · 影线深度'+sw.wickDepth+'%</span></div>'
-          +'<div style="font-size:10px;color:var(--muted);">'+sw.note+'</div>'
-          +'</div>';
-      });
-      html+='</div>';
+    if(sweeps.length){
+      inner+='<div style="padding:8px 13px;border-bottom:1px solid var(--line)"><div style="font-size:9px;letter-spacing:1px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:5px">⚡ 流动性猎杀</div>';
+      sweeps.forEach(sw=>{const col=sw.type==='bull'?'var(--green)':'var(--red)';const bg=sw.type==='bull'?'rgba(26,107,58,0.07)':'rgba(160,20,32,0.07)';const bd=sw.type==='bull'?'rgba(26,107,58,0.25)':'rgba(160,20,32,0.25)';inner+='<div style="background:'+bg+';border:1px solid '+bd+';border-radius:5px;padding:6px 9px;margin-bottom:4px"><div style="font-size:11px;font-weight:700;color:'+col+';margin-bottom:2px">'+(sw.type==='bull'?'🎯 空头止损被猎 → 多头机会':'🎯 多头止损被猎 → 空头机会')+'<span style="font-size:10px;font-weight:400;color:var(--dim)"> '+sw.age+'根前 · 影线'+sw.wickDepth+'%</span></div><div style="font-size:10px;color:var(--muted)">'+sw.note+'</div></div>';});
+      inner+='</div>';
     }
-
-    // ── FAIR VALUE GAPS ──
-    const topFVGs=(smData?.fvgs||[]).slice(0,2);
-    if(topFVGs.length){
-      html+='<div style="padding:8px 15px 6px;border-bottom:1px solid rgba(0,0,0,0.05);">'
-        +'<div style="font-size:9px;letter-spacing:1.2px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:5px;">FVG · 未填补价格缺口</div>';
-      topFVGs.forEach(fg=>{
-        const col=fg.type==='bull'?'var(--teal)':'var(--orange)';
-        const bg=fg.type==='bull'?'rgba(10,88,112,0.06)':'rgba(138,48,16,0.06)';
-        html+='<div style="background:'+bg+';border:1px solid '+col+'33;border-radius:6px;padding:6px 10px;margin-bottom:4px;display:flex;align-items:center;justify-content:space-between;">'
-          +'<div style="font-size:10px;color:var(--text);">'+fg.note+'</div>'
-          +'<div style="font-size:10px;font-weight:700;color:'+col+';margin-left:8px;flex-shrink:0;">'+fg.gapPct+'%</div>'
-          +'</div>';
-      });
-      html+='</div>';
+    if(fvgs.length){
+      inner+='<div style="padding:8px 13px;border-bottom:1px solid var(--line)"><div style="font-size:9px;letter-spacing:1px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:5px">FVG · 未填缺口</div>';
+      fvgs.forEach(fg=>{const col=fg.type==='bull'?'var(--teal)':'var(--orange)';const bg=fg.type==='bull'?'rgba(10,88,112,0.06)':'rgba(138,48,16,0.06)';inner+='<div style="background:'+bg+';border:1px solid '+col+'33;border-radius:5px;padding:5px 9px;margin-bottom:4px;display:flex;align-items:center;justify-content:space-between"><div style="font-size:10px;color:var(--text)">'+fg.note+'</div><div style="font-size:10px;font-weight:700;color:'+col+';margin-left:6px;flex-shrink:0">缺口'+fg.gapPct+'%</div></div>';});
+      inner+='</div>';
     }
-
-    // ── VOLUME PROFILE ──
-    if(hasVP){
-      const pocPct=((vp.priceVsPoc||0)*100).toFixed(1);
-      const pocColor=vp.nearPoc?'var(--gold)':vp.aboveVAH?'var(--orange)':vp.belowVAL?'var(--teal)':'var(--muted)';
-      html+='<div style="padding:8px 15px 8px;">'
-        +'<div style="font-size:9px;letter-spacing:1.2px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">量价分布 Volume Profile</div>'
-        +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;text-align:center;">'
-        +'<div style="background:rgba(139,105,20,0.08);border:1px solid rgba(139,105,20,0.2);border-radius:5px;padding:6px 4px;">'
-        +'<div style="font-size:13px;font-weight:700;color:var(--gold);">'+fmtP(vp.poc)+'</div>'
-        +'<div style="font-size:9px;color:var(--muted);margin-top:1px;">POC 最大成交量</div>'
-        +'</div>'
-        +'<div style="background:rgba(26,107,58,0.06);border:1px solid rgba(26,107,58,0.18);border-radius:5px;padding:6px 4px;">'
-        +'<div style="font-size:13px;font-weight:700;color:var(--green);">'+fmtP(vp.vah)+'</div>'
-        +'<div style="font-size:9px;color:var(--muted);margin-top:1px;">VA顶 70%区间</div>'
-        +'</div>'
-        +'<div style="background:rgba(160,20,32,0.06);border:1px solid rgba(160,20,32,0.18);border-radius:5px;padding:6px 4px;">'
-        +'<div style="font-size:13px;font-weight:700;color:var(--red);">'+fmtP(vp.val)+'</div>'
-        +'<div style="font-size:9px;color:var(--muted);margin-top:1px;">VA底 70%区间</div>'
-        +'</div>'
-        +'</div>'
-        +'<div style="margin-top:6px;padding:5px 8px;background:rgba(255,255,255,0.5);border-radius:5px;display:flex;align-items:center;justify-content:space-between;">'
-        +'<div style="font-size:10px;color:var(--muted);">'+vp.note+'</div>'
-        +'<div style="font-size:11px;font-weight:700;color:'+pocColor+';margin-left:8px;flex-shrink:0;">'+(pocPct>0?'+':'')+pocPct+'% vs POC</div>'
-        +'</div>'
-        +'</div>';
-    }
-
-    html+='</div>';
-    return html;
+    if(hasVP){const pocPct=((vp.priceVsPoc||0)*100).toFixed(1);const pocColor=vp.nearPoc?'var(--gold)':vp.aboveVAH?'var(--orange)':vp.belowVAL?'var(--teal)':'var(--muted)';inner+='<div style="padding:8px 13px"><div style="font-size:9px;letter-spacing:1px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:5px">📊 量价分布 Volume Profile</div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;text-align:center;margin-bottom:5px"><div style="background:rgba(139,105,20,0.08);border:1px solid rgba(139,105,20,0.2);border-radius:4px;padding:5px 3px"><div style="font-size:12px;font-weight:700;color:var(--gold)">'+fmtP(vp.poc)+'</div><div style="font-size:9px;color:var(--muted)">POC</div></div><div style="background:rgba(26,107,58,0.06);border:1px solid rgba(26,107,58,0.18);border-radius:4px;padding:5px 3px"><div style="font-size:12px;font-weight:700;color:var(--green)">'+fmtP(vp.vah)+'</div><div style="font-size:9px;color:var(--muted)">VA顶</div></div><div style="background:rgba(160,20,32,0.06);border:1px solid rgba(160,20,32,0.18);border-radius:4px;padding:5px 3px"><div style="font-size:12px;font-weight:700;color:var(--red)">'+fmtP(vp.val)+'</div><div style="font-size:9px;color:var(--muted)">VA底</div></div></div><div style="font-size:10px;color:var(--muted);display:flex;justify-content:space-between"><span>'+vp.note+'</span><span style="color:'+pocColor+';font-weight:700">'+(pocPct>0?'+':'')+pocPct+'% vs POC</span></div></div>';}
+    return '<details style="margin-bottom:8px">'
+      +'<summary style="list-style:none;cursor:pointer;padding:10px 14px;background:var(--card);border:1px solid var(--card-bd);border-radius:8px;display:flex;align-items:center;justify-content:space-between;user-select:none;box-shadow:var(--shadow);">'
+      +'<div><span style="font-size:11px;font-weight:700;color:var(--text)">🏦 Smart Money · 机构足迹</span>'
+      +'<div style="font-size:10px;color:var(--muted);margin-top:1px">'+summaryParts.join(' · ')+'</div></div>'
+      +'<span style="font-size:10px;color:var(--muted);flex-shrink:0;margin-left:8px">展开 ▼</span></summary>'
+      +'<div style="margin-top:3px;background:var(--card);border:1px solid var(--card-bd);border-radius:8px;overflow:hidden;box-shadow:var(--shadow);">'+inner+'</div></details>';
   })()}
 
-  <!-- ══════════════════════════════════════════════════════════════ -->
-  <!-- BLOCK 1B: 🕐 ENTRY GUARD + REGIME FLIP ALERT                -->
-  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- LAYER 1E · 🌐 Macro Regime (collapsible)                          -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  ${(()=>{
+    const mb=macroBias;
+    const macroColor=mb.macroStrength==='strong'?(mb.macroBull?'var(--green)':'var(--red)'):mb.macroStrength==='moderate'?(mb.macroBull?'var(--teal)':'var(--rose)'):'var(--amber)';
+    const macroBg=mb.macroStrength==='strong'?(mb.macroBull?'rgba(26,107,58,0.05)':'rgba(160,20,32,0.05)'):'rgba(128,80,0,0.04)';
+    const macroBd=mb.macroStrength==='strong'?(mb.macroBull?'rgba(26,107,58,0.22)':'rgba(160,20,32,0.22)'):'var(--line2)';
+    const alignIcon=mb.alignedWithMacro?'✅ 顺势交易':'⚠️ 逆势入场';
+    const alignColor=mb.alignedWithMacro?'var(--green)':'var(--amber)';
+    const strengthBar=Math.min(100,Math.abs(mb.macroScore)/12*100);
+    return '<details style="margin-bottom:8px">'
+      +'<summary style="list-style:none;cursor:pointer;padding:10px 14px;background:var(--card);border:1px solid var(--card-bd);border-radius:8px;display:flex;align-items:center;justify-content:space-between;user-select:none;box-shadow:var(--shadow);">'
+      +'<div><span style="font-size:11px;font-weight:700;color:var(--text)">🌐 宏观格局 · Macro Regime</span>'
+      +'<div style="font-size:10px;color:var(--muted);margin-top:1px">'+mb.macroLabel+' · <span style="color:'+alignColor+'">'+alignIcon+'</span> · 评分 '+mb.macroScore.toFixed(1)+'</div></div>'
+      +'<span style="font-size:10px;color:var(--muted);flex-shrink:0;margin-left:8px">展开 ▼</span></summary>'
+      +'<div style="margin-top:3px;background:'+macroBg+';border:1px solid '+macroBd+';border-radius:8px;overflow:hidden;">'
+      +'<div style="padding:10px 14px;border-bottom:1px solid '+macroBd+'33"><div style="display:flex;align-items:center;gap:8px;margin-bottom:3px"><span style="font-size:10px;color:var(--muted)">看空←</span><div style="flex:1;height:7px;background:var(--bg3);border-radius:3px;overflow:hidden;position:relative"><div style="position:absolute;left:50%;top:0;width:2px;height:100%;background:var(--line3);transform:translateX(-50%)"></div><div style="position:absolute;top:0;height:100%;border-radius:3px;background:'+macroColor+';'+(mb.macroBull?'left:50%;width:'+strengthBar/2+'%':'right:50%;width:'+strengthBar/2+'%')+'"></div></div><span style="font-size:10px;color:var(--muted)">→看多</span><span style="font-size:12px;font-weight:700;color:'+macroColor+'">'+mb.macroScore.toFixed(1)+'</span></div><div style="font-size:10px;color:var(--muted)">强度: <strong style="color:'+macroColor+'">'+(mb.macroStrength==='strong'?'强':mb.macroStrength==='moderate'?'中':'弱')+'</strong></div></div>'
+      +'<div style="padding:9px 14px;border-bottom:1px solid '+macroBd+'33"><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:4px">'+mb.components.map(c=>'<div style="display:flex;align-items:center;gap:4px;padding:4px 6px;background:rgba(255,255,255,0.55);border-radius:4px;border:1px solid var(--line)"><span style="font-size:11px">'+c.icon+'</span><div style="flex:1;min-width:0"><div style="font-size:9px;color:var(--muted)">'+c.label+'</div><div style="font-size:10px;font-weight:700;color:'+c.color+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+c.value+'</div></div></div>').join('')+'</div></div>'
+      +'<div style="padding:10px 14px"><div style="font-size:11px;color:var(--text);line-height:1.85;padding:8px 10px;background:rgba(255,255,255,0.5);border-radius:5px;border-left:3px solid '+macroColor+'">'+mb.tradeContext+'</div></div>'
+      +'</div></details>';
+  })()}
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- LAYER 1F · ⏱ Entry Guard + 方向转换 (collapsible)                -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
   ${(()=>{
     const vld=validity;
     const rf=regimeFlip;
@@ -9381,405 +9382,121 @@ function _doRenderStrategy(res){
     const vldBg=vld.urgency==='critical'?'rgba(160,20,32,0.06)':vld.urgency==='soon'?'rgba(128,80,0,0.06)':'rgba(10,96,80,0.05)';
     const vldBd=vld.urgency==='critical'?'rgba(160,20,32,0.25)':vld.urgency==='soon'?'rgba(128,80,0,0.25)':'rgba(10,96,80,0.2)';
     const flipRiskColor=rf.flipRisk==='high'?'var(--red)':rf.flipRisk==='medium'?'var(--amber)':'var(--teal)';
-    const flipRiskLabel=rf.flipRisk==='high'?'🔴 高':'🟡 中等';
-    const highWarnings=rf.earlyWarnings.filter(w=>w.severity==='high');
-    const medWarnings=rf.earlyWarnings.filter(w=>w.severity==='medium');
-
-    return '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">'
-
-    // ── Left cell: Price Confirmation System (replaces time-based validity) ──
-    +'<div style="background:'+vldBg+';border:1px solid '+vldBd+';border-radius:10px;padding:13px 14px;overflow:hidden;">'
-    +'<div style="font-size:10px;letter-spacing:1.5px;color:'+vldColor+';font-weight:700;text-transform:uppercase;margin-bottom:8px">⏱ 信号确认 · 每'+vld.recheckMins+'分钟验证</div>'
-
-    // Abort price — the most important single number
-    +'<div style="margin-bottom:8px;padding:8px 10px;background:rgba(160,20,32,0.07);border:1px solid rgba(160,20,32,0.2);border-radius:6px;">'
-    +'<div style="font-size:9px;color:var(--red);font-weight:700;letter-spacing:1px;margin-bottom:3px">🚫 入场终止价 — 触碰立即放弃</div>'
-    +'<div style="display:flex;align-items:baseline;gap:6px;">'
-    +'<span style="font-size:17px;font-weight:700;color:var(--red);font-variant-numeric:tabular-nums">'+fmtP(vld.abortPrice)+'</span>'
-    +'<span style="font-size:10px;color:var(--muted)">距入场价 '+vld.abortPct+'%</span>'
-    +'</div>'
-    +'<div style="font-size:10px;color:var(--red);margin-top:2px">价格到这里 = 论据已破坏，拒绝入场</div>'
-    +'</div>'
-
-    // Falling knife guard
-    +'<div style="margin-bottom:8px;padding:7px 10px;background:rgba(128,80,0,0.06);border:1px solid rgba(128,80,0,0.2);border-radius:6px;">'
-    +'<div style="font-size:9px;color:var(--amber);font-weight:700;letter-spacing:1px;margin-bottom:2px">🔪 接飞刀警戒价</div>'
-    +'<div style="font-size:14px;font-weight:700;color:var(--amber);font-variant-numeric:tabular-nums">'+fmtP(vld.fallingKnifeAbort)+'</div>'
-    +'<div style="font-size:10px;color:var(--muted);margin-top:1px">低价限价单已成交但价格继续破此位 → 全部止损出场</div>'
-    +'</div>'
-
-    // Keep alive conditions
-    +(vld.keepAliveConditions.length
-      ?'<div style="font-size:10px;color:var(--muted);line-height:1.7;"><strong style="color:var(--text)">信号存活条件：</strong><br>'
-       +vld.keepAliveConditions.map(c=>'✓ '+c).join('<br>')+'</div>'
-      :'')
-    +(vld.reasons.length?'<div style="font-size:10px;color:var(--muted);margin-top:5px;line-height:1.5">'+vld.reasons.join(' · ')+'</div>':'')
-    +'</div>'
-
-    // ── Right cell: Regime Flip Risk ──
-    +'<div style="background:rgba(255,255,255,0.6);border:1px solid var(--card-bd);border-radius:10px;padding:13px 14px;overflow:hidden;">'
-    +'<div style="font-size:10px;letter-spacing:1.5px;color:'+flipRiskColor+';font-weight:700;text-transform:uppercase;margin-bottom:8px">⚡ 方向转换风险</div>'
-    +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
-    +'<span style="font-size:13px;font-weight:700;color:'+flipRiskColor+'">'+flipRiskLabel+'</span>'
-    +'<span style="font-size:11px;color:var(--muted)">失效价: </span>'
-    +'<span style="font-size:13px;font-weight:700;color:var(--red)">'+fmtP(rf.flipPrice)+'</span>'
-    +'<span style="font-size:10px;color:var(--muted)">(距现价'+rf.flipPct+'%)</span>'
-    +'</div>'
-    +(highWarnings.length
-      ?'<div style="margin-bottom:5px;">'+highWarnings.map(w=>'<div style="font-size:10px;padding:3px 7px;margin-bottom:3px;border-radius:4px;background:rgba(160,20,32,0.07);border:1px solid rgba(160,20,32,0.18);color:var(--red);line-height:1.5;">'+w.icon+' '+w.text+'</div>').join('')+'</div>'
-      :'')
-    +(medWarnings.length
-      ?'<div>'+medWarnings.slice(0,2).map(w=>'<div style="font-size:10px;padding:3px 7px;margin-bottom:3px;border-radius:4px;background:rgba(128,80,0,0.06);border:1px solid rgba(128,80,0,0.18);color:var(--amber);line-height:1.5;">'+w.icon+' '+w.text+'</div>').join('')+'</div>'
-      :'')
-    +(!rf.earlyWarnings.length?'<div style="font-size:10px;color:var(--green);padding:4px 0;">✅ 暂无早期转换预警</div>':'')
-    +'</div>'
-
-    +'</div>'
-
-    // ── Full-width: Regime Flip Conditions ──
-    +'<div style="background:rgba(255,255,255,0.55);border:1px solid var(--line2);border-radius:10px;padding:12px 14px;margin-bottom:10px;">'
-    +'<div style="font-size:10px;letter-spacing:1.5px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:8px">🔄 方向彻底失效的条件（出现以下任一即需重新评估）</div>'
-    +'<div style="display:flex;flex-direction:column;gap:6px;">'
-    +rf.regimeConditions.map((c,i)=>
-      '<div style="display:grid;grid-template-columns:auto 1fr;gap:8px;align-items:start;padding:7px 10px;background:rgba(0,0,0,0.02);border-radius:6px;border-left:3px solid '+c.color+';">'
-      +'<div style="font-size:10px;font-weight:700;color:'+c.color+';white-space:nowrap;padding-top:1px">'+c.label+'</div>'
-      +'<div><div style="font-size:11px;color:var(--text);line-height:1.5;font-weight:600">'+c.condition+'</div>'
-      +'<div style="font-size:10px;color:var(--muted);margin-top:1px">→ '+c.consequence+'</div></div>'
+    const highW=rf.earlyWarnings.filter(w=>w.severity==='high');
+    const medW=rf.earlyWarnings.filter(w=>w.severity==='medium');
+    return '<details style="margin-bottom:8px">'
+      +'<summary style="list-style:none;cursor:pointer;padding:10px 14px;background:var(--card);border:1px solid var(--card-bd);border-radius:8px;display:flex;align-items:center;justify-content:space-between;user-select:none;box-shadow:var(--shadow);">'
+      +'<div><span style="font-size:11px;font-weight:700;color:var(--text)">⏱ 入场守卫 · 方向转换风险</span>'
+      +'<div style="font-size:10px;color:var(--muted);margin-top:1px">终止价 '+fmtP(vld.abortPrice)+' · 方向转换风险 '+(rf.flipRisk==='high'?'🔴 高':rf.flipRisk==='medium'?'🟡 中':'🟢 低')+' · 失效价 '+fmtP(rf.flipPrice)+'</div></div>'
+      +'<span style="font-size:10px;color:var(--muted);flex-shrink:0;margin-left:8px">展开 ▼</span></summary>'
+      +'<div style="margin-top:3px;background:var(--card);border:1px solid var(--card-bd);border-radius:8px;overflow:hidden;box-shadow:var(--shadow);">'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px 13px;border-bottom:1px solid var(--line)">'
+      +'<div style="background:'+vldBg+';border:1px solid '+vldBd+';border-radius:7px;padding:10px 11px">'
+      +'<div style="font-size:9px;letter-spacing:1px;color:'+vldColor+';font-weight:700;text-transform:uppercase;margin-bottom:6px">⏱ 每'+vld.recheckMins+'min验证</div>'
+      +'<div style="padding:7px 9px;background:rgba(160,20,32,0.07);border:1px solid rgba(160,20,32,0.2);border-radius:5px;margin-bottom:5px">'
+      +'<div style="font-size:9px;color:var(--red);font-weight:700;margin-bottom:2px">🚫 入场终止价</div>'
+      +'<div style="font-size:16px;font-weight:700;color:var(--red);font-variant-numeric:tabular-nums">'+fmtP(vld.abortPrice)+'</div>'
+      +'<div style="font-size:9px;color:var(--red);margin-top:1px">到这里 = 放弃入场</div></div>'
+      +(vld.keepAliveConditions.length?'<div style="font-size:10px;color:var(--muted);line-height:1.6"><strong style="color:var(--text)">存活：</strong><br>'+vld.keepAliveConditions.map(c=>'✓ '+c).join('<br>')+'</div>':'')
       +'</div>'
-    ).join('')
-    +'</div>'
-    +'</div>';
+      +'<div style="background:rgba(255,255,255,0.55);border:1px solid var(--card-bd);border-radius:7px;padding:10px 11px">'
+      +'<div style="font-size:9px;letter-spacing:1px;color:'+flipRiskColor+';font-weight:700;text-transform:uppercase;margin-bottom:6px">⚡ 方向转换风险</div>'
+      +'<div style="display:flex;align-items:baseline;gap:6px;margin-bottom:5px"><span style="font-size:13px;font-weight:700;color:'+flipRiskColor+'">'+(rf.flipRisk==='high'?'🔴 高':rf.flipRisk==='medium'?'🟡 中':'🟢 低')+'</span><span style="font-size:10px;color:var(--muted)">失效价</span><span style="font-size:13px;font-weight:700;color:var(--red)">'+fmtP(rf.flipPrice)+'</span></div>'
+      +highW.map(w=>'<div style="font-size:10px;padding:3px 6px;margin-bottom:2px;border-radius:3px;background:rgba(160,20,32,0.07);border:1px solid rgba(160,20,32,0.18);color:var(--red);line-height:1.5">'+w.icon+' '+w.text+'</div>').join('')
+      +medW.slice(0,2).map(w=>'<div style="font-size:10px;padding:3px 6px;margin-bottom:2px;border-radius:3px;background:rgba(128,80,0,0.06);border:1px solid rgba(128,80,0,0.18);color:var(--amber);line-height:1.5">'+w.icon+' '+w.text+'</div>').join('')
+      +(!rf.earlyWarnings.length?'<div style="font-size:10px;color:var(--green)">✅ 无早期预警</div>':'')
+      +'</div></div>'
+      +'<div style="padding:10px 13px"><div style="font-size:9px;letter-spacing:1px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:5px">🔄 方向彻底失效的条件</div>'
+      +'<div style="display:flex;flex-direction:column;gap:4px">'+rf.regimeConditions.map(c=>'<div style="display:grid;grid-template-columns:auto 1fr;gap:7px;align-items:start;padding:5px 8px;background:rgba(0,0,0,0.02);border-radius:5px;border-left:3px solid '+c.color+'"><div style="font-size:10px;font-weight:700;color:'+c.color+';white-space:nowrap">'+c.label+'</div><div><div style="font-size:10px;color:var(--text);line-height:1.5;font-weight:600">'+c.condition+'</div><div style="font-size:9px;color:var(--muted);margin-top:1px">→ '+c.consequence+'</div></div></div>').join('')
+      +'</div></div></div></details>';
   })()}
 
-  <!-- ══════════════════════════════════════════════════════════ -->
-  <!-- BLOCK 1C: 🌐 MACRO REGIME / BIG PICTURE ANALYSIS        -->
-  <!-- ══════════════════════════════════════════════════════════ -->
-  ${(()=>{
-    const mb=macroBias;
-    const macroColor=mb.macroStrength==='strong'?(mb.macroBull?'var(--green)':'var(--red)'):mb.macroStrength==='moderate'?(mb.macroBull?'var(--teal)':'var(--rose)'):'var(--amber)';
-    const macroBg=mb.macroStrength==='strong'?(mb.macroBull?'rgba(26,107,58,0.06)':'rgba(160,20,32,0.06)'):mb.macroStrength==='moderate'?(mb.macroBull?'rgba(10,96,80,0.05)':'rgba(136,8,64,0.05)'):'rgba(128,80,0,0.04)';
-    const macroBd=mb.macroStrength==='strong'?(mb.macroBull?'rgba(26,107,58,0.25)':'rgba(160,20,32,0.25)'):'var(--line2)';
-    const alignIcon=mb.alignedWithMacro?'✅ 顺势':'⚠️ 逆势';
-    const alignColor=mb.alignedWithMacro?'var(--green)':'var(--amber)';
-    const strengthBar=Math.min(100,Math.abs(mb.macroScore)/12*100);
-
-    return '<div style="background:'+macroBg+';border:1px solid '+macroBd+';border-radius:10px;margin-bottom:10px;overflow:hidden;">'
-
-    // Header
-    +'<div style="padding:12px 16px;border-bottom:1px solid '+macroBd+'88;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">'
-    +'<div>'
-    +'<div style="font-size:10px;letter-spacing:1.5px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:4px">🌐 大方向 · 宏观格局 Macro Regime</div>'
-    +'<div style="font-size:18px;font-weight:700;color:'+macroColor+';line-height:1.2">'+mb.macroLabel+'</div>'
-    +'</div>'
-    +'<div style="text-align:right;flex-shrink:0;">'
-    +'<div style="font-size:10px;color:var(--muted);margin-bottom:3px">当前信号</div>'
-    +'<div style="font-size:13px;font-weight:700;color:'+alignColor+'">'+alignIcon+'</div>'
-    +'<div style="font-size:10px;color:var(--muted);margin-top:2px">'+(mb.alignedWithMacro?'与大方向一致':'与大方向相悖')+'</div>'
-    +'</div>'
-    +'</div>'
-
-    // Score bar
-    +'<div style="padding:10px 16px;border-bottom:1px solid '+macroBd+'44;">'
-    +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">'
-    +'<span style="font-size:10px;color:var(--muted)">看空←</span>'
-    +'<div style="flex:1;height:8px;background:var(--bg3);border-radius:4px;overflow:hidden;position:relative;">'
-    +'<div style="position:absolute;left:50%;top:0;width:2px;height:100%;background:var(--line3);transform:translateX(-50%);"></div>'
-    +'<div style="position:absolute;top:0;height:100%;border-radius:4px;background:'+macroColor+';'
-    +(mb.macroBull
-      ?'left:50%;width:'+strengthBar/2+'%;'
-      :'right:50%;width:'+strengthBar/2+'%;')
-    +'"></div>'
-    +'</div>'
-    +'<span style="font-size:10px;color:var(--muted)">→看多</span>'
-    +'<span style="font-size:12px;font-weight:700;color:'+macroColor+'">'+mb.macroScore.toFixed(1)+'</span>'
-    +'</div>'
-    +'<div style="font-size:10px;color:var(--muted)">综合宏观得分（满分±12）· 强度: <strong style="color:'+macroColor+'">'+{strong:'强',moderate:'中',weak:'弱'}[mb.macroStrength]+'</strong></div>'
-    +'</div>'
-
-    // Component breakdown — compact grid
-    +'<div style="padding:10px 16px;border-bottom:1px solid '+macroBd+'44;">'
-    +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:5px;">'
-    +mb.components.map(c=>
-      '<div style="display:flex;align-items:center;gap:5px;padding:5px 8px;background:rgba(255,255,255,0.55);border-radius:5px;border:1px solid var(--line);">'
-      +'<span style="font-size:12px">'+c.icon+'</span>'
-      +'<div style="flex:1;min-width:0;">'
-      +'<div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px">'+c.label+'</div>'
-      +'<div style="font-size:11px;font-weight:700;color:'+c.color+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+c.value+'</div>'
-      +'</div>'
-      +'</div>'
-    ).join('')
-    +'</div>'
-    +'</div>'
-
-    // Trade context conclusion
-    +'<div style="padding:11px 16px;">'
-    +'<div style="font-size:12px;color:var(--text);line-height:1.85;padding:9px 12px;background:rgba(255,255,255,0.5);border-radius:6px;border-left:3px solid '+macroColor+';">'
-    +mb.tradeContext
-    +'</div>'
-    +'</div>'
-
-    +'</div>';
-  })()}
-
-  <!-- ══════════════════════════════════════════════════════════ -->
-  <!-- BLOCK 1D: 🎯 TRADE DEADLINE ANALYSIS (shown if set)      -->
-  <!-- ══════════════════════════════════════════════════════════ -->
-  ${deadlineAnalysis ? (()=>{
-    const da = deadlineAnalysis;
-    if (da.expired) return `<div style="background:rgba(160,20,32,0.08);border:1px solid rgba(160,20,32,0.3);border-radius:10px;padding:12px 16px;margin-bottom:10px;font-size:12px;color:var(--red);">⚠️ ${da.warning} <button onclick="clearTradeDeadline()" style="margin-left:8px;padding:2px 8px;border:1px solid var(--red);border-radius:3px;background:transparent;color:var(--red);font-family:inherit;font-size:10px;cursor:pointer;">清除截止日</button></div>`;
-
-    const tfWarn = da.tfRecommend
-      ? `<div style="margin-bottom:8px;padding:7px 10px;background:rgba(128,80,0,0.07);border:1px solid rgba(128,80,0,0.25);border-radius:6px;font-size:10px;color:var(--amber);">⚠️ <strong>${da.tfRecommend.issue}</strong>：${da.tfRecommend.reason} <button onclick="setStrat('${da.tfRecommend.suggest}',null)" style="margin-left:6px;padding:2px 7px;border:1px solid var(--amber);border-radius:3px;background:rgba(128,80,0,0.1);color:var(--amber);font-family:inherit;font-size:10px;cursor:pointer;font-weight:700;">切换到 ${da.tfRecommend.suggest.toUpperCase()}</button></div>`
-      : `<div style="font-size:10px;color:var(--teal);margin-bottom:8px;">✅ 当前时框（${res.tf.toUpperCase()}）与截止日期窗口匹配，剩余 ${da.barsLeft} 根K线</div>`;
-
-    const tpRows = da.tpReachable.map(tp => {
-      if (!tp.p || !isFinite(tp.p)) return '';
-      const valid = isBull ? tp.p > entry : tp.p < entry;
-      if (!valid) return '';
-      return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--line);">
-        <span style="font-size:9px;font-weight:700;padding:2px 5px;border-radius:3px;background:${tp.reachable?'rgba(10,96,80,0.1)':'rgba(160,20,32,0.08)'};color:${tp.reachable?'var(--teal)':'var(--red)'};border:1px solid ${tp.reachable?'rgba(10,96,80,0.25)':'rgba(160,20,32,0.2)'};">TP${tp.idx}</span>
-        <span style="font-size:13px;font-weight:700;color:${tp.reachable?'var(--teal)':'var(--muted)'};font-variant-numeric:tabular-nums;">${fmtP(tp.p)}</span>
-        <span style="font-size:10px;color:var(--muted);">${tp.reachable?'✅ 截止日前可达':'⏰ 可能超时'}</span>
-        <span style="font-size:10px;color:var(--dim);margin-left:auto;">预计 ${tp.etaStr}</span>
-      </div>`;
-    }).join('');
-
-    return `<div style="background:rgba(10,96,80,0.04);border:2px solid ${da.color};border-radius:10px;margin-bottom:10px;overflow:hidden;">
-      <div style="padding:10px 16px;border-bottom:1px solid ${da.color}44;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;">
-        <div>
-          <div style="font-size:10px;letter-spacing:1.5px;color:${da.color};font-weight:700;text-transform:uppercase;margin-bottom:3px">🎯 交易截止日分析</div>
-          <div style="font-size:14px;font-weight:700;color:${da.color}">${da.label}</div>
-        </div>
-        <div style="display:flex;align-items:center;gap:6px;">
-          <div style="text-align:right;font-size:10px;color:var(--muted);">剩余约 <strong style="color:${da.color};font-size:13px;">${da.barsLeft}</strong> 根 ${res.tf.toUpperCase()} K线<br>预期最大波幅: <strong style="color:var(--text);">${da.expectedMovePct}%</strong></div>
-          <button onclick="clearTradeDeadline()" style="padding:3px 8px;border:1px solid var(--line2);border-radius:3px;background:transparent;color:var(--muted);font-family:inherit;font-size:10px;cursor:pointer;">✕ 清除</button>
-        </div>
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- LAYER 1G · 🔮 玄学综合研判 (collapsible)                          -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <details style="margin-bottom:8px">
+    <summary style="list-style:none;cursor:pointer;padding:10px 14px;background:var(--card);border:1px solid rgba(88,24,144,0.22);border-radius:8px;display:flex;align-items:center;justify-content:space-between;user-select:none;box-shadow:var(--shadow);">
+      <div>
+        <span style="font-size:11px;font-weight:700;color:var(--text)">🔮 玄学 · 奇门 · 月相</span>
+        <div style="font-size:10px;color:var(--muted);margin-top:1px">${mc.lunar.icon} ${mc.lunar.name.split(' ')[0]} · 奇门${mc.palace.name} · <span style="color:${mysticAlignOk?'var(--violet)':'var(--amber)'}">${mysticAlignOk?'✅ 技术共振':'⚠️ 存在分歧'}</span></div>
       </div>
-      <div style="padding:12px 16px;">
-        ${tfWarn}
-        <div style="font-size:10px;letter-spacing:1px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:6px;">截止日前 TP 可达性</div>
-        ${tpRows || '<div style="font-size:11px;color:var(--muted);">无有效TP目标</div>'}
-        ${da.bestReachableTP
-          ? `<div style="margin-top:8px;padding:8px 12px;background:rgba(255,255,255,0.6);border-radius:6px;border-left:3px solid ${da.color};font-size:11px;color:var(--text);line-height:1.7;">
-              📌 <strong>截止日策略建议：</strong>
-              ${da.reachableCount === 0
-                ? '截止日前TP均难以达到，建议缩短时框重新分析，或放弃等待更好机会。'
-                : `在 ${da.deadlineStr} 前，重点锁定 <strong style="color:var(--teal)">TP${da.bestReachableTP.idx} ${fmtP(da.bestReachableTP.p)}</strong>。
-                   到达TP${da.bestReachableTP.idx}后，无论信号如何，截止日前主动平仓锁利，勿恋战。`}
-            </div>`
-          : ''}
-      </div>
-    </div>`;
-  })() : ''}
-
-  <!-- ══════════════════════════════════════ -->
-  <!-- BLOCK 2: 🔮 MYSTIC UNIFIED READING   -->
-  <!-- ══════════════════════════════════════ -->
-  <div style="border:2px solid ${mysticBorderCol};border-radius:12px;background:${mysticBgCol};margin-bottom:10px;overflow:hidden;">
-    <div style="padding:12px 18px;border-bottom:1px solid ${mysticBorderCol}25;display:flex;align-items:center;justify-content:space-between;">
-      <div style="font-size:12px;font-weight:700;color:var(--violet);letter-spacing:1px">🔮 玄学 · 奇门遁甲 · 月相 · 风水 综合研判</div>
-      <div style="font-size:11px;font-weight:700;color:${mysticAlignOk?'var(--violet)':'var(--amber)'}">${mysticAlignOk?'✅ 与技术面共振':'⚠️ 与技术面存在分歧'}</div>
-    </div>
-    <div style="padding:13px 18px;">
-
-      <!-- Mystic factors row -->
-      <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px;">
-        ${mc.mysticFactors.map(f=>`<span style="font-size:11px;padding:3px 9px;border-radius:10px;background:rgba(88,24,144,0.08);color:var(--violet);border:1px solid rgba(88,24,144,0.2);font-weight:700">${f}</span>`).join('')}
-        ${mc.inRet?'<span style="font-size:11px;padding:3px 9px;border-radius:10px;background:rgba(160,20,32,0.08);color:var(--red);border:1px solid var(--red-bd);font-weight:700">⚠️ 水星逆行期</span>':''}
-      </div>
-
-      <!-- 4-column mystic details -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
-
-        <!-- Lunar -->
-        <div style="background:rgba(255,255,255,0.55);border-radius:8px;padding:10px 12px;border:1px solid rgba(88,24,144,0.15);">
-          <div style="font-size:10px;color:var(--violet);font-weight:700;letter-spacing:1px;margin-bottom:5px">🌕 月相周期</div>
-          <div style="font-size:15px;font-weight:700;color:var(--text)">${mc.lunar.icon} ${mc.lunar.name.split(' ')[0]}</div>
-          <div style="font-size:11px;color:${mc.lunar.bias==='bull'?'var(--green)':mc.lunar.bias==='bear'?'var(--red)':'var(--muted)'};margin-top:2px;font-weight:700">${mc.lunar.bias==='bull'?'↑ 历史偏多':mc.lunar.bias==='bear'?'↓ 历史偏空':'→ 中性转换'}</div>
-          <div style="font-size:10px;color:var(--muted);margin-top:4px;line-height:1.5">${mc.lunarNote}</div>
-          <div style="font-size:10px;color:var(--dim);margin-top:3px">距新月 ${mc.dTN}天 · 距满月 ${mc.dTF}天</div>
-        </div>
-
-        <!-- Qi Men Palace -->
-        <div style="background:rgba(255,255,255,0.55);border-radius:8px;padding:10px 12px;border:1px solid rgba(88,24,144,0.15);">
-          <div style="font-size:10px;color:var(--violet);font-weight:700;letter-spacing:1px;margin-bottom:5px">⛩️ 奇门时宫</div>
-          <div style="font-size:15px;font-weight:700;color:var(--text)">${mc.palace.name} · ${mc.palace.element}</div>
-          <div style="font-size:11px;color:${mc.fsAlign==='bull'?'var(--green)':mc.fsAlign==='bear'?'var(--red)':'var(--muted)'};margin-top:2px;font-weight:700">${mc.fsAlign==='bull'?'↑ 五行生发利多':mc.fsAlign==='bear'?'↓ 五行收敛利空':'→ 五行平衡'}</div>
-          <div style="font-size:10px;color:var(--muted);margin-top:4px;line-height:1.5">${mc.palace.market}</div>
-        </div>
-
-        <!-- Date numerology -->
-        <div style="background:rgba(255,255,255,0.55);border-radius:8px;padding:10px 12px;border:1px solid rgba(88,24,144,0.15);">
-          <div style="font-size:10px;color:var(--violet);font-weight:700;letter-spacing:1px;margin-bottom:5px">🔢 日期命数</div>
-          <div style="font-size:15px;font-weight:700;color:var(--text)">数字 ${mc.dn}</div>
-          <div style="font-size:10px;color:var(--muted);margin-top:4px;line-height:1.5">${mc.dnMeaning}</div>
-        </div>
-
-        <!-- 天干地支 Year Stem-Branch -->
-        <div style="background:rgba(255,255,255,0.55);border-radius:8px;padding:10px 12px;border:1px solid rgba(88,24,144,0.15);">
-          <div style="font-size:10px;color:var(--violet);font-weight:700;letter-spacing:1px;margin-bottom:5px">🐉 天干地支 · 年柱五行</div>
-          <div style="font-size:15px;font-weight:700;color:var(--text)">${mc.heavenlyStem||''}${mc.earthlyBranch||''}年 · ${mc.yearElement||''}年</div>
-          <div style="font-size:10px;color:var(--muted);margin-top:4px;line-height:1.5">${mc.yearBias||''}</div>
-          <div style="font-size:10px;color:var(--dim);margin-top:3px">本月天干: ${mc.monthStem||''}(${mc.monthElement||''})</div>
-        </div>
-
-        <!-- Mercury + Price number -->
-        <div style="background:rgba(255,255,255,0.55);border-radius:8px;padding:10px 12px;border:1px solid rgba(88,24,144,0.15);">
-          <div style="font-size:10px;color:var(--violet);font-weight:700;letter-spacing:1px;margin-bottom:5px">☿ 水星 · 价格命数</div>
-          <div style="font-size:13px;font-weight:700;color:${mc.inRet?'var(--red)':'var(--green)'}">${mc.inRet?'⚠️ 逆行中 — 减仓谨慎':'✅ 顺行 — 信号较清晰'}</div>
-          <div style="font-size:10px;color:var(--muted);margin-top:4px">价格命数: ${mc.pn} · ${['','领导开创','合作等待','扩张突破','稳固构建','变化高波','平衡震荡','精准技术','权威强势','终结转化'][mc.pn]||''}</div>
-          ${mc.inRet?'<div style="font-size:10px;color:var(--red);margin-top:3px">逆行期间波动性历史高出约18%，建议减小仓位</div>':''}
-        </div>
-      </div>
-
-      <!-- Mystic synthesis -->
-      <div style="background:rgba(88,24,144,0.06);border:1px solid rgba(88,24,144,0.2);border-radius:7px;padding:10px 12px;">
-        <div style="font-size:11px;font-weight:700;color:var(--violet);margin-bottom:5px">综合玄学判断</div>
-        <div style="font-size:12px;color:var(--text);line-height:1.8">
-          ${mysticAlignOk
-            ?`当前月相（${mc.lunar.name.split(' ')[0]}）、奇门时宫（${mc.palace.name}·${mc.palace.element}）与技术面方向<strong style="color:var(--violet)">一致共振</strong>，玄学层面支持${isBull?'看多':'看空'}。日期数字${mc.dn}（${mc.dnMeaning.split('·')[0]}），价格能量与趋势协调。${mc.inRet?'<strong style="color:var(--red)">但水星逆行建议减小仓位。</strong>':''}`
-            :`当前月相与奇门时宫方向与技术面<strong style="color:var(--amber)">存在分歧</strong>，建议适当减仓或等待玄学条件改善（约${Math.min(mc.dTN,mc.dTF).toFixed(0)}天后月相转换）。`}
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ══════════════════════════════════════════════ -->
-  <!-- BLOCK 3: TP/SL SIDE-BY-SIDE (v20)           -->
-  <!-- ══════════════════════════════════════════════ -->
-  ${!isWait?(()=>{
-    /* Build side-by-side TP/SL rows using string concatenation (avoids nested backtick) */
-    const tpC=['var(--teal)','var(--green)','var(--blue)'];
-    const tpBG=['rgba(10,96,80,0.06)','rgba(26,107,58,0.06)','rgba(26,58,138,0.06)'];
-    const tpBD=['rgba(10,96,80,0.2)','var(--green-bd)','rgba(26,58,138,0.2)'];
-    const probs=[68,45,28];
-    const slDesc=['新手推荐','常规使用','长线宽松'];
-    const sideBySideRows=[0,1,2].map(idx=>{
-      const tp=tps[idx],sl=sls[idx];
-      const vTP=tp&&isFinite(tp.p)&&(isBull?tp.p>entry:tp.p<entry);
-      const vSL=sl&&isFinite(sl.p)&&(isBull?sl.p<entry:sl.p>entry);
-      const et=vTP?estTime(tp.p,barMsVal):{label:'--',date:'--'};
-      const rrV=vTP?((Math.abs(tp.p-entry)/Math.max(Math.abs(sls[0].p-entry),0.001)).toFixed(1)):'—';
-      const rowBg=idx%2?'background:rgba(0,0,0,0.018)':'';
-      const tpH=vTP
-        ?('<div style="display:flex;align-items:center;gap:5px;margin-bottom:4px">'
-          +'<span style="font-size:9px;font-weight:700;padding:2px 5px;border-radius:4px;background:'+tpBG[idx]+';color:'+tpC[idx]+';border:1px solid '+tpBD[idx]+'">TP'+(idx+1)+'</span>'
-          +'<span style="font-size:9px;font-weight:700;color:'+tpC[idx]+'">'+rrV+'R</span>'
-          +'<span style="font-size:9px;color:var(--dim)"> '+probs[idx]+'%概率</span>'
-          +'</div>'
-          +'<div style="font-size:18px;font-weight:700;color:'+tpC[idx]+';font-variant-numeric:tabular-nums;line-height:1.2">'+fmtP(tp.p)+'</div>'
-          +'<div style="font-size:12px;font-weight:700;color:'+tpC[idx]+';margin-top:1px">'+fmtPct(tp.pct)+'</div>'
-          +'<div style="font-size:10px;color:var(--muted);margin-top:5px">⏱ '+et.label+'</div>'
-          +'<div style="font-size:10px;color:var(--dim)">'+et.date+'</div>'
-          +(et.range?'<div style="font-size:9px;color:var(--amber);margin-top:1px">📊 区间: '+et.range+'</div>':'')
-          +(tp.note?'<div style="font-size:10px;color:var(--muted);margin-top:3px;line-height:1.4">'+tp.note+'</div>':''))
-        :'<span style="color:var(--muted);font-size:11px">—</span>';
-      const slRisk=vSL?Math.abs((sl.p-entry)/entry*100).toFixed(2):'—';
-      const slH=vSL
-        ?('<div style="display:flex;align-items:center;gap:5px;margin-bottom:4px">'
-          +'<span style="font-size:9px;font-weight:700;padding:2px 5px;border-radius:4px;background:var(--red-bg);color:var(--red);border:1px solid var(--red-bd)">SL'+(idx+1)+'</span>'
-          +'<span style="font-size:9px;color:var(--muted)">'+slDesc[idx]+'</span>'
-          +'</div>'
-          +'<div style="font-size:18px;font-weight:700;color:var(--red);font-variant-numeric:tabular-nums;line-height:1.2">'+fmtP(sl.p)+'</div>'
-          +'<div style="font-size:12px;font-weight:700;color:var(--red);margin-top:1px">'+fmtPct(sl.pct)+'</div>'
-          +'<div style="font-size:10px;color:var(--muted);margin-top:5px">风险 '+slRisk+'%</div>'
-          +(sl.invalidate?'<div style="font-size:10px;color:var(--red);margin-top:3px">⚠ '+sl.invalidate+'</div>':''))
-        :'<span style="color:var(--muted);font-size:11px">—</span>';
-      return '<div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--line);'+rowBg+'">'
-        +'<div style="padding:10px 14px;border-right:1px solid var(--line)">'+tpH+'</div>'
-        +'<div style="padding:10px 14px">'+slH+'</div>'
-        +'</div>';
-    }).join('');
-    return '<div style="background:var(--card);border:1px solid var(--card-bd);border-radius:12px;margin-bottom:10px;overflow:hidden;box-shadow:var(--shadow);">'
-      +'<div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:2px solid var(--line2);">'
-      +'<div style="padding:10px 14px;border-right:1px solid var(--line);background:rgba(26,107,58,0.04);">'
-      +'<div style="font-size:10px;letter-spacing:1.5px;color:var(--green);font-weight:700;text-transform:uppercase">🎯 止盈 · TP</div>'
-      +'<div style="font-size:10px;color:var(--muted);margin-top:2px">价格 · 幅度 · 预计时间</div></div>'
-      +'<div style="padding:10px 14px;background:rgba(160,20,32,0.04);">'
-      +'<div style="font-size:10px;letter-spacing:1.5px;color:var(--red);font-weight:700;text-transform:uppercase">🛡️ 止损 · SL</div>'
-      +'<div style="font-size:10px;color:var(--muted);margin-top:2px">SL1最紧 → SL2中 → SL3宽</div></div></div>'
-      +sideBySideRows
-      +'<div style="padding:8px 14px;background:rgba(0,0,0,0.02);border-top:1px solid var(--line);">'
-      +'<div style="font-size:10px;color:var(--muted);line-height:1.7">'
-      +'📌 <strong style="color:var(--text)">TP操作：</strong>TP1达到→平50%+止损移成本 · TP2→再平30% · TP3→余量持有'
-      +' &nbsp;|&nbsp; <strong style="color:var(--text)">SL建议：</strong>新手→SL1 · 常规→SL2 · 长线→SL3'
-      +'</div></div></div>';
-  })():`
-  <!-- WAIT state breakout levels -->
-  <div style="background:var(--card);border:1px solid var(--card-bd);border-radius:12px;padding:14px 16px;margin-bottom:10px;box-shadow:var(--shadow);">
-    <div style="font-size:11px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:10px">⏳ 等待突破 · 关键价位监控</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-      <div style="padding:12px;background:var(--green-bg);border:1px solid var(--green-bd);border-radius:8px;text-align:center;">
-        <div style="font-size:10px;color:var(--green);font-weight:700;margin-bottom:5px;letter-spacing:1px">▲ 突破后做多</div>
-        <div style="font-size:22px;font-weight:700;color:var(--green)">${fmtP(tps[0].p)}</div>
-        <div style="font-size:10px;color:var(--muted);margin-top:3px">放量收盘确认入场</div>
-      </div>
-      <div style="padding:12px;background:var(--red-bg);border:1px solid var(--red-bd);border-radius:8px;text-align:center;">
-        <div style="font-size:10px;color:var(--red);font-weight:700;margin-bottom:5px;letter-spacing:1px">▼ 跌破后做空</div>
-        <div style="font-size:22px;font-weight:700;color:var(--red)">${fmtP(sls[0].p)}</div>
-        <div style="font-size:10px;color:var(--muted);margin-top:3px">收盘确认，不提前追空</div>
-      </div>
-    </div>
-    <div style="margin-top:10px;font-size:11px;color:var(--muted);text-align:center;line-height:1.6">${verdict?.watchFor||''}</div>
-  </div>`}
-
-  <!-- ══════════════════════════════════════ -->
-  <!-- BLOCK 4: SIGNALS + SCENARIOS          -->
-  <!-- ══════════════════════════════════════ -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
-    <!-- Active signals -->
-    <div style="background:var(--card);border:1px solid var(--card-bd);border-radius:8px;padding:11px 13px;box-shadow:var(--shadow);">
-      <div style="font-size:10px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:7px">📡 活跃信号 ${sigs.length}个</div>
-      <div style="display:flex;flex-wrap:wrap;gap:4px;">${sigs.map(s=>`<span class="sig ${s.c}" style="font-size:10px">${s.l}</span>`).join('')}</div>
-    </div>
-    <!-- Three scenarios compact -->
-    ${verdict?.scenarios?`
-    <div style="background:var(--card);border:1px solid var(--card-bd);border-radius:8px;padding:11px 13px;box-shadow:var(--shadow);">
-      <div style="font-size:10px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:7px">📐 三种情景</div>
-      ${verdict.scenarios.map(s=>`<div style="display:flex;align-items:center;gap:6px;padding:3px 0;border-bottom:1px solid var(--line);font-size:11px;">
-        <div style="width:3px;height:28px;background:${s.color};border-radius:2px;flex-shrink:0"></div>
-        <div style="flex:1"><div style="font-weight:700;color:var(--bright)">${s.name}</div><div style="color:var(--muted);font-size:10px">${s.trigger}</div></div>
-        <div style="font-size:10px;font-weight:700;color:${s.prob==='高'?'var(--green)':s.prob==='中'?'var(--amber)':'var(--muted)'};flex-shrink:0">${s.prob}</div>
-      </div>`).join('')}
-    </div>`:''}
-  </div>
-
-  <!-- ══════════════════════════════════════ -->
-  <!-- BLOCK 5: DEEP ANALYSIS (collapsible)  -->
-  <!-- ══════════════════════════════════════ -->
-  <details style="margin-bottom:10px;" id="deepAnalysisDetails">
-    <summary style="cursor:pointer;padding:12px 16px;background:var(--card);border:1px solid var(--card-bd);border-radius:8px;font-size:12px;font-weight:700;color:var(--muted);list-style:none;display:flex;align-items:center;justify-content:space-between;user-select:none;box-shadow:var(--shadow);">
-      <span>🔬 深度技术分析 · 策略矩阵 · AI解读</span><span style="font-size:11px">点击展开 ▼</span>
+      <span style="font-size:10px;color:var(--muted);flex-shrink:0;margin-left:8px">展开 ▼</span>
     </summary>
-    <div style="padding:10px 0;">
+    <div style="margin-top:3px;border:2px solid ${mysticBorderCol};border-radius:8px;background:${mysticBgCol};overflow:hidden;">
+      <div style="padding:9px 14px;border-bottom:1px solid ${mysticBorderCol}20">
+        <div style="display:flex;flex-wrap:wrap;gap:4px">${mc.mysticFactors.map(f=>`<span style="font-size:10px;padding:2px 7px;border-radius:8px;background:rgba(88,24,144,0.07);color:var(--violet);border:1px solid rgba(88,24,144,0.18);font-weight:700">${f}</span>`).join('')}${mc.inRet?'<span style="font-size:10px;padding:2px 7px;border-radius:8px;background:rgba(160,20,32,0.08);color:var(--red);border:1px solid var(--red-bd);font-weight:700">⚠️ 水星逆行</span>':''}</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;padding:9px 14px;border-bottom:1px solid ${mysticBorderCol}15">
+        <div style="background:rgba(255,255,255,0.5);border-radius:5px;padding:8px 10px;border:1px solid rgba(88,24,144,0.12)">
+          <div style="font-size:9px;color:var(--violet);font-weight:700;letter-spacing:1px;margin-bottom:3px">🌕 月相</div>
+          <div style="font-size:12px;font-weight:700;color:var(--text)">${mc.lunar.icon} ${mc.lunar.name.split(' ')[0]}</div>
+          <div style="font-size:10px;color:${mc.lunar.bias==='bull'?'var(--green)':mc.lunar.bias==='bear'?'var(--red)':'var(--muted)'};margin-top:1px;font-weight:700">${mc.lunar.bias==='bull'?'↑偏多':mc.lunar.bias==='bear'?'↓偏空':'→中性'}</div>
+          <div style="font-size:9px;color:var(--dim);margin-top:2px">新月${mc.dTN}d · 满月${mc.dTF}d</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.5);border-radius:5px;padding:8px 10px;border:1px solid rgba(88,24,144,0.12)">
+          <div style="font-size:9px;color:var(--violet);font-weight:700;letter-spacing:1px;margin-bottom:3px">⛩️ 奇门时宫</div>
+          <div style="font-size:12px;font-weight:700;color:var(--text)">${mc.palace.name} · ${mc.palace.element}</div>
+          <div style="font-size:10px;color:${mc.fsAlign==='bull'?'var(--green)':mc.fsAlign==='bear'?'var(--red)':'var(--muted)'};margin-top:1px;font-weight:700">${mc.fsAlign==='bull'?'↑利多':mc.fsAlign==='bear'?'↓利空':'→平衡'}</div>
+          <div style="font-size:9px;color:var(--muted);margin-top:2px">${mc.palace.market}</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.5);border-radius:5px;padding:8px 10px;border:1px solid rgba(88,24,144,0.12)">
+          <div style="font-size:9px;color:var(--violet);font-weight:700;letter-spacing:1px;margin-bottom:3px">🐉 干支年</div>
+          <div style="font-size:12px;font-weight:700;color:var(--text)">${mc.heavenlyStem||''}${mc.earthlyBranch||''}年 · ${mc.yearElement||''}</div>
+          <div style="font-size:9px;color:var(--muted);margin-top:2px;line-height:1.4">${(mc.yearBias||'').slice(0,40)}</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.5);border-radius:5px;padding:8px 10px;border:1px solid rgba(88,24,144,0.12)">
+          <div style="font-size:9px;color:var(--violet);font-weight:700;letter-spacing:1px;margin-bottom:3px">☿ 水星 · 日数${mc.dn}</div>
+          <div style="font-size:12px;font-weight:700;color:${mc.inRet?'var(--red)':'var(--green)'}">${mc.inRet?'⚠️ 逆行减仓':'✅ 顺行清晰'}</div>
+          <div style="font-size:9px;color:var(--muted);margin-top:2px">${(mc.dnMeaning||'').split('·')[0]}</div>
+        </div>
+      </div>
+      <div style="padding:9px 14px">
+        <div style="background:rgba(88,24,144,0.06);border:1px solid rgba(88,24,144,0.18);border-radius:5px;padding:8px 10px">
+          <div style="font-size:10px;font-weight:700;color:var(--violet);margin-bottom:3px">综合玄学研判</div>
+          <div style="font-size:11px;color:var(--text);line-height:1.8">${mysticAlignOk?`月相（${mc.lunar.name.split(' ')[0]}）与奇门时宫（${mc.palace.name}·${mc.palace.element}）与技术面<strong style="color:var(--violet)">一致共振</strong>，支持${isBull?'看多':'看空'}。日数${mc.dn}：${(mc.dnMeaning||'').split('·')[0]}。${mc.inRet?'<strong style="color:var(--red)">水星逆行期建议减仓。</strong>':''}`:
+            `月相与奇门时宫与技术面<strong style="color:var(--amber)">存在分歧</strong>，适当减仓或等待（约${Math.min(mc.dTN,mc.dTF).toFixed(0)}天后月相转换）。`}</div>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- LAYER 2 · 🔬 深度技术分析 (collapsible)                           -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <details style="margin-bottom:8px">
+    <summary style="list-style:none;cursor:pointer;padding:10px 14px;background:var(--card);border:1px solid var(--card-bd);border-radius:8px;display:flex;align-items:center;justify-content:space-between;user-select:none;box-shadow:var(--shadow);">
+      <span style="font-size:11px;font-weight:700;color:var(--muted)">🔬 深度技术分析 · 战略矩阵 · AI叙事</span>
+      <span style="font-size:10px;color:var(--muted)">展开 ▼</span>
+    </summary>
+    <div style="padding:8px 0">
       ${(()=>{try{return _Γ8p(res)||'';}catch(e){return'';}})()}
-      <div style="background:var(--card);border:1px solid var(--card-bd);border-left:3px solid var(--gold);border-radius:8px;padding:13px;margin-bottom:10px;">
-        <div style="font-size:10px;letter-spacing:1.5px;color:var(--gold);text-transform:uppercase;margin-bottom:9px">🔮 多维战略矩阵</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;font-size:11px;">
+      <div style="background:var(--card);border:1px solid var(--card-bd);border-left:3px solid var(--gold);border-radius:8px;padding:11px 13px;margin-bottom:9px">
+        <div style="font-size:9px;letter-spacing:1.5px;color:var(--gold);text-transform:uppercase;margin-bottom:7px">🔮 多维战略矩阵</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;font-size:11px">
           ${[
-            {icon:'📊',lbl:'技术面',col:'var(--blue)',body:`RSI <strong style="color:${res.rsi<35?'var(--green)':res.rsi>65?'var(--red)':'var(--muted)'}">${res.rsi.toFixed(0)}</strong> · MACD <strong style="color:${res.macdD.hist>0?'var(--green)':'var(--red)'}">${res.macdD.hist>0?'多头':'空头'}</strong><br>Vegas: ${res.vegas?res.vegas.above?'▲上方':res.vegas.below?'▼下方':'⚡内':'N/A'} · ADX: ${res.adx?.adx?.toFixed(0)||'--'}`},
+            {icon:'📊',lbl:'技术指标',col:'var(--blue)',body:`RSI <strong style="color:${res.rsi<35?'var(--green)':res.rsi>65?'var(--red)':'var(--muted)'}">${res.rsi.toFixed(0)}</strong> · MACD <strong style="color:${res.macdD.hist>0?'var(--green)':'var(--red)'}">${res.macdD.hist>0?'多':'空'}</strong><br>Vegas: ${res.vegas?res.vegas.above?'▲云上':res.vegas.below?'▼云下':'⚡云中':'N/A'} · ADX: ${res.adx?.adx?.toFixed(0)||'--'}`},
             {icon:'🔱',lbl:'缠论结构',col:'var(--teal)',body:`${res.chan?.bullDiv?'⚡底背驰':res.chan?.bearDiv?'⚡顶背驰':res.chan?.bullBi?'↗上升笔':'↘下降笔'}<br>中枢: ${res.chan?.zhLo&&res.chan?.zhHi?fmtP(res.chan.zhLo)+'–'+fmtP(res.chan.zhHi):'未成形'}`},
             {icon:'🌀',lbl:'斐波那契',col:'var(--gold)',body:`φ61.8%: <strong style="color:var(--violet)">${fmtP(res.fib618)}</strong><br>${res.nF618?'⚡ 黄金共振位':'区间: '+fmtP(res.fibLo)+'–'+fmtP(res.fibHi)}`},
-            {icon:'📈',lbl:'量价OBV/CVD',col:'var(--teal)',body:`OBV ${res.obv?.obvTrend===1?'↑多头':'↓空头'}${res.obv?.obvDiv?' ⚡背驰':''}<br>CVD: ${res.cvd?.bullishDelta?'买盘主导':'卖盘主导'}`},
+            {icon:'📈',lbl:'OBV/CVD',col:'var(--teal)',body:`OBV ${res.obv?.obvTrend===1?'↑多头':'↓空头'}${res.obv?.obvDiv?' ⚡背驰':''}<br>CVD: ${res.cvd?.bullishDelta?'买盘主导':'卖盘主导'}`},
             {icon:'⚔️',lbl:'江恩Sq9',col:'var(--violet)',body:`支撑: ${S.modData.gann?.below?.[0]?fmtP(S.modData.gann.below[0].price):'--'}<br>阻力: ${S.modData.gann?.above?.[0]?fmtP(S.modData.gann.above[0].price):'--'}`},
-              {icon:'☁️',lbl:'一目均衡',col:'var(--teal)',body:`${S.modData.ichimoku?.fullBull?'✅ 全多共振':S.modData.ichimoku?.fullBear?'❌ 全空共振':S.modData.ichimoku?.aboveCloud?'↑ 云上多':S.modData.ichimoku?.belowCloud?'↓ 云下空':'⚡ 云中整理'}<br>TK: ${S.modData.ichimoku?.tkBull?'多叉↑':'空叉↓'} 迟行: ${S.modData.ichimoku?.chikouBull?'✓':'✗'}`},
-            {icon:'🏗',lbl:'市场结构',col:'var(--blue)',body:`${res.mktStr?.bias==='bull'?'✅ HH/HL多头':res.mktStr?.bias==='bear'?'❌ LL/LH空头':'⚡ 中性整理'}<br>${res.mktStr?.bullCHoCH?'⚡CHoCH反转多头':res.mktStr?.bearCHoCH?'⚡CHoCH反转空头':'结构延续'}`},
-          ].map(s=>`<div style="background:var(--bg1);border-radius:6px;padding:9px;border:1px solid var(--line);">
-            <div style="font-weight:700;color:${s.col};margin-bottom:4px;font-size:11px">${s.icon} ${s.lbl}</div>
-            <div style="color:var(--text);line-height:1.7;font-size:11px">${s.body}</div>
+            {icon:'☁️',lbl:'一目均衡',col:'var(--teal)',body:`${S.modData.ichimoku?.fullBull?'✅全多':S.modData.ichimoku?.fullBear?'❌全空':S.modData.ichimoku?.aboveCloud?'↑云上':S.modData.ichimoku?.belowCloud?'↓云下':'⚡云中'}<br>TK: ${S.modData.ichimoku?.tkBull?'多叉↑':'空叉↓'} 迟行: ${S.modData.ichimoku?.chikouBull?'✓':'✗'}`},
+            {icon:'🏗',lbl:'市场结构',col:'var(--blue)',body:`${res.mktStr?.bias==='bull'?'✅ HH/HL多头':res.mktStr?.bias==='bear'?'❌ LL/LH空头':'⚡ 中性'}<br>${res.mktStr?.bullCHoCH?'⚡CHoCH多转':res.mktStr?.bearCHoCH?'⚡CHoCH空转':'结构延续'}`},
+          ].map(s=>`<div style="background:var(--bg1);border-radius:5px;padding:7px 8px;border:1px solid var(--line)">
+            <div style="font-weight:700;color:${s.col};margin-bottom:2px;font-size:10px">${s.icon} ${s.lbl}</div>
+            <div style="color:var(--text);line-height:1.7;font-size:10px">${s.body}</div>
           </div>`).join('')}
         </div>
       </div>
-      <div style="background:var(--card);border:1px solid var(--card-bd);border-radius:8px;padding:13px;margin-bottom:10px;">
-        <div style="font-size:10px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:9px">📐 左侧 vs 右侧入场</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-          <div style="background:${isBull?'rgba(26,107,58,0.07)':'rgba(160,20,32,0.07)'};border:1px solid ${isBull?'var(--green-bd)':'var(--red-bd)'};border-radius:6px;padding:10px;">
-            <div style="font-size:11px;font-weight:700;color:${isBull?'var(--green)':'var(--red)'};margin-bottom:5px">◀ 左侧预测性入场</div>
-            <div style="font-size:11px;color:var(--text);line-height:1.8">${isBull?`现价 ${fmtP(entry)} 附近分批建仓<br>止损: ${fmtP(sls[0].p)}<br><span style="color:var(--green)">↑ 成本更低</span> · <span style="color:var(--red)">↓ 可能被洗盘</span>`:`现价 ${fmtP(entry)} 做空<br>止损: ${fmtP(sls[0].p)}<br><span style="color:var(--green)">↑ 价位更优</span> · <span style="color:var(--red)">↓ 可能假突破</span>`}</div>
+      <div style="background:var(--card);border:1px solid var(--card-bd);border-radius:8px;padding:11px 13px;margin-bottom:9px">
+        <div style="font-size:9px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:7px">📐 左侧 vs 右侧入场对比</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">
+          <div style="background:${isBull?'rgba(26,107,58,0.07)':'rgba(160,20,32,0.07)'};border:1px solid ${isBull?'var(--green-bd)':'var(--red-bd)'};border-radius:5px;padding:8px">
+            <div style="font-size:10px;font-weight:700;color:${isBull?'var(--green)':'var(--red)'};margin-bottom:3px">◀ 左侧预测</div>
+            <div style="font-size:10px;color:var(--text);line-height:1.8">${isBull?`现价附近 ${fmtP(entry)} 建仓<br>止损 ${fmtP(sls[0].p)}<br><span style="color:var(--green)">↑成本低</span> · <span style="color:var(--red)">↓可能洗盘</span>`:`现价 ${fmtP(entry)} 做空<br>止损 ${fmtP(sls[0].p)}<br><span style="color:var(--green)">↑价位优</span> · <span style="color:var(--red)">↓假突破风险</span>`}</div>
           </div>
-          <div style="background:rgba(26,58,138,0.05);border:1px solid rgba(26,58,138,0.2);border-radius:6px;padding:10px;">
-            <div style="font-size:11px;font-weight:700;color:var(--blue);margin-bottom:5px">▶ 右侧确认性入场</div>
-            <div style="font-size:11px;color:var(--text);line-height:1.8">${isBull?`等突破 ${fmtP(res.swingHighs?.[0]||tps[0].p)} 放量后入<br><span style="color:var(--green)">↑ 成功率更高</span> · <span style="color:var(--red)">↓ 价位稍贵</span>`:`等跌破 ${fmtP(res.swingLows?.[0]||tps[0].p)} 放量后空<br><span style="color:var(--green)">↑ 成功率更高</span> · <span style="color:var(--red)">↓ 错过最佳价</span>`}</div>
+          <div style="background:rgba(26,58,138,0.05);border:1px solid rgba(26,58,138,0.2);border-radius:5px;padding:8px">
+            <div style="font-size:10px;font-weight:700;color:var(--blue);margin-bottom:3px">▶ 右侧确认</div>
+            <div style="font-size:10px;color:var(--text);line-height:1.8">${isBull?`突破 ${fmtP(res.swingHighs?.[0]||tps[0].p)} 放量后入<br><span style="color:var(--green)">↑成功率高</span> · <span style="color:var(--red)">↓价位稍贵</span>`:`跌破 ${fmtP(res.swingLows?.[0]||tps[0].p)} 放量后空<br><span style="color:var(--green)">↑成功率高</span> · <span style="color:var(--red)">↓错过最优</span>`}</div>
           </div>
         </div>
       </div>
@@ -9789,6 +9506,15 @@ function _doRenderStrategy(res){
       </div>
     </div>
   </details>
+
+  <!-- Trade Deadline -->
+  ${deadlineAnalysis?(()=>{
+    const da=deadlineAnalysis;
+    if(da.expired)return`<div style="background:rgba(160,20,32,0.08);border:1px solid rgba(160,20,32,0.3);border-radius:8px;padding:10px 14px;margin-bottom:8px;font-size:12px;color:var(--red)">⚠️ ${da.warning} <button onclick="clearTradeDeadline()" style="margin-left:8px;padding:2px 7px;border:1px solid var(--red);border-radius:3px;background:transparent;color:var(--red);font-family:inherit;font-size:10px;cursor:pointer">清除</button></div>`;
+    const tpRowsDA=da.tpReachable.map(tp=>{if(!tp.p||!isFinite(tp.p))return'';const valid=isBull?tp.p>entry:tp.p<entry;if(!valid)return'';return`<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--line)"><span style="font-size:9px;font-weight:700;padding:2px 5px;border-radius:3px;background:${tp.reachable?'rgba(10,96,80,0.1)':'rgba(160,20,32,0.08)'};color:${tp.reachable?'var(--teal)':'var(--red)'};border:1px solid ${tp.reachable?'rgba(10,96,80,0.25)':'rgba(160,20,32,0.2)'}">TP${tp.idx}</span><span style="font-size:12px;font-weight:700;color:${tp.reachable?'var(--teal)':'var(--muted)'};font-variant-numeric:tabular-nums">${fmtP(tp.p)}</span><span style="font-size:10px;color:var(--muted)">${tp.reachable?'✅ 可达':'⏰ 可能超时'}</span><span style="font-size:10px;color:var(--dim);margin-left:auto">~${tp.etaStr}</span></div>`;}).join('');
+    return`<details style="margin-bottom:8px"><summary style="list-style:none;cursor:pointer;padding:10px 14px;background:var(--card);border:2px solid ${da.color};border-radius:8px;display:flex;align-items:center;justify-content:space-between;user-select:none;box-shadow:var(--shadow);"><div><span style="font-size:11px;font-weight:700;color:var(--text)">🎯 截止日分析</span><div style="font-size:10px;color:var(--muted);margin-top:1px">${da.label} · 剩余~${da.barsLeft}根K线 · 最大波幅${da.expectedMovePct}%</div></div><span style="font-size:10px;color:var(--muted)">展开 ▼</span></summary><div style="margin-top:3px;background:rgba(10,96,80,0.04);border:2px solid ${da.color};border-radius:8px;padding:11px 14px">${da.tfRecommend?`<div style="margin-bottom:7px;padding:6px 9px;background:rgba(128,80,0,0.07);border:1px solid rgba(128,80,0,0.25);border-radius:5px;font-size:10px;color:var(--amber)">⚠️ <strong>${da.tfRecommend.issue}</strong>：${da.tfRecommend.reason} <button onclick="setStrat('${da.tfRecommend.suggest}',null)" style="margin-left:5px;padding:2px 6px;border:1px solid var(--amber);border-radius:3px;background:rgba(128,80,0,0.1);color:var(--amber);font-family:inherit;font-size:9px;cursor:pointer;font-weight:700">切换${da.tfRecommend.suggest.toUpperCase()}</button></div>`:`<div style="font-size:10px;color:var(--teal);margin-bottom:7px">✅ 时框匹配，剩余${da.barsLeft}根K线</div>`}<div style="font-size:9px;letter-spacing:1px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:4px">截止日TP可达性</div>${tpRowsDA||'<div style="font-size:11px;color:var(--muted)">无有效TP</div>'}${da.bestReachableTP?`<div style="margin-top:6px;padding:6px 10px;background:rgba(255,255,255,0.6);border-radius:5px;border-left:3px solid ${da.color};font-size:11px;color:var(--text);line-height:1.7">📌 <strong>截止日策略：</strong>${da.reachableCount===0?'TP难达，缩短时框或等待更好机会。':`锁定 <strong style="color:var(--teal)">TP${da.bestReachableTP.idx} ${fmtP(da.bestReachableTP.p)}</strong>，到达主动平仓，勿恋战。`}</div>`:''}
+      <div style="margin-top:7px;text-align:right"><button onclick="clearTradeDeadline()" style="padding:3px 8px;border:1px solid var(--line2);border-radius:3px;background:transparent;color:var(--muted);font-family:inherit;font-size:10px;cursor:pointer">✕ 清除截止日</button></div></div></details>`;
+  })():''}
 
   <!-- Footer -->
   <div style="display:flex;align-items:center;justify-content:space-between;padding:5px 10px;background:var(--bg2);border-radius:6px;border:1px solid var(--line);">
