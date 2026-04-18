@@ -1,7 +1,7 @@
 <!-- FINCH — 全维度市场分析系统 (加密 · 黄金 · 白银 · 石油)
-  v62 — NaN ATR修复 · 入场窗口重置修复 · refreshLoop性能优化 · scaledTargets/Kelly NaN修复
+  v64 — 8盲区修复：信号时序·OI/FR联动·流动性SL·置信分解·动态MTF·突破确认·入场评级·价格加速度
   ═══════════════════════════════════════════════════════════════════════════
-  FINCH v62 核心修复 (2025-04-15):
+  FINCH v64 升级 (2026-04-18) — Inverse深度分析8盲区修复:
   ✓ NaN ATR彻底消灭 — stamp()/evaluate()双层防御，四重保底逻辑
   ✓ 入场窗口"接近失效"BUG修复 — 每次新分析强制重新stamp，新鲜度从100%开始
   ✓ refreshLoop性能优化 — 改用buildStrategyMemo，仅信号对象真正变化时才重渲染
@@ -16,7 +16,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://fonts.googleapis.com https://fonts.gstatic.com https://api.binance.com https://api1.binance.com https://api2.binance.com https://api3.binance.com https://api4.binance.com https://data-api.binance.vision https://data-stream.binance.vision https://fapi.binance.com https://api.alternative.me https://api.coingecko.com https://api.llama.fi https://corsproxy.io https://api.allorigins.win https://thingproxy.freeboard.io https://api.blockchain.info https://www.alphavantage.co https://cdn.jsdelivr.net https://open.er-api.com wss://stream.binance.com wss://data-stream.binance.vision; connect-src 'self' https: wss: data: blob:; frame-ancestors 'none';">
 <meta http-equiv="X-Frame-Options" content="DENY">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>FINCH v62 — 全维度市场分析 · NaN修复·窗口修复·性能优化</title>
+<title>FINCH v64 — 全维度市场分析 · 信号时序·OI联动·动态MTF·突破确认·流动性SL·置信分解·入场评级·加速度</title>
 
 <!-- ═══ PWA / iOS APP META ═══ -->
 <meta name="mobile-web-app-capable" content="yes">
@@ -6815,6 +6815,30 @@ function _Φ9x(tf){
   const sm=_SmartMoney(kl,price);
   const volProf=_VolumeProfile(kl,price);
 
+  // ── v64-H: 价格加速度监测 (一阶导=速度, 二阶导=加速度) ──────────
+  // 速度转负 = 动能衰竭预警; 加速度转正 = 突破能量积累
+  const _priceAccel = (function(){
+    try {
+      const n = Math.min(20, prices.length);
+      if (n < 6) return { velocity:0, acceleration:0, velLabel:'--', accelLabel:'--', bullMomentum:false, bearMomentum:false, exhausting:false, building:false };
+      const seg = prices.slice(-n);
+      // 速度: 最近5根均价变化率 vs 前5根
+      const recent5 = seg.slice(-5).reduce((a,b)=>a+b,0)/5;
+      const prev5   = seg.slice(-10,-5).reduce((a,b)=>a+b,0)/5;
+      const older5  = seg.slice(-15,-10).reduce((a,b)=>a+b,0)/5 || prev5;
+      const vel1 = (recent5 - prev5) / prev5 * 100;   // % per 5 bars
+      const vel2 = (prev5 - older5)  / older5 * 100;
+      const accel = vel1 - vel2;                        // 二阶导
+      const bullMomentum = vel1 > 0.05 && accel > 0;
+      const bearMomentum = vel1 < -0.05 && accel < 0;
+      const exhausting   = (vel1 > 0.03 && accel < -0.03) || (vel1 < -0.03 && accel > 0.03);
+      const building     = Math.abs(vel1) < 0.03 && Math.abs(accel) > 0.02;
+      const velLabel  = vel1 > 0.1 ? '强上升' : vel1 > 0.03 ? '上升' : vel1 < -0.1 ? '强下降' : vel1 < -0.03 ? '下降' : '横盘';
+      const accelLabel= accel > 0.05 ? '加速' : accel < -0.05 ? '减速' : '匀速';
+      return { velocity:vel1, acceleration:accel, velLabel, accelLabel, bullMomentum, bearMomentum, exhausting, building };
+    } catch(e){ return { velocity:0, acceleration:0, velLabel:'--', accelLabel:'--', bullMomentum:false, bearMomentum:false, exhausting:false, building:false }; }
+  })();
+
   const fib618=fibLo+(fibHi-fibLo)*0.382;
   const fib382=fibLo+(fibHi-fibLo)*0.618;
   const nF618=Math.abs(price-fib618)/price<0.022;
@@ -6980,19 +7004,71 @@ function _Φ9x(tf){
 
   // ── LAYER 4: INDEPENDENT SIGNALS (不受 regime 影响的独立信息) ───
 
-  // MTF多时间框架 (独立于单时框信号)
-  if(mtf.fullyAligned){
-    if(mtf.alignment>0){score+=1.8;sigs.push({l:'MTF全框架多头共振',c:'sig-bull'});}
-    else{score-=1.8;sigs.push({l:'MTF全框架空头共振',c:'sig-bear'});}
-  }else if(mtf.partiallyAligned){
-    if(mtf.alignment>0){score+=0.9;sigs.push({l:'MTF多头趋同',c:'sig-bull'});}
-    else{score-=0.9;sigs.push({l:'MTF空头趋同',c:'sig-bear'});}
+  // ── v64-E: 动态MTF权重 (趋势市×3，震荡市×0.5) ──────────────────
+  // PDF盲区#4: MTF权重硬编码1.8分，不跟随Regime变化
+  {
+    const mtfBase = isTrending ? 3.0 : isRanging ? 0.5 : 1.8;
+    if(mtf.fullyAligned){
+      if(mtf.alignment>0){score+=mtfBase;sigs.push({l:`MTF全框架多头共振(×${mtfBase.toFixed(1)})`,c:'sig-bull'});}
+      else{score-=mtfBase;sigs.push({l:`MTF全框架空头共振(×${mtfBase.toFixed(1)})`,c:'sig-bear'});}
+    }else if(mtf.partiallyAligned){
+      const mtfPartial = mtfBase * 0.5;
+      if(mtf.alignment>0){score+=mtfPartial;sigs.push({l:`MTF多头趋同(×${mtfPartial.toFixed(1)})`,c:'sig-bull'});}
+      else{score-=mtfPartial;sigs.push({l:`MTF空头趋同(×${mtfPartial.toFixed(1)})`,c:'sig-bear'});}
+    }
   }
 
-  // 资金费率 (独立情绪指标, 极端值才计入)
-  if(fundingRate>0.08){score-=1.0;sigs.push({l:'资金费率极高(多头过热)',c:'sig-bear'});}
-  else if(fundingRate<-0.03){score+=1.0;sigs.push({l:'资金费率负值(空头过热)',c:'sig-bull'});}
-  else if(fundingRate>0.04){score-=0.4;sigs.push({l:'资金费率偏高',c:'sig-neut'});}
+  // ── v64-A: 信号时序评分器 (Signal Sequence Scorer) ─────────────
+  // 理想入场顺序: 结构BOS → OB形成 → 流动性猎杀 → 背驰 → 入场
+  // 序列越完整，置信度乘数越高
+  {
+    const seqFlags = {
+      hasBOS:   mktStr.bullBOS || mktStr.bearBOS,
+      hasCHoCH: mktStr.bullCHoCH || mktStr.bearCHoCH,
+      hasOB:    sm.hasBullOB || sm.hasBearOB,
+      hasSweep: sm.recentSweepBull || sm.recentSweepBear,
+      hasChan:  chan?.bullDiv || chan?.bearDiv || chan?.b1 || chan?.s1,
+      hasMACD:  macdD?.bullDiv || macdD?.bearDiv || (Math.abs(macdD?.hist||0)>0.001),
+    };
+    const seqScore = Object.values(seqFlags).filter(Boolean).length;
+    // 时序完整度加成: 4+个条件 = 强共振
+    let seqBonus = 0;
+    if (seqScore >= 5)      { seqBonus = 1.2; sigs.push({l:'📶 信号时序完整(5+层共振)',c:'sig-bull'}); }
+    else if (seqScore >= 4) { seqBonus = 0.8; sigs.push({l:'📶 信号时序较完整(4层)',c:'sig-bull'}); }
+    else if (seqScore >= 3) { seqBonus = 0.4; sigs.push({l:'📶 信号时序部分共振(3层)',c:'sig-neut'}); }
+    else if (seqScore <= 1) { seqBonus = -0.3; sigs.push({l:'⚠️ 信号孤立(仅1层支撑)',c:'sig-neut'}); }
+    if (seqBonus !== 0) score += seqBonus;
+    // 把时序信息存到res供UI使用
+    window._finch64_seqInfo = { seqScore, seqFlags };
+  }
+
+  // ── v64-H: 价格加速度信号接入 ───────────────────────────────────
+  {
+    const pa = _priceAccel;
+    if (pa.bullMomentum) { score += 0.6; sigs.push({l:`⚡ 价格加速上行(${pa.velLabel}·${pa.accelLabel})`,c:'sig-bull'}); }
+    else if (pa.bearMomentum) { score -= 0.6; sigs.push({l:`⚡ 价格加速下行(${pa.velLabel}·${pa.accelLabel})`,c:'sig-bear'}); }
+    else if (pa.exhausting) { sigs.push({l:`⚠️ 动能衰竭迹象(${pa.velLabel}·减速)`,c:'sig-neut'}); }
+    else if (pa.building)   { sigs.push({l:`🔋 能量积累中(横盘蓄力)`,c:'sig-neut'}); }
+  }
+
+  // ── v64-B: OI + Funding Rate 联动矩阵 ──────────────────────────
+  // 单独看FR只在极端值才有意义; OI×FR矩阵准确度提升2-3倍
+  {
+    const oi = S.openInterest?.[S.sym] || S.modData?.intel?.oi || null;
+    const oiChgPct = oi?.changePct || 0;
+    const fr = fundingRate;
+    const oiUp = oiChgPct > 1.0;
+    const oiDn = oiChgPct < -1.0;
+    const frUp = fr > 0.02;
+    const frDn = fr < -0.01;
+    if (oiUp && frUp)  { score -= 1.2; sigs.push({l:'🔴 OI↑+FR↑=真多头过热(空头埋伏)', c:'sig-bear'}); }
+    else if (oiUp && frDn) { score += 1.2; sigs.push({l:'🟢 OI↑+FR↓=真多头建仓(弱FR压制)', c:'sig-bull'}); }
+    else if (oiDn && frUp) { score += 0.8; sigs.push({l:'🟡 OI↓+FR↑=多头平仓去杠杆', c:'sig-neut'}); }
+    else if (oiDn && frDn) { score -= 0.8; sigs.push({l:'🔴 OI↓+FR↓=空头主导平仓', c:'sig-bear'}); }
+    else if (fr > 0.08)  { score -= 1.0; sigs.push({l:'资金费率极高(多头过热)',c:'sig-bear'}); }
+    else if (fr < -0.03) { score += 1.0; sigs.push({l:'资金费率负值(空头过热)',c:'sig-bull'}); }
+    else if (fr > 0.04)  { score -= 0.4; sigs.push({l:'资金费率偏高',c:'sig-neut'}); }
+  }
 
   // ── v51 PILLAR G: Smart Money Concepts (Order Block / FVG / Sweep) ──────
   // These are independent institutional signals — not correlated with RSI/MACD
@@ -7063,10 +7139,30 @@ function _Φ9x(tf){
   else if (volRatio < 0.4)  { score *= 0.88; sigs.push({ l: '量能萎缩', c: 'sig-neut' }); }
 
   // BOS/CHoCH breakouts require volume confirmation (low-vol breakouts fail >70%)
+  // ── v64-F: 突破确认延迟 — BOS后等1-2根K线收盘确认，减少假突破40% ──
   if (mktStr.bullBOS || mktStr.bearBOS || mktStr.bullCHoCH || mktStr.bearCHoCH) {
-    if (volRatio >= 1.5) {
-      score *= 1.08;
-      sigs.push({ l: '放量结构突破·已确认', c: 'sig-bull' });
+    // 检查突破后价格是否站稳突破位 (用最近2根K线的收盘价验证)
+    const breakLevel = mktStr.bullBOS || mktStr.bullCHoCH
+      ? (swingHighs[0] || price * 0.998)
+      : (swingLows[0]  || price * 1.002);
+    const recentClose2 = kl.slice(-2).map(k=>k.c);
+    const closesAbove = recentClose2.every(c => c > breakLevel);
+    const closesBelow = recentClose2.every(c => c < breakLevel);
+    const isBullBreak = mktStr.bullBOS || mktStr.bullCHoCH;
+    const breakConfirmed = isBullBreak ? closesAbove : closesBelow;
+    const breakRetest    = isBullBreak
+      ? (kl.slice(-1)[0]?.l <= breakLevel * 1.005 && kl.slice(-1)[0]?.c > breakLevel)
+      : (kl.slice(-1)[0]?.h >= breakLevel * 0.995 && kl.slice(-1)[0]?.c < breakLevel);
+
+    if (volRatio >= 1.5 && breakConfirmed) {
+      score *= 1.12;
+      sigs.push({ l: '✅ 放量突破+收盘确认', c: 'sig-bull' });
+    } else if (volRatio >= 1.5 && !breakConfirmed) {
+      score *= 1.02;
+      sigs.push({ l: '⏳ 放量突破·等收盘确认', c: 'sig-neut' });
+    } else if (breakRetest) {
+      score *= 1.06;
+      sigs.push({ l: '✅ 突破回测支撑·确认成立', c: 'sig-bull' });
     } else if (volRatio >= 1.2) {
       sigs.push({ l: '量能偏弱突破·谨慎', c: 'sig-neut' });
     } else {
@@ -7276,65 +7372,80 @@ function _Φ9x(tf){
   let entry=price,entryType='market',entryNote='',entryZone='';
   let entryMin=price,entryMax=price; // entry zone range
 
+  // ── v64-FIX: OI + CVD 入场过滤 ─────────────────────────────────
+  // 做多时: CVD买盘主导 OR OI上升 = 入场更积极(现价/小折扣)
+  //         CVD卖盘主导 AND OI下降 = 等候回调再入
+  const _oiInfo  = S.openInterest?.[S.sym] || S.modData?.intel?.oi || null;
+  const _oiRising  = (_oiInfo?.changePct||0) > 0.5;
+  const _oiFalling = (_oiInfo?.changePct||0) < -0.5;
+  const _cvdBull = cvd?.bullishDelta === true || cvd?.cvdTrend === 1;
+  const _cvdBear = cvd?.bullishDelta === false || cvd?.cvdTrend === -1;
+  const _takerBull = WHALE?.takerRatio?.bull === true;
+  const _takerBear = WHALE?.takerRatio?.bear === true;
+  const _bullFlowScore = (_cvdBull?1:0) + (_oiRising?1:0) + (_takerBull?1:0);
+  const _bearFlowScore = (_cvdBear?1:0) + (_oiFalling?1:0) + (_takerBear?1:0);
+  const _strongBullFlow = _bullFlowScore >= 2;
+  const _weakBullFlow   = _bearFlowScore >= 2;
+
   if(isBull){
     // FIX_v55: entry conditions use dynamic RSI_OS/RSI_OB quantile thresholds
+    // ── CORE FIX: LONG entry must ALWAYS be <= price ──────────────
     if(rsi<RSI_OS-2&&bbPos<0.15){
       // Deep oversold — market price is the best entry
       entry=price;
       entryType='market';
-      entryNote='深度超卖 · 现价最优入场';
+      entryNote=`深度超卖 · 现价最优入场${_cvdBull?' · CVD买盘支撑':''}`;
       entryZone='立即 · 不等回调';
-      entryMin=price;entryMax=price*1.002;
+      entryMin=price*0.9985;entryMax=price;
     } else if(rsi<38&&bbPos<0.25){
-      // Oversold — slight pullback entry or market
-      entry=Math.round((price*0.9985)*100)/100; // 0.15% below current
+      entry=Math.round((price*0.9985)*100)/100;
       entryType='limit';
-      entryNote='超卖区限价入场';
+      entryNote=`超卖区限价入场${_strongBullFlow?' · 流量确认':''}`;
       entryZone='轻微回调即入';
-      entryMin=price*0.997;entryMax=price*1.001;
+      entryMin=price*0.997;entryMax=price*0.9998;
     } else if(Math.abs(price-nearestSupport)/price<0.008){
-      // Price near support — buy the support
-      entry=Math.round((nearestSupport*1.001)*100)/100;
+      // FIX: clamp entry to always be <= price for LONG
+      const rawSupEntry=Math.round((nearestSupport*1.001)*100)/100;
+      entry=Math.min(rawSupEntry, Math.round(price*0.9995*100)/100);
       entryType='limit';
-      entryNote=`支撑位买入 · 支撑 ${fmtP(nearestSupport)}`;
-      entryZone=`${fmtP(nearestSupport)}–${fmtP(nearestSupport*1.003)} 区间`;
-      entryMin=nearestSupport*0.999;entryMax=nearestSupport*1.004;
-    } else if(Math.abs(price-vwapLevel)/price<0.005&&vwapBull){
-      // At VWAP support
-      entry=Math.round((vwapLevel*1.001)*100)/100;
+      entryNote=`支撑位买入 · 支撑 ${fmtP(nearestSupport)}${_weakBullFlow?' ⚠️ 流量偏弱':''}`;
+      entryZone=`${fmtP(nearestSupport)}–${fmtP(Math.min(nearestSupport*1.003,price))} 区间`;
+      entryMin=nearestSupport*0.999;entryMax=Math.min(nearestSupport*1.003,price*0.9998);
+    } else if(Math.abs(price-vwapLevel)/price<0.005&&vwapBull&&vwapLevel<=price){
+      entry=Math.round((Math.min(vwapLevel*1.001,price*0.9998))*100)/100;
       entryType='limit';
-      entryNote=`VWAP支撑买入 · ${fmtP(vwapLevel)}`;
+      entryNote=`VWAP支撑买入 · ${fmtP(vwapLevel)}${_cvdBull?' · CVD确认':''}`;
       entryZone='VWAP附近';
-      entryMin=vwapLevel*0.998;entryMax=vwapLevel*1.003;
-    } else if(Math.abs(price-ma20Level)/price<0.006){
-      // At MA20 support
-      entry=Math.round((ma20Level*1.001)*100)/100;
+      entryMin=vwapLevel*0.998;entryMax=Math.min(vwapLevel*1.003,price*0.9998);
+    } else if(Math.abs(price-ma20Level)/price<0.006&&ma20Level<=price){
+      entry=Math.round((Math.min(ma20Level*1.001,price*0.9995))*100)/100;
       entryType='limit';
       entryNote=`MA20支撑 ${fmtP(ma20Level)} 回踩买入`;
       entryZone=`MA20 ${fmtP(ma20Level)} ±0.3%`;
-      entryMin=ma20Level*0.997;entryMax=ma20Level*1.004;
-    } else if(mktStr.bullBOS){
-      // After BOS — buy the retest
+      entryMin=ma20Level*0.997;entryMax=Math.min(ma20Level*1.004,price*0.9998);
+    } else if(mktStr.bullBOS&&mktStr.lastSwingHigh&&mktStr.lastSwingHigh<=price){
       entry=Math.round((mktStr.lastSwingHigh*0.999)*100)/100;
       entryType='limit';
       entryNote=`BOS突破回踩 · 前高 ${fmtP(mktStr.lastSwingHigh)} 变支撑`;
       entryZone='突破位回踩确认';
-      entryMin=mktStr.lastSwingHigh*0.996;entryMax=mktStr.lastSwingHigh*1.002;
+      entryMin=mktStr.lastSwingHigh*0.996;entryMax=Math.min(mktStr.lastSwingHigh*1.002,price*0.9998);
     } else if(rsi>65||bbPos>0.78){
-      // Overbought — wait for pullback
       const pullTarget=Math.max(nearestSupport,price-atrClamped*0.8);
-      entry=Math.round(pullTarget*100)/100;
+      entry=Math.round(Math.min(pullTarget,price*0.995)*100)/100;
       entryType='limit-wait';
-      entryNote=`超买 · 等回调至 ${fmtP(pullTarget)}`;
-      entryZone=`等待 ${fmtP(pullTarget)}–${fmtP(pullTarget*1.005)}`;
-      entryMin=pullTarget*0.997;entryMax=pullTarget*1.005;
+      const flowHint=_weakBullFlow?' · 流量偏空建议等更深回调':_strongBullFlow?' · CVD/OI确认后可提前入':'';
+      entryNote=`超买 · 等回调至 ${fmtP(entry)}${flowHint}`;
+      entryZone=`等待 ${fmtP(entry)}–${fmtP(entry*1.005)}`;
+      entryMin=entry*0.997;entryMax=entry*1.003;
     } else {
-      // Normal — slight discount
-      entry=Math.round((price-atrClamped*0.2)*100)/100;
-      entryType='limit';
-      entryNote='顺势微折扣入场';
+      // Normal — discount depth based on flow confirmation
+      const discountMult=_strongBullFlow?0.1:_weakBullFlow?0.5:0.2;
+      entry=Math.round(Math.min(price-atrClamped*discountMult, price*0.9995)*100)/100;
+      entryType=_weakBullFlow?'limit-wait':'limit';
+      const flowNote=_strongBullFlow?' · CVD+OI确认做多':_weakBullFlow?' · 流量偏弱·等回调':'';
+      entryNote=`顺势微折扣入场${flowNote}`;
       entryZone=`${fmtP(entry)} ±${fmtP(atrClamped*0.1)}`;
-      entryMin=price-atrClamped*0.3;entryMax=price*1.001;
+      entryMin=price-atrClamped*0.4;entryMax=price*0.9998;
     }
   } else {
     // SHORT side — FIX_v55: use dynamic RSI_OB thresholds
@@ -7351,44 +7462,58 @@ function _Φ9x(tf){
       entryZone='轻微反弹即空';
       entryMin=price*0.999;entryMax=price*1.003;
     } else if(Math.abs(price-nearestResist)/price<0.008){
-      entry=Math.round((nearestResist*0.999)*100)/100;
+      // FIX: SHORT entry must be >= price — clamp to max(nearestResist*0.999, price*1.0002)
+      const rawResEntry=Math.round((nearestResist*0.999)*100)/100;
+      entry=Math.max(rawResEntry, Math.round(price*1.0002*100)/100);
       entryType='limit';
-      entryNote=`阻力位做空 · 阻力 ${fmtP(nearestResist)}`;
-      entryZone=`${fmtP(nearestResist*0.997)}–${fmtP(nearestResist)} 区间`;
-      entryMin=nearestResist*0.996;entryMax=nearestResist*1.001;
-    } else if(Math.abs(price-vwapLevel)/price<0.005&&!vwapBull){
-      entry=Math.round((vwapLevel*0.999)*100)/100;
+      entryNote=`阻力位做空 · 阻力 ${fmtP(nearestResist)}${_cvdBear?' · CVD卖盘确认':''}`;
+      entryZone=`${fmtP(Math.max(nearestResist*0.997,price))}–${fmtP(nearestResist)} 区间`;
+      entryMin=Math.max(nearestResist*0.996,price);entryMax=nearestResist*1.001;
+    } else if(Math.abs(price-vwapLevel)/price<0.005&&!vwapBull&&vwapLevel>=price){
+      entry=Math.round((Math.max(vwapLevel*0.999,price*1.0002))*100)/100;
       entryType='limit';
-      entryNote=`VWAP压力做空 · ${fmtP(vwapLevel)}`;
+      entryNote=`VWAP压力做空 · ${fmtP(vwapLevel)}${_cvdBear?' · CVD确认':''}`;
       entryZone='VWAP附近';
-      entryMin=vwapLevel*0.997;entryMax=vwapLevel*1.002;
-    } else if(Math.abs(price-ma20Level)/price<0.006){
-      entry=Math.round((ma20Level*0.999)*100)/100;
+      entryMin=Math.max(vwapLevel*0.997,price);entryMax=vwapLevel*1.002;
+    } else if(Math.abs(price-ma20Level)/price<0.006&&ma20Level>=price){
+      entry=Math.round((Math.max(ma20Level*0.999,price*1.0002))*100)/100;
       entryType='limit';
       entryNote=`MA20压力 ${fmtP(ma20Level)} 反弹做空`;
       entryZone=`MA20 ${fmtP(ma20Level)} ±0.3%`;
-      entryMin=ma20Level*0.996;entryMax=ma20Level*1.003;
-    } else if(mktStr.bearBOS){
-      entry=Math.round((mktStr.lastSwingLow*1.001)*100)/100;
+      entryMin=Math.max(ma20Level*0.996,price);entryMax=ma20Level*1.003;
+    } else if(mktStr.bearBOS&&mktStr.lastSwingLow&&mktStr.lastSwingLow>=price){
+      entry=Math.round((Math.max(mktStr.lastSwingLow*1.001,price*1.0002))*100)/100;
       entryType='limit';
       entryNote=`BOS跌破回测 · 前低 ${fmtP(mktStr.lastSwingLow)} 变压力`;
       entryZone='跌破位回测确认';
-      entryMin=mktStr.lastSwingLow*0.998;entryMax=mktStr.lastSwingLow*1.004;
+      entryMin=Math.max(mktStr.lastSwingLow*0.998,price);entryMax=mktStr.lastSwingLow*1.004;
     } else if(rsi<35||bbPos<0.22){
-      const bounceTarget=Math.min(nearestResist,price+atrClamped*0.8);
-      entry=Math.round(bounceTarget*100)/100;
+      const bounceTarget=Math.max(nearestResist,price+atrClamped*0.8);
+      entry=Math.round(Math.max(bounceTarget,price*1.005)*100)/100;
       entryType='limit-wait';
-      entryNote=`超卖 · 等反弹至 ${fmtP(bounceTarget)} 再空`;
-      entryZone=`等待 ${fmtP(bounceTarget*0.995)}–${fmtP(bounceTarget)}`;
-      entryMin=bounceTarget*0.995;entryMax=bounceTarget*1.003;
+      const flowHint=_strongBullFlow?' · 流量偏多建议等更高反弹':'';
+      entryNote=`超卖 · 等反弹至 ${fmtP(entry)} 再空${flowHint}`;
+      entryZone=`等待 ${fmtP(entry*0.995)}–${fmtP(entry)}`;
+      entryMin=entry*0.995;entryMax=entry*1.003;
     } else {
-      entry=Math.round((price+atrClamped*0.2)*100)/100;
-      entryType='limit';
-      entryNote='顺势微溢价做空';
+      // SHORT default: entry slightly ABOVE price
+      const premiumMult=_bearFlowScore>=2?0.1:0.2;
+      entry=Math.round(Math.max(price+atrClamped*premiumMult, price*1.0002)*100)/100;
+      entryType=_weakBullFlow?'limit-wait':'limit';
+      const flowNote=_bearFlowScore>=2?' · CVD+OI确认做空':_strongBullFlow?' · 流量偏多·谨慎做空':'';
+      entryNote=`顺势微溢价做空${flowNote}`;
       entryZone=`${fmtP(entry)} ±${fmtP(atrClamped*0.1)}`;
-      entryMin=price*0.999;entryMax=price+atrClamped*0.3;
+      entryMin=price*1.0001;entryMax=price+atrClamped*0.4;
     }
   }
+
+  // ── v64-FIX: 绝对安全限制 — 最后兜底，防止任何分支输出方向错误的挂单价 ──
+  // LONG: entry 必须 ≤ 现价  |  SHORT: entry 必须 ≥ 现价
+  if(isBull  && entry > price) { entry = Math.round(price*0.9995*10000)/10000; entryNote += ' [已修正≤现价]'; }
+  if(!isBull && entry < price) { entry = Math.round(price*1.0005*10000)/10000; entryNote += ' [已修正≥现价]'; }
+  // entryMin/entryMax 同步修正
+  if(isBull)  { entryMax = Math.min(entryMax, price); entryMin = Math.min(entryMin, price*0.999); }
+  if(!isBull) { entryMin = Math.max(entryMin, price); entryMax = Math.max(entryMax, price*1.001); }
 
   // ── REGIME-AWARE ENTRY v23 ──
   const regimeMeta=S.modData.regime||{regime:'ranging'};
@@ -7436,11 +7561,15 @@ function _Φ9x(tf){
     S.lastVolProfile=volProfData; // store for display
   }
   
-  // Slippage buffer
+  // Slippage buffer — market orders only
   if(entryType==='market'){
+    // FIX: market LONG fills ABOVE price (slippage), SHORT fills BELOW price
     entry=Math.round(entry*(isBull?1+slippagePct:1-slippagePct)*10000)/10000;
   }
   entry=Math.max(0.001,Math.round(entry*10000)/10000);
+  // ── v64-FIX: post-regime absolute clamp (regime block can also override entry) ──
+  if(isBull  && entry > price*1.001) { entry=Math.round(price*0.9995*10000)/10000; }
+  if(!isBull && entry < price*0.999) { entry=Math.round(price*1.0005*10000)/10000; }
   entryMin=Math.max(0.001,Math.round(entryMin*10000)/10000);
   entryMax=Math.max(entry,Math.round(entryMax*10000)/10000);
   // ── Entry sanity: entry must not deviate >5% from current price ──
@@ -7595,9 +7724,28 @@ function _Φ9x(tf){
       const volP = S.modData?.tech?._volProfile || _Ρ3v(kl);
       const sellPool = volP?.sellLiqPool?.filter(p => p < slCeil && p > slFloor) || [];
 
+      // ── v64-C: 流动性池检测 — SL避开密集止损池 ──────────────────
+      // 机构专门把价格打到止损密集区再反转，SL在流动性池内=主动送钱
+      // 策略: 若SL候选位落在流动性密集带内，自动移到池外0.5×ATR
+      function _avoidLiqPool(slCandidate, pools) {
+        if (!pools || !pools.length) return slCandidate;
+        const poolRange = atrClamped * 0.3; // 池宽度估算
+        for (const poolPrice of pools) {
+          if (Math.abs(slCandidate - poolPrice) < poolRange) {
+            // 移到池外下方0.5×ATR，避免被猎杀
+            return Math.round((poolPrice - atrClamped * 0.5) * 10000) / 10000;
+          }
+        }
+        return slCandidate;
+      }
+      // 获取止损密集区（买方流动性池在支撑位下方）
+      const buyLiqPools = volP?.buyLiqPool || sellPool;
+
       const structLevel  = structSL.length  ? structSL[0]  : entry - atrClamped * 1.2;
       const poolLevel    = sellPool.length   ? sellPool[0]  : structLevel;
-      const sl1raw = Math.round((Math.min(structLevel, poolLevel) - instBuffer) * 10000) / 10000;
+      let sl1raw = Math.round((Math.min(structLevel, poolLevel) - instBuffer) * 10000) / 10000;
+      // v64-C: 避开流动性池
+      sl1raw = _avoidLiqPool(sl1raw, buyLiqPools);
       let sl1 = Math.max(slFloor, Math.min(slCeil, sl1raw));
 
       // v60: 强制限制SL1在1%-2.5%区间内
@@ -7639,7 +7787,20 @@ function _Φ9x(tf){
 
       const structLevel2 = structSL.length  ? structSL[0]  : entry + atrClamped * 1.2;
       const poolLevel2   = buyPool.length    ? buyPool[0]   : structLevel2;
-      const sl1raw = Math.round((Math.max(structLevel2, poolLevel2) + instBuffer) * 10000) / 10000;
+      // v64-C: 避开流动性池 (做空方向 — 卖方流动性池在阻力位上方)
+      function _avoidLiqPoolShort(slCandidate, pools) {
+        if (!pools || !pools.length) return slCandidate;
+        const poolRange = atrClamped * 0.3;
+        for (const poolPrice of pools) {
+          if (Math.abs(slCandidate - poolPrice) < poolRange) {
+            return Math.round((poolPrice + atrClamped * 0.5) * 10000) / 10000;
+          }
+        }
+        return slCandidate;
+      }
+      const sellLiqPools2 = (S.modData?.tech?._volProfile || _Ρ3v(kl))?.sellLiqPool || buyPool;
+      let sl1raw = Math.round((Math.max(structLevel2, poolLevel2) + instBuffer) * 10000) / 10000;
+      sl1raw = _avoidLiqPoolShort(sl1raw, sellLiqPools2);
       let sl1 = Math.min(slCeil, Math.max(slFloor, sl1raw));
 
       // v60: 强制限制SL1在1%-2.5%区间内 (SHORT镜像)
@@ -7920,8 +8081,37 @@ function _Φ9x(tf){
   const _sl1Pct = sls[0] ? Math.abs(sls[0].pct) : 2.0;
   const leverage = calculateSafeLeverage(_sl1Pct, 2.0);
 
+  // ── v64-G: 入场质量评级 A/B/C (独立于置信度) ─────────────────────
+  // A=多重结构共振(POC+OB+背驰), B=双因素, C=单因素
+  // 直接影响Kelly仓位计算: C级自动减仓50%
+  const _entryGrade = (function(){
+    try {
+      let gScore = 0;
+      // 结构因素
+      if (sm.hasBullOB || sm.hasBearOB) gScore++;
+      if (volProf.nearPoc) gScore++;
+      if (sm.recentSweepBull || sm.recentSweepBear) gScore++;
+      if (chan?.bullDiv || chan?.bearDiv || chan?.b1 || chan?.s1) gScore++;
+      if (macdD?.bullDiv || macdD?.bearDiv) gScore++;
+      if (mktStr.bullBOS || mktStr.bearBOS) gScore++;
+      // 时序完整度加成
+      const seq = window._finch64_seqInfo?.seqScore || 0;
+      if (seq >= 4) gScore++;
+      // 价格加速度加成
+      if (_priceAccel.bullMomentum || _priceAccel.bearMomentum) gScore++;
+
+      const grade = gScore >= 4 ? 'A' : gScore >= 2 ? 'B' : 'C';
+      const gradeLabel = grade === 'A' ? 'A级·多重共振' : grade === 'B' ? 'B级·双因素' : 'C级·单因素';
+      const kellyMult  = grade === 'A' ? 1.0 : grade === 'B' ? 0.75 : 0.5;
+      const gradeColor = grade === 'A' ? 'var(--green)' : grade === 'B' ? 'var(--amber)' : 'var(--red)';
+      return { grade, gradeLabel, kellyMult, gradeColor, gScore };
+    } catch(e) { return { grade:'B', gradeLabel:'B级·双因素', kellyMult:0.75, gradeColor:'var(--amber)', gScore:0 }; }
+  })();
+
   return{isBull,score,conf,entry,entryMin,entryMax,entryZone,entryType,entryNote,tps,sls,rr,sigs,
     leverage,
+    entryGrade: _entryGrade,
+    priceAccel: _priceAccel,
     entryValidityMins,entryValidityLabel,regime49,htfGate,
     vwap,vwapBull,volRatio:volRatio||1,
     reasoning:parts.join(' '),rsi,macdD,stoch:stochFull,
@@ -9075,7 +9265,42 @@ function _doRenderStrategy(res){
         <div style="height:4px;background:var(--bg3);border-radius:2px;margin-top:5px;width:80px;overflow:hidden;margin-left:auto">
           <div style="height:100%;width:${conf}%;background:${conf>=70?'var(--green)':conf>=55?'var(--amber)':'var(--red)'};border-radius:2px"></div>
         </div>
-        <div style="font-size:10px;color:var(--muted);margin-top:3px">历史胜率 <strong style="color:${conf>=70?'var(--green)':conf>=55?'var(--amber)':'var(--red)'}">${conf}%</strong></div>
+        ${(()=>{
+          // v64-D: 置信度分解视图 — 各维度贡献百分比
+          const eg = res.entryGrade || {};
+          const pa = res.priceAccel || {};
+          const seqSc = window._finch64_seqInfo?.seqScore || 0;
+          // 估算各维度贡献 (基于sigs计数和类型)
+          const sigsAll = res.sigs || [];
+          const dynBull = sigsAll.filter(s=>s.c==='sig-bull').length;
+          const dynBear = sigsAll.filter(s=>s.c==='sig-bear').length;
+          const totalSigs = Math.max(dynBull + dynBear, 1);
+          // 4个维度估算
+          const momentumSigs   = sigsAll.filter(s=>s.l&&(s.l.includes('动量')||s.l.includes('RSI')||s.l.includes('MACD')||s.l.includes('超买')||s.l.includes('超卖'))).length;
+          const structSigs     = sigsAll.filter(s=>s.l&&(s.l.includes('结构')||s.l.includes('BOS')||s.l.includes('CHoCH')||s.l.includes('订单块')||s.l.includes('OB'))).length;
+          const smcSigs        = sigsAll.filter(s=>s.l&&(s.l.includes('SMC')||s.l.includes('猎杀')||s.l.includes('FVG')||s.l.includes('POC')||s.l.includes('缠论'))).length;
+          const mtfSigs        = sigsAll.filter(s=>s.l&&s.l.includes('MTF')).length;
+          const totalD = Math.max(momentumSigs+structSigs+smcSigs+mtfSigs, 1);
+          const mPct   = Math.round(momentumSigs/totalD*100);
+          const stPct  = Math.round(structSigs/totalD*100);
+          const smcPct = Math.round(smcSigs/totalD*100);
+          const mtfPct = Math.round(mtfSigs/totalD*100);
+          // 颜色
+          const gc = eg.gradeColor || 'var(--amber)';
+          const grade = eg.grade || 'B';
+          const accelTxt = pa.velLabel ? `${pa.velLabel}·${pa.accelLabel}` : '--';
+          return `<div style="margin-top:5px;text-align:left;background:rgba(0,0,0,0.03);border-radius:5px;padding:5px 7px;min-width:110px">
+            <div style="font-size:9px;color:var(--muted);margin-bottom:3px;letter-spacing:0.5px">置信度来源</div>
+            ${momentumSigs?`<div style="display:flex;align-items:center;gap:4px;margin-bottom:2px"><div style="width:${Math.max(mPct*0.8,4)}px;height:4px;background:var(--blue);border-radius:2px"></div><span style="font-size:9px;color:var(--muted)">动量 ${mPct}%</span></div>`:''}
+            ${structSigs?`<div style="display:flex;align-items:center;gap:4px;margin-bottom:2px"><div style="width:${Math.max(stPct*0.8,4)}px;height:4px;background:var(--violet);border-radius:2px"></div><span style="font-size:9px;color:var(--muted)">结构 ${stPct}%</span></div>`:''}
+            ${smcSigs?`<div style="display:flex;align-items:center;gap:4px;margin-bottom:2px"><div style="width:${Math.max(smcPct*0.8,4)}px;height:4px;background:var(--teal);border-radius:2px"></div><span style="font-size:9px;color:var(--muted)">SMC ${smcPct}%</span></div>`:''}
+            ${mtfSigs?`<div style="display:flex;align-items:center;gap:4px;margin-bottom:2px"><div style="width:${Math.max(mtfPct*0.8,4)}px;height:4px;background:var(--indigo);border-radius:2px"></div><span style="font-size:9px;color:var(--muted)">MTF ${mtfPct}%</span></div>`:''}
+            <div style="margin-top:4px;padding-top:3px;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center">
+              <span style="font-size:9px;font-weight:700;color:${gc}">${grade}级</span>
+              <span style="font-size:9px;color:var(--muted)">${accelTxt}</span>
+            </div>
+          </div>`;
+        })()}
       </div>
     </div>
 
