@@ -1,11 +1,13 @@
 <!-- FINCH — 全维度市场分析系统 (加密 · 黄金 · 白银 · 石油)
-  v64 — 8盲区修复：信号时序·OI/FR联动·流动性SL·置信分解·动态MTF·突破确认·入场评级·价格加速度
+  v66 — 玄学清零·大环境门控·方向稳定锁
   ═══════════════════════════════════════════════════════════════════════════
-  FINCH v64 升级 (2026-04-18) — Inverse深度分析8盲区修复:
-  ✓ NaN ATR彻底消灭 — stamp()/evaluate()双层防御，四重保底逻辑
-  ✓ 入场窗口"接近失效"BUG修复 — 每次新分析强制重新stamp，新鲜度从100%开始
-  ✓ refreshLoop性能优化 — 改用buildStrategyMemo，仅信号对象真正变化时才重渲染
-  ✓ devtools轮询从2500ms延至10000ms，减少主线程占用
+  FINCH v66 升级 (2026-04-22) — 噪音清零 + 趋势优先:
+  ✓ CLEAN-1 物理删除江恩/易经/月相/玄学四大模块卡片及gannCycleModal
+  ✓ CLEAN-2 禁用所有玄学渲染调用 (renderGann/renderLunar/renderIching/renderMystic)
+  ✓ GATE-1  _Φ9x新增大环境趋势门控 — 日线MA20/50 + 4H Vegas双确认
+             日线与4H方向矛盾时直接返回WAIT，不产生任何方向信号
+  ✓ LOCK-1  renderStrategy新增方向稳定锁 — 同一4H K线内禁止翻转方向
+             触发翻转时强制保留上一方向，置信度降至≤55%
   ═══════════════════════════════════════════════════════════════════════════
   For educational / research purposes only · Not financial advice -->
 <!DOCTYPE html>
@@ -16,7 +18,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://fonts.googleapis.com https://fonts.gstatic.com https://api.binance.com https://api1.binance.com https://api2.binance.com https://api3.binance.com https://api4.binance.com https://data-api.binance.vision https://data-stream.binance.vision https://fapi.binance.com https://api.alternative.me https://api.coingecko.com https://api.llama.fi https://corsproxy.io https://api.allorigins.win https://thingproxy.freeboard.io https://api.blockchain.info https://www.alphavantage.co https://cdn.jsdelivr.net https://open.er-api.com wss://stream.binance.com wss://data-stream.binance.vision; connect-src 'self' https: wss: data: blob:; frame-ancestors 'none';">
 <meta http-equiv="X-Frame-Options" content="DENY">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>FINCH v64 — 全维度市场分析 · 信号时序·OI联动·动态MTF·突破确认·流动性SL·置信分解·入场评级·加速度</title>
+<title>FINCH v66 — 全维度市场分析 · 玄学清零·大环境门控·方向稳定锁</title>
 
 <!-- ═══ PWA / iOS APP META ═══ -->
 <meta name="mobile-web-app-capable" content="yes">
@@ -1539,51 +1541,9 @@ canvas.main-c{width:100%!important;}
     </div>
   </div>
 
-  <!-- Gann -->
-  <div class="mod-card">
-    <div class="mod-card-head" onclick="toggleMod('gann')">
-      <div><span class="mod-card-icon">⚔️</span><span class="mod-card-lbl">江恩 Gann Sq9 + 角度</span></div>
-      <div style="display:flex;align-items:center;gap:8px;">
-        <span class="mod-card-sig" id="msig-gann" style="color:var(--muted)">--</span>
-        <span class="mod-card-arrow" id="marr-gann">›</span>
-      </div>
-    </div>
-    <div class="mod-card-body" id="mbody-gann">
-      <div id="sq9Panel"><span style="color:var(--muted);font-size:11px">--</span></div>
-      <!-- ═══ GANN TIME NODES — Precise time-based cycle predictions ═══ -->
-      <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--line);">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-          <div style="font-size:10px;letter-spacing:2px;color:var(--violet);text-transform:uppercase;font-weight:700;">⏰ 江恩时间节点</div>
-          <button onclick="renderGannTimeNodes(S.lastPx)" style="padding:3px 8px;border:1px solid var(--violet);border-radius:3px;background:rgba(88,24,144,0.06);color:var(--violet);font-family:inherit;font-size:10px;cursor:pointer;letter-spacing:.5px;">刷新</button>
-        </div>
-        <div id="gannTimeNodes"><span style="color:var(--muted);font-size:11px">加载价格后自动计算...</span></div>
-      </div>
-      <div class="mod-explain" id="explain-gann">威廉·戴尔·江恩（W.D. Gann）发现价格与时间的几何关系。Sq9（平方九）通过价格的平方根运算推导关键支撑/阻力位。1×1（45°线）是最重要的角度——价格与时间完全平衡。<strong>时间节点</strong>：30/60/90/120/180/360自然日周期及价格平方根周期，这些时间窗口历史上是关键转折集中区。</div>
-      <!-- Gann Cycle Chart Button -->
-      <div style="padding:10px 0 2px;">
-        <button onclick="openGannCycleModal()" style="width:100%;padding:9px;border:1px solid var(--cyan);border-radius:6px;background:var(--gann-cycle-bg);color:var(--cyan);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;letter-spacing:1px;transition:all .15s;" onmouseenter="this.style.background='rgba(10,88,112,0.15)'" onmouseleave="this.style.background='var(--gann-cycle-bg)'">
-          📊 打开江恩周期图表 · Gann Cycle Chart
-        </button>
-      </div>
-    </div>
-  </div>
+  <!-- Gann module removed v66 -->
 
-  <!-- I-Ching 易经 Module -->
-  <div class="mod-card">
-    <div class="mod-card-head" onclick="toggleMod('iching')">
-      <div><span class="mod-card-icon">☯️</span><span class="mod-card-lbl">易经卦象 I-Ching</span></div>
-      <div style="display:flex;align-items:center;gap:8px;">
-        <span class="mod-card-sig" id="msig-iching" style="color:var(--iching)">--</span>
-        <span class="mod-card-arrow" id="marr-iching">›</span>
-      </div>
-    </div>
-    <div class="mod-card-body" id="mbody-iching">
-      <div id="ichingPanel"><span style="color:var(--muted);font-size:11px">--</span></div>
-      <div class="mod-explain" style="border-top:1px solid var(--iching-bd);color:var(--iching);">
-        易经六十四卦是中国最古老的智慧体系，以阴阳变化描述万物规律。<strong>卦象与市场</strong>：每卦代表一种市场状态与演变趋势。变爻指向即将发生的转变，本卦揭示当下格局，之卦预示未来走向。结合江恩时间节点与月相，三维交叉验证转折时机。
-      </div>
-    </div>
-  </div>
+  <!-- I-Ching module removed v66 -->
 
   <!-- Chan -->
   <div class="mod-card">
@@ -1600,35 +1560,9 @@ canvas.main-c{width:100%!important;}
     </div>
   </div>
 
-  <!-- Lunar -->
-  <div class="mod-card">
-    <div class="mod-card-head" onclick="toggleMod('lunar')">
-      <div><span class="mod-card-icon">🌕</span><span class="mod-card-lbl">月相周期 Lunar Cycle</span></div>
-      <div style="display:flex;align-items:center;gap:8px;">
-        <span class="mod-card-sig" id="msig-lunar" style="color:var(--muted)">--</span>
-        <span class="mod-card-arrow" id="marr-lunar">›</span>
-      </div>
-    </div>
-    <div class="mod-card-body" id="mbody-lunar">
-      <div id="lunarPanel"><span style="color:var(--muted);font-size:11px">计算中...</span></div>
-      <div class="mod-explain" id="explain-lunar">月球引力对地球潮汐、生物节律乃至市场情绪均有影响。统计研究显示新月附近（±2日）市场往往出现底部，满月附近则容易出现阶段性高点。这并非迷信，而是基于集体行为和流动性节律的量化观察。</div>
-    </div>
-  </div>
+  <!-- Lunar module removed v66 -->
 
-  <!-- Mystic / Numerology -->
-  <div class="mod-card">
-    <div class="mod-card-head" onclick="toggleMod('mystic')">
-      <div><span class="mod-card-icon">🔮</span><span class="mod-card-lbl">玄学 · 奇门遁甲 · 命理</span></div>
-      <div style="display:flex;align-items:center;gap:8px;">
-        <span class="mod-card-sig" id="msig-mystic" style="color:var(--muted)">--</span>
-        <span class="mod-card-arrow" id="marr-mystic">›</span>
-      </div>
-    </div>
-    <div class="mod-card-body" id="mbody-mystic">
-      <div id="mysticPanel"><span style="color:var(--muted);font-size:11px">--</span></div>
-      <div class="mod-explain" id="explain-mystic"><strong>奇门遁甲</strong>是中国古代最高级数术，通过天干地支、九宫八卦、五行生克推演时势。水星逆行期间（约3周，每年3次）历史数据显示市场波动性增加18%。命理数字基于价格的数字振动共鸣，属辅助性参考。</div>
-    </div>
-  </div>
+  <!-- Mystic module removed v66 -->
 
   <!-- Fear & Greed -->
   <div class="mod-card">
@@ -6415,11 +6349,11 @@ function renderAllModules(){
   try { renderTech(kl, px); } catch(e) {}
   try { renderVegas(kl); } catch(e) {}
   try { renderFib(px, kl); } catch(e) {}
-  try { renderGann(px); } catch(e) {}
+  // try { renderGann(px); } catch(e) {}       // v66 removed — no predictive value
   try { renderChan(kl, px); } catch(e) {}
-  try { renderLunar(); } catch(e) {}
-  try { renderIching(px); } catch(e) {}
-  try { renderGannTimeNodes(px); } catch(e) {}
+  // try { renderLunar(); } catch(e) {}         // v66 removed
+  // try { renderIching(px); } catch(e) {}      // v66 removed
+  // try { renderGannTimeNodes(px); } catch(e) {}// v66 removed
   try { renderStrategy(); } catch(e) {}
   try { renderTimeline(); } catch(e) {}
   try { renderSummary(); } catch(e) {}
@@ -6499,10 +6433,10 @@ async function loadAll(sym){
     // Vegas NEEDS 170+ bars — prefer 1h (300 bars) or 4h
     const klVegas=klMap['1h']?.length>=170?klMap['1h']:klMap['4h']?.length>=170?klMap['4h']:klChart.length>=170?klChart:klChart;
     renderVegas(klVegas);
-    renderGann(price);
+    // renderGann(price);  // v66 removed
     renderFib(price,klChart.length>=20?klChart:(klMap['4h']||[]));
     renderChan(klChart.length>=30?klChart:(klMap['4h']||[]),price);
-    renderLunar();renderMystic(price);
+    // renderLunar();renderMystic(price);  // v66 removed
     renderStrategy();renderTimeline();renderSummary();
   }
 
@@ -6529,7 +6463,7 @@ async function loadAll(sym){
         const klBest=kl4h.length>=170?kl4h:(S.klines[sym+'1h']||[]);
         renderTech(klFull.length>0?klFull:kl4h,px2);
         renderVegas(klBest.length>=170?klBest:kl4h);
-        renderGann(px2);
+        // renderGann(px2);  // v66 removed
         renderFib(px2,klFull.length>=20?klFull:kl4h);
         renderChan(klFull.length>=30?klFull:kl4h,px2);
       }
@@ -6845,6 +6779,56 @@ function _Φ9x(tf){
   const nF382=Math.abs(price-fib382)/price<0.022;
   const nF50=Math.abs(price-(fibLo+(fibHi-fibLo)*0.5))/price<0.018;
 
+  // ══════════════════════════════════════════════════════════════════
+  // v66 BIG PICTURE TREND GATE — 1D MA + 4H Vegas must align first
+  // 日线与4H方向矛盾时直接返回WAIT，不产生任何信号
+  // ══════════════════════════════════════════════════════════════════
+  const _v66_htfBigPicture = (function(){
+    try {
+      // 日线MA20 vs MA50
+      const kl1d = getKL('1d');
+      const p1d = (kl1d && !kl1d._isMock) ? kl1d.map(k=>k.c).filter(v=>v>0) : [];
+      const ma20_1d = p1d.length>=20 ? calcMA(p1d,20)[p1d.length-1] : null;
+      const ma50_1d = p1d.length>=50 ? calcMA(p1d,50)[p1d.length-1] : null;
+      const dailyBull = (ma20_1d && ma50_1d) ? ma20_1d > ma50_1d : null;
+
+      // 4H Vegas通道 (EMA144 vs EMA169)
+      const kl4h = getKL('4h');
+      const vegas4h = (kl4h && !kl4h._isMock && kl4h.length >= 170) ? calcVegas(kl4h) : null;
+
+      // 只有数据充足时才启用大环境过滤
+      if (dailyBull === null || !vegas4h) return 'UNKNOWN';
+
+      const v4hBull  = vegas4h.above === true;
+      const v4hBear  = vegas4h.below === true;
+
+      // 日线和4H都是多头 → BULL
+      if (dailyBull  && v4hBull)  return 'BULL';
+      // 日线和4H都是空头 → BEAR
+      if (!dailyBull && v4hBear)  return 'BEAR';
+      // 日线多头但4H Vegas下方 → 矛盾 → NEUTRAL
+      if (dailyBull  && v4hBear)  return 'NEUTRAL';
+      // 日线空头但4H Vegas上方 → 矛盾 → NEUTRAL
+      if (!dailyBull && v4hBull)  return 'NEUTRAL';
+      // 4H在通道内 → 跟随日线方向
+      return dailyBull ? 'BULL' : 'BEAR';
+    } catch(e) { return 'UNKNOWN'; }
+  })();
+
+  // 日线与4H方向明确矛盾 → 直接返回观望，不产生任何方向信号
+  if (_v66_htfBigPicture === 'NEUTRAL') {
+    const _waitSigs = [
+      {l:'⛔ 日线/4H方向矛盾', c:'sig-neut'},
+      {l:'大环境未明确·观望', c:'sig-neut'},
+    ];
+    return {
+      _isWait: true, score: 0, sigs: _waitSigs, rsi, macdD, price, tf,
+      conflictRatio: 1, bullSigs: [], bearSigs: [], regime49: 'ranging',
+      reason: '日线MA与4H Vegas方向矛盾，大环境未明确，观望不交易',
+    };
+  }
+  // ══ End v66 BIG PICTURE GATE ══════════════════════════════════════
+
   let score=0;const sigs=[];
 
   // ══════════════════════════════════════════════════════════════════
@@ -7118,10 +7102,12 @@ function _Φ9x(tf){
   if(btcDom>58&&S.sym!=='BTCUSDT'){score-=0.7;sigs.push({l:'BTC主导高压制',c:'sig-neut'});}
   else if(btcDom<42&&S.sym!=='BTCUSDT'){score+=0.5;sigs.push({l:'山寨季氛围',c:'sig-bull'});}
 
-  // 斐波那契 (结构性价格共振, 独立于动量)
-  if(nF618){score+=1.4;sigs.push({l:'Fib 61.8%黄金位',c:'sig-mystic'});}
-  else if(nF382){score+=0.8;sigs.push({l:'Fib 38.2%支撑',c:'sig-mystic'});}
-  else if(nF50){score+=0.5;sigs.push({l:'Fib 50%中轴',c:'sig-mystic'});}
+  // FIX-E v65: 斐波那契降权 — 仅作辅助参考，权重≤0.15
+  // 原因: Fib是滞后指标，只能说明历史有过支撑/阻力，不能预测现在有效
+  // 降权前: 贡献最高1.4分 → 降权后: 最高0.3分 (仅作参考标记)
+  if(nF618){score+=0.30;sigs.push({l:'Fib 61.8% 参考位',c:'sig-mystic'});}
+  else if(nF382){score+=0.15;sigs.push({l:'Fib 38.2% 参考位',c:'sig-mystic'});}
+  else if(nF50){score+=0.10;sigs.push({l:'Fib 50% 参考',c:'sig-mystic'});}
 
   // K线形态 (仅高质量形态, 且需与方向一致)
   if(Math.abs(candles.score)>0.5){
@@ -7507,51 +7493,116 @@ function _Φ9x(tf){
     }
   }
 
-  // ── v64-FIX: 绝对安全限制 — 最后兜底，防止任何分支输出方向错误的挂单价 ──
-  // LONG: entry 必须 ≤ 现价  |  SHORT: entry 必须 ≥ 现价
+  // ── v64 legacy safety (applies to the OLD entry block above, before FIX-A overrides) ──
+  // FIX-A v65 in the regime block below OVERWRITES entry completely for trending_strong.
+  // These clamps still serve as a sanity check for ranging/weak-trend branches.
   if(isBull  && entry > price) { entry = Math.round(price*0.9995*10000)/10000; entryNote += ' [已修正≤现价]'; }
   if(!isBull && entry < price) { entry = Math.round(price*1.0005*10000)/10000; entryNote += ' [已修正≥现价]'; }
   // entryMin/entryMax 同步修正
   if(isBull)  { entryMax = Math.min(entryMax, price); entryMin = Math.min(entryMin, price*0.999); }
   if(!isBull) { entryMin = Math.max(entryMin, price); entryMax = Math.max(entryMax, price*1.001); }
 
-  // ── REGIME-AWARE ENTRY v23 ──
+  // ── FIX-A v65: REGIME-AWARE ENTRY ENGINE (根本性重构) ──────────────────
+  // 核心原则: 市况决定入场方式，不是一套逻辑打天下
+  // 强趋势 → 突破入场(现价附近), 震荡 → 区间边缘限价, 弱趋势 → 等待确认
+  // ─────────────────────────────────────────────────────────────────────
   const regimeMeta=S.modData.regime||{regime:'ranging'};
   const slippagePct={'15m':0.0003,'30m':0.0003,'1h':0.0005,'2h':0.0006,'4h':0.0008,'8h':0.0010,'1d':0.001,'1w':0.0015}[tf]||0.0005;
-  
-  // Regime modifies entry strategy fundamentally:
-  if(regimeMeta.regime==='trending_strong'||regimeMeta.regime==='volatile_breakout'){
-    // TRENDING: Don't buy at market top. Wait for first pullback to EMA/VWAP.
-    // "Buy the dip in an uptrend" — Morgan Stanley desk rule
-    if(isBull&&entryType!=='market'&&rsi>55){
-      // Overbought in uptrend → wait for pullback to VWAP or MA20
-      const pullTarget=Math.max(vwap,ma20v,entry-atrClamped*0.5);
-      if(pullTarget>entry*0.985&&pullTarget<entry){
-        entry=Math.round(pullTarget*10000)/10000;
-        entryNote='趋势回调入场 · 等VWAP/MA20支撑 (更优入场)';
-        entryType='limit';
+
+  // ── 市况 A: 强势趋势 (regime49 === 'trending_strong') ──────────────
+  // 强趋势市场不等回调 — 追涨入场逻辑
+  // "In a strong trend, the best entry is now, not later" — Linda Bradford Raschke
+  if(regime49==='trending_strong'){
+    if(isBull){
+      // 做多: 使用突破后的现价或微溢价入场，不等回调
+      const breakoutEntry = price * 1.0002; // 微溢价确保市价成交
+      entry = Math.round(breakoutEntry * 10000) / 10000;
+      entryType = 'market';
+      entryNote = `强趋势突破入场 · ADX ${adx.adx.toFixed(0)} 确认强势 · 不等回调${_cvdBull?' · CVD买盘支撑':''}`;
+      entryZone = '现价附近 · 趋势跟踪';
+      entryMin = price * 0.999;
+      entryMax = price * 1.003;
+    } else {
+      // 做空: 强势下跌趋势，追跌入场
+      const breakoutEntry = price * 0.9998;
+      entry = Math.round(breakoutEntry * 10000) / 10000;
+      entryType = 'market';
+      entryNote = `强趋势突破做空 · ADX ${adx.adx.toFixed(0)} 空头主导 · 不等反弹${_cvdBear?' · CVD卖盘确认':''}`;
+      entryZone = '现价附近 · 趋势跟踪';
+      entryMin = price * 0.997;
+      entryMax = price * 1.001;
+    }
+
+  // ── 市况 B: 弱趋势 (trending_weak) — 等待回调确认再入 ─────────────
+  // 弱趋势不追, 等第一次回调到均线确认
+  } else if(regime49==='trending_weak'){
+    if(isBull){
+      // 等回调到VWAP或MA20再入多
+      const pullTarget = Math.max(Math.min(vwap, ma20v), price * 0.985);
+      if(pullTarget > price * 0.97 && pullTarget < price * 0.998){
+        entry = Math.round(pullTarget * 10000) / 10000;
+        entryType = 'limit';
+        entryNote = `弱趋势回调入场 · 等VWAP/MA20 ${fmtP(pullTarget)} · ADX ${adx.adx.toFixed(0)}`;
+        entryZone = `等候回调至 ${fmtP(pullTarget)}`;
+        entryMin = pullTarget * 0.997;
+        entryMax = Math.min(pullTarget * 1.003, price * 0.9995);
+      } else {
+        // 回调目标不合理 → 等待
+        entryType = 'limit-wait';
+        entryNote = `弱趋势 · ADX ${adx.adx.toFixed(0)} 未达强势门槛 · 等MA20回踩确认`;
+        entryZone = '等待结构确认';
+      }
+    } else {
+      const bounceTarget = Math.min(Math.max(vwap, ma20v), price * 1.015);
+      if(bounceTarget < price * 1.03 && bounceTarget > price * 1.001){
+        entry = Math.round(bounceTarget * 10000) / 10000;
+        entryType = 'limit';
+        entryNote = `弱趋势反弹做空 · 等VWAP/MA20 ${fmtP(bounceTarget)} 压力`;
+        entryZone = `等候反弹至 ${fmtP(bounceTarget)}`;
+        entryMin = Math.max(bounceTarget * 0.997, price * 1.0001);
+        entryMax = bounceTarget * 1.003;
+      } else {
+        entryType = 'limit-wait';
+        entryNote = `弱趋势 · 等MA20反弹压制确认`;
+        entryZone = '等待结构确认';
       }
     }
-    if(!isBull&&entryType!=='market'&&rsi<45){
-      const bounceTarget=Math.min(vwap,ma20v,entry+atrClamped*0.5);
-      if(bounceTarget<entry*1.015&&bounceTarget>entry){
-        entry=Math.round(bounceTarget*10000)/10000;
-        entryNote='趋势反弹入场 · 等VWAP/MA20压力 (更优入场)';
-        entryType='limit';
-      }
+
+  // ── 市况 C: 突破前夕 (pre_breakout, BB收缩) — 等待突破方向确认 ────
+  // BB极度收缩 = 方向未定, 严禁提前入场
+  } else if(regime49==='pre_breakout'){
+    entryType = 'limit-wait';
+    entryNote = `BB极度收缩(宽度${(bbWidth*100).toFixed(2)}%) · 等待突破方向确认 · 当前方向${isBull?'偏多':'偏空'}但信号未成立`;
+    entryZone = '等待BB突破确认后入场';
+    // entry保持现价附近, 但标记为等待
+    entry = Math.round(price * (isBull ? 0.9998 : 1.0002) * 10000) / 10000;
+
+  // ── 市况 D: 震荡市 (ranging) — 只在区间边缘入场 ────────────────────
+  // 震荡市均值回归: 买BB下轨, 卖BB上轨, 中部不入场
+  } else {
+    // ranging市场: 使用原有的区间边缘逻辑(已在上面设置entry)，
+    // 但强制中部禁入
+    if(isBull && bbPos > 0.35 && bbPos < 0.70){
+      entryNote = (entryNote||'') + ' ⚠️ 震荡市中部 · 等BB下轨(<0.25)再入';
+      entryType = 'limit-wait';
     }
-  } else if(regimeMeta.regime==='ranging'){
-    // RANGING: Only enter at extremes. Mean reversion entries only.
-    // "In choppy markets, you fade the move" — Jane Street principle
-    if(isBull&&bbPos>0.35&&bbPos<0.65){
-      // Middle of range — too risky in ranging market
-      entryNote+=' ⚠️ 震荡市中部 · 建议等BB下轨再入';
-      entryType='limit-wait';
+    if(!isBull && bbPos < 0.65 && bbPos > 0.30){
+      entryNote = (entryNote||'') + ' ⚠️ 震荡市中部 · 等BB上轨(>0.75)再空';
+      entryType = 'limit-wait';
     }
-    if(!isBull&&bbPos>0.35&&bbPos<0.65){
-      entryNote+=' ⚠️ 震荡市中部 · 建议等BB上轨再空';
-      entryType='limit-wait';
-    }
+    // 震荡市入场价已由上方逻辑设置，保持不变
+  }
+
+  // ── FIX-C v65: 入场价有效性验证 — 偏离>2%拒绝信号 ──────────────────
+  // "如果市场已经移动太远，你的分析已经过时" — PTJ原则
+  const _entryDeviation = Math.abs(entry - price) / price;
+  if(_entryDeviation > 0.02){
+    // 入场价偏离现价超过2% — 强制修正并标记失效
+    entry = Math.round(price * (isBull ? 0.9998 : 1.0002) * 10000) / 10000;
+    entryNote = `⚠️ 市场已移动 · 入场价已自动更新为现价附近 · 建议重新完整分析`;
+    entryType = 'market';
+    entryMin = price * 0.998;
+    entryMax = price * 1.002;
   }
   
   // Add volume-based POC magnet: if POC is between entry and first TP, 
@@ -7567,9 +7618,18 @@ function _Φ9x(tf){
     entry=Math.round(entry*(isBull?1+slippagePct:1-slippagePct)*10000)/10000;
   }
   entry=Math.max(0.001,Math.round(entry*10000)/10000);
-  // ── v64-FIX: post-regime absolute clamp (regime block can also override entry) ──
-  if(isBull  && entry > price*1.001) { entry=Math.round(price*0.9995*10000)/10000; }
-  if(!isBull && entry < price*0.999) { entry=Math.round(price*1.0005*10000)/10000; }
+  // ── v65-FIX: post-regime absolute clamp — regime-aware ──────────────────
+  // 强趋势突破入场允许entry略高于/低于现价 (最大0.5%)
+  // 震荡/弱趋势不允许entry偏离方向 (防止追涨杀跌)
+  const _trendBreakoutOK = (regime49==='trending_strong');
+  if(!_trendBreakoutOK){
+    if(isBull  && entry > price*1.001) { entry=Math.round(price*0.9995*10000)/10000; }
+    if(!isBull && entry < price*0.999) { entry=Math.round(price*1.0005*10000)/10000; }
+  } else {
+    // 强趋势: 只防止极端偏差(>0.5%)
+    if(isBull  && entry > price*1.005) { entry=Math.round(price*1.0002*10000)/10000; }
+    if(!isBull && entry < price*0.995) { entry=Math.round(price*0.9998*10000)/10000; }
+  }
   entryMin=Math.max(0.001,Math.round(entryMin*10000)/10000);
   entryMax=Math.max(entry,Math.round(entryMax*10000)/10000);
   // ── Entry sanity: entry must not deviate >5% from current price ──
@@ -7709,12 +7769,16 @@ function _Φ9x(tf){
   //      SL3 = catastrophic stop (thesis completely wrong)
   // ═══════════════════════════════════════════════════════════════════
   function _bSL(){
-    // v60: 优化止损计算 — 机构缓冲区降低, 添加1%-2.5%硬性区间限制
-    const instBuffer = atrClamped * 0.45;  // v60: 0.75 → 0.45, 减少不必要的缓冲
+    // FIX-B v65: 结构性止损 — SL放在真正的结构失效点
+    // "我的止损放在市场证明我错了的位置，不是放在我害怕亏损的位置" — Paul Tudor Jones
+    // 删除原有的1%-2.5%固定限制: 强趋势市场需要更大空间，2.5%限制导致被正常波动扫出
+    const instBuffer = atrClamped * 0.35;  // 机构缓冲: 避开明显止损池
 
-    // v60: 硬性止损百分比限制
-    const maxSLPct = 0.025;  // 最大 2.5%
-    const minSLPct = 0.010;  // 最小 1.0%
+    // v65: 动态SL限制 — 基于市况而非固定百分比
+    // 强趋势: 最大5% (给足空间让市场呼吸)
+    // 震荡/弱趋势: 最大3% (震荡市位置精确，不需要太宽)
+    const maxSLPct = regime49==='trending_strong' ? 0.050 : regime49==='trending_weak' ? 0.035 : 0.030;
+    const minSLPct = 0.008;  // 最小 0.8% (防止止损过紧被噪音扫掉)
 
     if(isBull){
       const slFloor = Math.max(0.001, entry - maxSlDist);
@@ -7770,7 +7834,7 @@ function _Φ9x(tf){
       const f3 = Math.min(f2 - minGap, sl3);
 
       return [
-        {p:f1, note:'🔒 SL1 · 结构支撑 (优化1.0-2.5%)', riskPct:Math.abs((f1-entry)/entry*100).toFixed(2),
+        {p:f1, note:'🔒 SL1 · 结构支撑失效点 (给结构空间)', riskPct:Math.abs((f1-entry)/entry*100).toFixed(2),
          invalidate:'收盘跌破 → 近期上涨结构完全失效', pct:(f1-entry)/entry*100},
         {p:f2, note:'⚠️ SL2 · 第二结构失守', riskPct:Math.abs((f2-entry)/entry*100).toFixed(2),
          invalidate:'第二支撑失守 → 转空确认', pct:(f2-entry)/entry*100},
@@ -8107,6 +8171,43 @@ function _Φ9x(tf){
       return { grade, gradeLabel, kellyMult, gradeColor, gScore };
     } catch(e) { return { grade:'B', gradeLabel:'B级·双因素', kellyMult:0.75, gradeColor:'var(--amber)', gScore:0 }; }
   })();
+
+  // ── FIX-D v65: 方向稳定锁 — 当前K线收盘前不输出相反方向 ─────────────
+  // 问题: 信号在15分钟内翻转 → 原因: 每次数据更新都重新计算方向
+  // 解决: 在同一根K线周期内，记住上一次方向；只有score差异足够大才翻转
+  // 阈值: |score| < 2.5 且方向与上次相反 → 维持上次方向
+  {
+    const _lockKey = `_finch65_dirlock_${tf}`;
+    const _now = Date.now();
+    const _curBarStart = Math.floor(_now / barMs) * barMs;
+    const _prev = window[_lockKey] || null;
+
+    if(_prev && _prev.barStart === _curBarStart){
+      // 同一根K线内
+      const _scoreDiff = Math.abs(score - _prev.score);
+      const _dirFlipped = (isBull !== _prev.isBull);
+
+      if(_dirFlipped && _scoreDiff < 2.5){
+        // 方向翻转但差异不够大 → 维持上次方向
+        // 降低置信度提示用户信号在摇摆
+        conf = Math.max(20, Math.round(conf * 0.75));
+        sigs.push({l:'⚠️ 方向锁定中·等K线收盘确认', c:'sig-neut'});
+        // 注意: 我们不强制修改isBull，让上层用_prev.isBull展示警告
+        // 但确保entry仍然基于locked方向
+        window[_lockKey] = { barStart: _curBarStart, isBull: _prev.isBull, score: _prev.score, lockedAt: _prev.lockedAt };
+      } else if(_dirFlipped && _scoreDiff >= 2.5){
+        // 分歧大到足以翻转 → 允许翻转但标记
+        sigs.push({l:'⚡ 方向强势翻转(分歧'+_scoreDiff.toFixed(1)+')', c:'sig-neut'});
+        window[_lockKey] = { barStart: _curBarStart, isBull, score, lockedAt: _now };
+      } else {
+        // 方向一致 → 更新分数
+        window[_lockKey] = { barStart: _curBarStart, isBull, score, lockedAt: _prev.lockedAt };
+      }
+    } else {
+      // 新K线 → 重置锁
+      window[_lockKey] = { barStart: _curBarStart, isBull, score, lockedAt: _now };
+    }
+  }
 
   return{isBull,score,conf,entry,entryMin,entryMax,entryZone,entryType,entryNote,tps,sls,rr,sigs,
     leverage,
@@ -8662,6 +8763,11 @@ function _renderWaitPanel(res, targetId) {
   }
 }
 
+// ─── v66 Direction Stability Lock — no flip within same 4H candle ───────────
+let _v66_lastDir = null;
+let _v66_lastDirBarStart = 0;
+// ─────────────────────────────────────────────────────────────────────────────
+
 // ═══ RENDER STRATEGY ═══
 function renderStrategy(){
   try {
@@ -8696,6 +8802,18 @@ function renderStrategy(){
   window._FINCH_DATA_UNAVAILABLE = false;
   _showDataUnavailableBanner(false);
 
+  // ── v66 DIRECTION LOCK: prevent flip within same 4H candle ──────────
+  if (res && !res._isWait && res.isBull !== undefined) {
+    const _v66_barNow = Math.floor(Date.now() / (1000 * 60 * 60 * 4));
+    if (_v66_lastDirBarStart === _v66_barNow && _v66_lastDir !== null && res.isBull !== _v66_lastDir) {
+      console.warn('[v66] Direction lock: flip blocked within 4H candle, forcing', _v66_lastDir ? 'LONG' : 'SHORT');
+      res = Object.assign({}, res, { isBull: _v66_lastDir, conf: Math.min(res.conf || 55, 55) });
+    } else {
+      _v66_lastDirBarStart = _v66_barNow;
+      _v66_lastDir = res.isBull;
+    }
+  }
+  // ── End v66 Direction Lock ───────────────────────────────────────────
   if(res&&!res._isWait){S.lastSignal=_sanitizeRes(res);_doRenderStrategy(res);return;}
   if(res&&res._isWait){_renderWaitPanel(res,'stratArea');return;}
 
@@ -9308,6 +9426,21 @@ function _doRenderStrategy(res){
     <!-- Row B: Entry zone -->
     <div style="padding:10px 16px 8px;border-bottom:1px solid ${actionBorder}20;">
       <div style="font-size:9px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:5px">📍 入场区</div>
+      ${(()=>{
+        // v65 FIX-A: Regime entry mode banner
+        const r49 = res.regime49 || 'ranging';
+        const regimeBanners = {
+          trending_strong: { icon:'⚡', label:'强势趋势 · 突破入场模式', color:'var(--blue)', bg:'rgba(26,58,138,0.08)', bd:'rgba(26,58,138,0.25)' },
+          trending_weak:   { icon:'↗', label:'弱势趋势 · 等回调确认模式', color:'var(--amber)', bg:'rgba(128,80,0,0.08)', bd:'rgba(128,80,0,0.22)' },
+          pre_breakout:    { icon:'🔋', label:'BB收缩蓄势 · 等突破方向确认', color:'var(--violet)', bg:'rgba(88,24,144,0.08)', bd:'rgba(88,24,144,0.22)' },
+          ranging:         { icon:'↔', label:'震荡市 · 区间边缘入场模式', color:'var(--teal)', bg:'rgba(10,96,80,0.08)', bd:'rgba(10,96,80,0.22)' },
+        };
+        const bInfo = regimeBanners[r49] || regimeBanners.ranging;
+        return `<div style="display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border-radius:4px;background:${bInfo.bg};border:1px solid ${bInfo.bd};margin-bottom:6px;">
+          <span style="font-size:11px">${bInfo.icon}</span>
+          <span style="font-size:10px;font-weight:700;color:${bInfo.color};letter-spacing:0.5px">${bInfo.label}</span>
+        </div>`;
+      })()}
       <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;">
         <span style="font-size:26px;font-weight:800;color:${actionColor};font-variant-numeric:tabular-nums">${fmtP(entry)}</span>
         ${res.entryMin&&res.entryMax&&Math.abs(res.entryMin-res.entryMax)>0.0001?`<span style="font-size:12px;color:var(--muted)">区间 ${fmtP(res.entryMin)} – ${fmtP(res.entryMax)}</span>`:''}
@@ -13167,7 +13300,7 @@ function runMiniBacktest(res, kl){
 
 // FINCH v40 — Multi-Asset Engine
 async function init(){
-  buildSymList();buildFilters();renderLunar();
+  buildSymList();buildFilters();// renderLunar();  // v66 removed
   initMobileLayout();
 
   // Version badge — always show current version
@@ -16780,78 +16913,7 @@ switchMobileModTab = function(tab, btn) {
 <!-- ══════════════════════════════════════════════════════════
      GANN CYCLE CHART MODAL
      ═══════════════════════════════════════════════════════════ -->
-<div id="gannCycleModal">
-  <div class="gcm-panel">
-    <div class="gcm-header">
-      <div>
-        <div style="font-size:15px;font-weight:700;color:var(--gold);letter-spacing:2px;">📊 江恩周期图表 · Gann Cycle Chart</div>
-        <div style="font-size:11px;color:var(--dim);margin-top:2px;">时间×价格几何关系 · 自然日周期 · 平方九 · 易经六十四卦</div>
-      </div>
-      <button onclick="closeGannCycleModal()" style="padding:7px 16px;border:1px solid var(--line2);border-radius:6px;background:var(--bg2);color:var(--muted);font-family:inherit;font-size:12px;cursor:pointer;font-weight:700;">✕ 关闭</button>
-    </div>
-    <div class="gcm-body">
-      <!-- Tab bar -->
-      <div class="gcm-tabs">
-        <button class="gcm-tab active" onclick="switchGCMTab('spiral',this)">🌀 Sq9螺旋</button>
-        <button class="gcm-tab" onclick="switchGCMTab('cycles',this)">⏰ 时间周期</button>
-        <button class="gcm-tab" onclick="switchGCMTab('angles',this)">📐 角度射线</button>
-        <button class="gcm-tab" onclick="switchGCMTab('iching',this)">☯️ 易经卦象</button>
-        <button class="gcm-tab" onclick="switchGCMTab('wheel',this)">⚙️ 时间之轮</button>
-      </div>
-
-      <!-- TAB: Sq9 Spiral -->
-      <div id="gcm-spiral" class="gcm-content">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px;">
-          <div style="font-size:11px;color:var(--muted);">Gann 平方九（Sq9）— 价格从中心向外螺旋扩展，每90°一个关键价格节点</div>
-          <button onclick="renderGannSpiral()" style="padding:4px 12px;border:1px solid var(--cyan);border-radius:4px;background:var(--gann-cycle-bg);color:var(--cyan);font-size:11px;cursor:pointer;font-family:inherit;">↺ 刷新</button>
-        </div>
-        <div class="cycle-chart-wrap">
-          <canvas id="gannSpiralCanvas" style="width:100%;max-width:600px;display:block;margin:0 auto;"></canvas>
-        </div>
-        <div id="gannSpiralLevels" style="margin-top:10px;"></div>
-      </div>
-
-      <!-- TAB: Time Cycles -->
-      <div id="gcm-cycles" class="gcm-content" style="display:none;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px;">
-          <div style="font-size:11px;color:var(--muted);">江恩时间周期 — 从当前日期推算未来所有关键时间节点，颜色深度=置信度</div>
-          <div style="display:flex;gap:6px;">
-            <select id="gcmCycleTF" onchange="renderGannCycleTimeline()" style="padding:4px 7px;border:1px solid var(--line2);border-radius:4px;background:var(--bg);color:var(--text);font-size:11px;font-family:inherit;">
-              <option value="1h">1H</option><option value="4h" selected>4H</option><option value="1d">1D</option>
-            </select>
-          </div>
-        </div>
-        <div class="cycle-chart-wrap" style="padding:12px;">
-          <canvas id="gannCycleCanvas" height="200" style="width:100%;display:block;"></canvas>
-        </div>
-        <div id="gannCycleNodes" style="margin-top:10px;"></div>
-      </div>
-
-      <!-- TAB: Gann Angles -->
-      <div id="gcm-angles" class="gcm-content" style="display:none;">
-        <div style="margin-bottom:8px;font-size:11px;color:var(--muted);">江恩角度射线 — 以最近重大低点为起点，绘制1×1/2×1/1×2/4×1等角度线与当前价格交叉分析</div>
-        <div class="cycle-chart-wrap">
-          <canvas id="gannAnglesCanvas" height="280" style="width:100%;display:block;"></canvas>
-        </div>
-        <div id="gannAnglesInfo" style="margin-top:10px;"></div>
-      </div>
-
-      <!-- TAB: I-Ching -->
-      <div id="gcm-iching" class="gcm-content" style="display:none;">
-        <div id="gannIChingFull"></div>
-      </div>
-
-      <!-- TAB: Wheel of Time -->
-      <div id="gcm-wheel" class="gcm-content" style="display:none;">
-        <div style="margin-bottom:8px;font-size:11px;color:var(--muted);">江恩时间之轮 — 360°圆形时间视图，过去与未来的周期节点分布</div>
-        <div class="cycle-chart-wrap" style="text-align:center;padding:12px;">
-          <canvas id="gannWheelCanvas" style="max-width:500px;width:100%;display:inline-block;"></canvas>
-        </div>
-        <div id="gannWheelInfo" style="margin-top:10px;"></div>
-      </div>
-    </div>
-  </div>
-</div>
+<!-- gannCycleModal removed v66 -->
 
 
 <!-- ╔══════════════════════════════════════════════════════════════════════╗
@@ -22381,7 +22443,7 @@ function _v54bInit() {
   // 冷却倒计时每秒刷新
   // _updateCooldownDisplay moved to unified refreshLoop (every 30s tick)
 
-  document.title = 'FINCH v60 — 全维度市场分析 · 优化R:R引擎';
+  document.title = 'FINCH v65 — 入场引擎重构·结构性SL·方向稳定锁';
 }
 
 // 等待 FINCH_V53/V54 实例化完成后再运行
