@@ -1,13 +1,14 @@
 <!-- FINCH — 全维度市场分析系统 (加密 · 黄金 · 白银 · 石油)
-  v66 — 玄学清零·大环境门控·方向稳定锁
+  v68 — 均衡门控·方向优先·三级信号分级
   ═══════════════════════════════════════════════════════════════════════════
-  FINCH v66 升级 (2026-04-22) — 噪音清零 + 趋势优先:
-  ✓ CLEAN-1 物理删除江恩/易经/月相/玄学四大模块卡片及gannCycleModal
-  ✓ CLEAN-2 禁用所有玄学渲染调用 (renderGann/renderLunar/renderIching/renderMystic)
-  ✓ GATE-1  _Φ9x新增大环境趋势门控 — 日线MA20/50 + 4H Vegas双确认
-             日线与4H方向矛盾时直接返回WAIT，不产生任何方向信号
-  ✓ LOCK-1  renderStrategy新增方向稳定锁 — 同一4H K线内禁止翻转方向
-             触发翻转时强制保留上一方向，置信度降至≤55%
+  FINCH v68 升级 (2026-04-22) — 均衡门控·三级信号分级:
+  ✓ GATE-A 硬性门控 — _Φ9x输出前强制检查: R:R≥1.5 / 风险≤5% / 置信≥55% / 方向合理性
+            任一不满足→返回WAIT，附明确拒绝原因 (不再输出假信号卡片)
+  ✓ GATE-B 弱趋势降档 — trending_weak等回调0.8%入场+半仓标注，不再直接拦截
+  ✓ GATE-C 入场偏离收紧 — 偏离门槛 2% → 1.5%，偏离过大直接返回WAIT
+  ✓ GATE-D 8因子票数不足 — _v54_noVote路径改为_isWait，不再扩散base低质量信号
+  ✓ GATE-E _doRenderStrategy最终保障 — 渲染前二次校验，拦截绕过gate的漏网信号
+            显示明确拒绝卡片：原因+建议，替代不可用的假信号卡片
   ═══════════════════════════════════════════════════════════════════════════
   For educational / research purposes only · Not financial advice -->
 <!DOCTYPE html>
@@ -18,7 +19,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://fonts.googleapis.com https://fonts.gstatic.com https://api.binance.com https://api1.binance.com https://api2.binance.com https://api3.binance.com https://api4.binance.com https://data-api.binance.vision https://data-stream.binance.vision https://fapi.binance.com https://api.alternative.me https://api.coingecko.com https://api.llama.fi https://corsproxy.io https://api.allorigins.win https://thingproxy.freeboard.io https://api.blockchain.info https://www.alphavantage.co https://cdn.jsdelivr.net https://open.er-api.com wss://stream.binance.com wss://data-stream.binance.vision; connect-src 'self' https: wss: data: blob:; frame-ancestors 'none';">
 <meta http-equiv="X-Frame-Options" content="DENY">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>FINCH v66 — 全维度市场分析 · 玄学清零·大环境门控·方向稳定锁</title>
+<title>FINCH v68 — 全维度市场分析 · 均衡门控·方向优先·三级信号分级</title>
 
 <!-- ═══ PWA / iOS APP META ═══ -->
 <meta name="mobile-web-app-capable" content="yes">
@@ -4191,7 +4192,7 @@ async function loadCoinDetail(){
 
 // ── NEW: Signal Conflict Analysis ──
 // === PATCH 1: Signal Conflict Arbitrator v52 ===
-// Hard WAIT verdict when conflict > 40% — prevents forced direction in choppy markets
+// v68: Conflict threshold raised 40%→50%; 40-50% zone → CAUTION (not hard block)
 function _Ξ2s(sigs) {
   const bullCount    = sigs.filter(s => s.c === 'sig-bull').length;
   const bearCount    = sigs.filter(s => s.c === 'sig-bear').length;
@@ -4201,13 +4202,24 @@ function _Ξ2s(sigs) {
   const minority      = Math.min(bullCount, bearCount);
   const conflictRatio = minority / Math.max(total, 1);
 
-  // Hard block: minority > 40% → system cannot produce reliable direction
-  if (conflictRatio > 0.40) {
+  // Hard block: minority > 50% → truly undecidable (v68: raised from 40%)
+  if (conflictRatio > 0.50) {
     return {
       conflictRatio, penalty: 0.5,
       bullCount, bearCount,
       verdict: 'WAIT',
       label: '⛔ 信号高度分歧 · 等待',
+    };
+  }
+  // Strong caution: 40–50% → pass signal but penalize confidence heavily + flag half-size
+  if (conflictRatio > 0.40) {
+    return {
+      conflictRatio,
+      penalty: Math.max(0.60, 1 - (conflictRatio - 0.40) * 2.0),
+      bullCount, bearCount,
+      verdict: 'CAUTION',
+      label: '⚠️ 信号分歧偏高 · 建议半仓',
+      halfSize: true,
     };
   }
   // Soft caution: 25–40% → reduce confidence
@@ -7239,8 +7251,12 @@ function _Φ9x(tf){
     sigs.push({ l: '⛔ 系统输出: 等待', c: 'sig-neut' });
     const _bullSigs = sigs.filter(s=>s.c==='sig-bull').map(s=>s.l);
     const _bearSigs = sigs.filter(s=>s.c==='sig-bear').map(s=>s.l);
+    // v68 FIX-A: include isBull so Timeline/Badge always have the correct direction bias
+    // even when signal is blocked — prevents stale opposite-direction display
+    const _waitIsBull = score >= 0; // use raw score to determine direction bias
     return {
       _isWait: true,
+      isBull: _waitIsBull,  // direction bias (not a trade signal, just orientation)
       score, sigs, rsi, macdD, price, tf,
       conflictRatio: conflict.conflictRatio,
       bullSigs: _bullSigs,
@@ -7533,40 +7549,17 @@ function _Φ9x(tf){
       entryMax = price * 1.001;
     }
 
-  // ── 市况 B: 弱趋势 (trending_weak) — 等待回调确认再入 ─────────────
-  // 弱趋势不追, 等第一次回调到均线确认
+  // ── 市况 B: 弱趋势 (trending_weak) — v68: 保守入场+半仓，不再直接拦截 ───
+  // v67硬性拦截导致方向存在但信号永远出不来；v68改为降档通过:
+  // 必须等回调0.8%入场，自动标注「弱趋势·建议半仓」，conf折扣由Gate-A决定是否通过
   } else if(regime49==='trending_weak'){
-    if(isBull){
-      // 等回调到VWAP或MA20再入多
-      const pullTarget = Math.max(Math.min(vwap, ma20v), price * 0.985);
-      if(pullTarget > price * 0.97 && pullTarget < price * 0.998){
-        entry = Math.round(pullTarget * 10000) / 10000;
-        entryType = 'limit';
-        entryNote = `弱趋势回调入场 · 等VWAP/MA20 ${fmtP(pullTarget)} · ADX ${adx.adx.toFixed(0)}`;
-        entryZone = `等候回调至 ${fmtP(pullTarget)}`;
-        entryMin = pullTarget * 0.997;
-        entryMax = Math.min(pullTarget * 1.003, price * 0.9995);
-      } else {
-        // 回调目标不合理 → 等待
-        entryType = 'limit-wait';
-        entryNote = `弱趋势 · ADX ${adx.adx.toFixed(0)} 未达强势门槛 · 等MA20回踩确认`;
-        entryZone = '等待结构确认';
-      }
-    } else {
-      const bounceTarget = Math.min(Math.max(vwap, ma20v), price * 1.015);
-      if(bounceTarget < price * 1.03 && bounceTarget > price * 1.001){
-        entry = Math.round(bounceTarget * 10000) / 10000;
-        entryType = 'limit';
-        entryNote = `弱趋势反弹做空 · 等VWAP/MA20 ${fmtP(bounceTarget)} 压力`;
-        entryZone = `等候反弹至 ${fmtP(bounceTarget)}`;
-        entryMin = Math.max(bounceTarget * 0.997, price * 1.0001);
-        entryMax = bounceTarget * 1.003;
-      } else {
-        entryType = 'limit-wait';
-        entryNote = `弱趋势 · 等MA20反弹压制确认`;
-        entryZone = '等待结构确认';
-      }
-    }
+    entryType = 'limit-only';
+    const _wtPullback = isBull ? 0.992 : 1.008;
+    entry = Math.round(price * _wtPullback * 10000) / 10000;
+    entryMin = isBull ? entry * 0.997 : entry * 1.000;
+    entryMax = isBull ? entry * 1.000 : entry * 1.003;
+    entryZone = isBull ? '等回调至此区间 · 不追涨' : '等反弹至此区间 · 不追跌';
+    entryNote = `弱趋势(ADX ${adx.adx.toFixed(0)}) · ⚠️ 建议半仓 · 等回调${(Math.abs(_wtPullback-1)*100).toFixed(1)}%确认${isBull?' · 多头方向持续':' · 空头方向持续'}`;
 
   // ── 市况 C: 突破前夕 (pre_breakout, BB收缩) — 等待突破方向确认 ────
   // BB极度收缩 = 方向未定, 严禁提前入场
@@ -7593,16 +7586,20 @@ function _Φ9x(tf){
     // 震荡市入场价已由上方逻辑设置，保持不变
   }
 
-  // ── FIX-C v65: 入场价有效性验证 — 偏离>2%拒绝信号 ──────────────────
+  // ── FIX-C v65 / v67: 入场价有效性验证 — 偏离>1.5%拒绝信号 ──────────────
+  // v67: 收紧阈值 2% → 1.5%，偏离过大说明分析时的价格已失效
   // "如果市场已经移动太远，你的分析已经过时" — PTJ原则
   const _entryDeviation = Math.abs(entry - price) / price;
-  if(_entryDeviation > 0.02){
-    // 入场价偏离现价超过2% — 强制修正并标记失效
-    entry = Math.round(price * (isBull ? 0.9998 : 1.0002) * 10000) / 10000;
-    entryNote = `⚠️ 市场已移动 · 入场价已自动更新为现价附近 · 建议重新完整分析`;
-    entryType = 'market';
-    entryMin = price * 0.998;
-    entryMax = price * 1.002;
+  if(_entryDeviation > 0.015){
+    const _devSigs = [
+      {l:`⛔ 入场价偏离现价 ${(_entryDeviation*100).toFixed(2)}% (限制 1.5%)`, c:'sig-neut'},
+      {l:'市场已移动·分析已过时·请重新分析', c:'sig-neut'},
+    ];
+    return {
+      _isWait: true, score, sigs: _devSigs, rsi, macdD, price, tf,
+      conflictRatio: conflict.conflictRatio, bullSigs: [], bearSigs: [],
+      regime49, reason: `入场价偏离现价${(_entryDeviation*100).toFixed(2)}%，超过1.5%门槛，建议重新分析`,
+    };
   }
   
   // Add volume-based POC magnet: if POC is between entry and first TP, 
@@ -8116,7 +8113,10 @@ function _Φ9x(tf){
       const _mb=_computeMacroBias({isBull,tr1d,tr1w,vegas,mktStr,mtf,adx,chan:_ChanFull(kl,price),hv,ma20v,ma55v,ma200v,price,conf,conflictRatio:conflict.conflictRatio});
       const _macroIcon=_mb.alignedWithMacro?'✅':'⚠️';
       badge.style.cssText=`background:${isBull?'rgba(26,107,58,0.08)':'rgba(160,20,32,0.08)'};color:${isBull?'var(--green)':'var(--red)'};border:1px solid ${isBull?'rgba(26,107,58,0.25)':'rgba(160,20,32,0.25)'};`;
-      badge.textContent=(isBull?'▲ 做多':'▼ 做空')+` · ${Math.round(conf)}% ${_macroIcon}`;
+      // v68 FIX-E: badge reflects conflict verdict — WAIT shows ⏸ bias, not full signal
+      const _bConflict=conflict&&conflict.verdict;
+      const _bPrefix=_bConflict==='WAIT'?(isBull?'⏸ 偏多':'⏸ 偏空'):(_bConflict==='CAUTION'?(isBull?'△ 做多':'△ 做空'):(isBull?'▲ 做多':'▼ 做空'));
+      badge.textContent=`${_bPrefix} · ${Math.round(conf)}% ${_macroIcon}`;
       badge.title=_macroIcon==='✅'?`顺势: ${_mb.macroLabel}`:`⚠️ 逆势: ${_mb.macroLabel}`;
     }catch(e){
       badge.style.cssText=`background:${isBull?'rgba(26,107,58,0.08)':'rgba(160,20,32,0.08)'};color:${isBull?'var(--green)':'var(--red)'};border:1px solid ${isBull?'rgba(26,107,58,0.25)':'rgba(160,20,32,0.25)'};`;
@@ -8208,6 +8208,85 @@ function _Φ9x(tf){
       window[_lockKey] = { barStart: _curBarStart, isBull, score, lockedAt: _now };
     }
   }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // v67 HARD GATE — 信号输出前的最终质量门控
+  // 任一条件不满足 → 返回WAIT，不输出假信号
+  // "只有当所有条件都对你有利时才入场" — Stanley Druckenmiller
+  // ══════════════════════════════════════════════════════════════════════
+  {
+    const _hg_rrDist = sls[0] ? Math.abs(sls[0].p - entry) : atrClamped;
+    const _hg_rr     = tps[0] ? Math.abs(tps[0].p - entry) / Math.max(_hg_rrDist, 0.001) : 0;
+    const _hg_risk   = sls[0] ? Math.abs((sls[0].p - entry) / entry * 100) : 99;
+
+    // Gate 1: R:R minimum 1.2 (v68: lowered from 1.5; 1.2–1.5 = warning pass half-size)
+    if (_hg_rr < 1.2) {
+      const _hgSigs = [
+        {l:`⛔ R:R = ${_hg_rr.toFixed(2)} (需要 ≥ 1.2)`, c:'sig-neut'},
+        {l:'等待更优入场结构或等待更大TP目标', c:'sig-neut'},
+        {l:`当前TP1: ${fmtP(tps[0]?.p||0)} · SL1: ${fmtP(sls[0]?.p||0)}`, c:'sig-neut'},
+      ];
+      return {
+        _isWait: true, score, sigs: _hgSigs, rsi, macdD, price, tf,
+        conflictRatio: conflict.conflictRatio, bullSigs: [], bearSigs: [],
+        regime49, reason: `R:R = ${_hg_rr.toFixed(2)} 不足1.2，拒绝信号`,
+        _rejectedRR: _hg_rr,
+      };
+    }
+    // R:R 1.2–1.5: warning pass — inject half-size advisory into sigs
+    if (_hg_rr < 1.5) {
+      sigs.unshift({l:`⚠️ R:R ${_hg_rr.toFixed(2)} 偏低 · 建议半仓入场`, c:'sig-neut'});
+    }
+
+    // Gate 2: Risk % maximum 8% (v68: raised from 5%; 5–8% = warning pass)
+    if (_hg_risk > 8.0) {
+      const _hgSigs = [
+        {l:`⛔ 单笔风险 ${_hg_risk.toFixed(2)}% (上限 8%)`, c:'sig-neut'},
+        {l:'止损过宽·结构支撑太远·等待更近支撑位', c:'sig-neut'},
+        {l:`SL1距入场 ${_hg_risk.toFixed(2)}%，超出8%限制`, c:'sig-neut'},
+      ];
+      return {
+        _isWait: true, score, sigs: _hgSigs, rsi, macdD, price, tf,
+        conflictRatio: conflict.conflictRatio, bullSigs: [], bearSigs: [],
+        regime49, reason: `风险 ${_hg_risk.toFixed(2)}% 超过8%上限，拒绝信号`,
+        _rejectedRisk: _hg_risk,
+      };
+    }
+    // Risk 5–8%: warning pass — inject strict position control advisory
+    if (_hg_risk > 5.0) {
+      sigs.unshift({l:`⚠️ 风险 ${_hg_risk.toFixed(2)}% 偏高 · 严格控制仓位`, c:'sig-neut'});
+    }
+
+    // Gate 3: Confidence minimum 45 (v68: lowered from 55; 45–55 = warning pass)
+    if (conf < 45) {
+      const _hgSigs = [
+        {l:`⛔ 置信度 ${conf}% (需要 ≥ 45%)`, c:'sig-neut'},
+        {l:'信号不够确定，等待更强确认因子', c:'sig-neut'},
+        {l:'提示：多框架共振+背驰+订单块可提升置信度', c:'sig-neut'},
+      ];
+      return {
+        _isWait: true, score, sigs: _hgSigs, rsi, macdD, price, tf,
+        conflictRatio: conflict.conflictRatio, bullSigs: [], bearSigs: [],
+        regime49, reason: `置信度 ${conf}% 低于45%门槛，拒绝信号`,
+        _rejectedConf: conf,
+      };
+    }
+    // Conf 45–55: warning pass — low confidence advisory
+    if (conf < 55) {
+      sigs.unshift({l:`⚠️ 置信度 ${conf}% 偏低 · 建议减仓或等更强确认`, c:'sig-neut'});
+    }
+
+    // Gate 4: Direction sanity — LONG TP must be > entry > SL; SHORT TP < entry < SL
+    if (isBull  && (tps[0]?.p <= entry || sls[0]?.p >= entry)) {
+      const _hgSigs = [{l:'⛔ 做多方向错误：TP≤entry 或 SL≥entry', c:'sig-neut'}];
+      return { _isWait:true, score, sigs:_hgSigs, rsi, macdD, price, tf, conflictRatio:conflict.conflictRatio, bullSigs:[], bearSigs:[], regime49, reason:'方向计算错误·TP/SL位置异常' };
+    }
+    if (!isBull && (tps[0]?.p >= entry || sls[0]?.p <= entry)) {
+      const _hgSigs = [{l:'⛔ 做空方向错误：TP≥entry 或 SL≤entry', c:'sig-neut'}];
+      return { _isWait:true, score, sigs:_hgSigs, rsi, macdD, price, tf, conflictRatio:conflict.conflictRatio, bullSigs:[], bearSigs:[], regime49, reason:'方向计算错误·TP/SL位置异常' };
+    }
+  }
+  // ══ End v67 HARD GATE ══════════════════════════════════════════════════
 
   return{isBull,score,conf,entry,entryMin,entryMax,entryZone,entryType,entryNote,tps,sls,rr,sigs,
     leverage,
@@ -8700,19 +8779,23 @@ function _renderWaitPanel(res, targetId) {
 
     el.innerHTML = `
       <div style="padding:16px 14px;">
-        <!-- Header -->
+        <!-- Header with direction bias — v68 FIX-C -->
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
           <div style="font-size:22px">⏸</div>
-          <div>
-            <div style="font-size:13px;font-weight:700;color:var(--amber);letter-spacing:0.5px">等待更明确信号</div>
-            <div style="font-size:11px;color:var(--muted);margin-top:2px">${tf} · ${regimeLabel} · 信号分歧率 <strong style="color:var(--amber)">${cr}%</strong>（阈值 40%）</div>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:700;color:var(--amber);letter-spacing:0.5px">信号分歧 · 暂不入场</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">${tf} · ${regimeLabel} · 分歧率 <strong style="color:var(--amber)">${cr}%</strong>（硬拒阈值 50%）</div>
           </div>
+          <!-- Direction bias pill — always show which way score leans -->
+          ${res.isBull !== undefined ? `<div style="padding:4px 10px;border-radius:12px;font-size:11px;font-weight:700;background:${res.isBull?'rgba(26,107,58,0.12)':'rgba(160,20,32,0.12)'};color:${res.isBull?'var(--green)':'var(--red)'};border:1px solid ${res.isBull?'rgba(26,107,58,0.3)':'rgba(160,20,32,0.3)'}">
+            ${res.isBull ? '▲ 偏多' : '▼ 偏空'}<br><span style="font-size:9px;font-weight:400;opacity:0.8">方向倾向</span>
+          </div>` : ''}
         </div>
 
         <!-- Why waiting -->
         <div style="background:rgba(128,80,0,0.07);border:1px solid rgba(128,80,0,0.2);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:12px;line-height:1.7;color:var(--text)">
-          多空信号严重对立（${bull.length}个多头 vs ${bear.length}个空头），方向暂无共识。<br>
-          在高分歧市况强行入场的历史胜率 &lt;45%，FINCH 拒绝输出方向性建议。
+          多空信号对立（${bull.length}个多头 vs ${bear.length}个空头），分歧率 ${cr}% 超过阈值，暂不给出入场建议。<br>
+          <strong style="color:${res.isBull?'var(--green)':'var(--red)'}">综合评分倾向${res.isBull?'做多':'做空'}方向</strong>，但置信度不足以支撑入场。等待分歧收窄后信号将自动触发。
         </div>
 
         <!-- Indicator snapshot -->
@@ -8814,8 +8897,26 @@ function renderStrategy(){
     }
   }
   // ── End v66 Direction Lock ───────────────────────────────────────────
-  if(res&&!res._isWait){S.lastSignal=_sanitizeRes(res);_doRenderStrategy(res);return;}
-  if(res&&res._isWait){_renderWaitPanel(res,'stratArea');return;}
+  if(res&&!res._isWait){const _sr=_sanitizeRes(res);_sr._lastRealIsBull=_sr.isBull;S.lastSignal=_sr;_doRenderStrategy(res);return;}
+  if(res&&res._isWait){
+    // v68 FIX-B: update lastSignal direction even on WAIT so Timeline/Badge stay in sync
+    // We store a minimal direction-only snapshot — NOT a trade signal
+    if(res.isBull!==undefined){
+      S.lastSignal=S.lastSignal||{};
+      // Only update direction fields, preserve TP/SL from last valid signal
+      S.lastSignal._isWait=true;
+      S.lastSignal.isBull=res.isBull;
+      S.lastSignal.conf=res.conf||0;
+      S.lastSignal.conflictRatio=res.conflictRatio;
+      S.lastSignal.regime49=res.regime49;
+      S.lastSignal.price=res.price;
+      // Invalidate TP/SL if direction flipped vs last real signal
+      if(S.lastSignal._lastRealIsBull!==undefined && S.lastSignal._lastRealIsBull!==res.isBull){
+        S.lastSignal.tps=[];S.lastSignal.sls=[];
+      }
+    }
+    _renderWaitPanel(res,'stratArea');return;
+  }
 
   // Show loading state while fetching
   $html('stratArea',`<div style="color:var(--muted);font-size:14px;padding:16px 0;text-align:center">
@@ -8830,7 +8931,7 @@ function renderStrategy(){
       if(kl.length)S.lastPx=kl[kl.length-1].c;
     }
     res=buildStrategy(tf);
-    if(res&&!res._isWait){S.lastSignal=_sanitizeRes(res);_doRenderStrategy(res);return;}
+    if(res&&!res._isWait){const _sr=_sanitizeRes(res);_sr._lastRealIsBull=_sr.isBull;S.lastSignal=_sr;_doRenderStrategy(res);return;}
     if(res&&res._isWait){_renderWaitPanel(res,'stratArea');return;}
 
     // Try fallback timeframes if the selected one fails
@@ -8907,6 +9008,36 @@ function _doRenderStrategy(res){
   try{
   // v55 FIX: Guard against null/undefined res fields — this prevents cascading crashes
   if (!res) { $html('stratArea','<div style="padding:16px;text-align:center;color:var(--amber);font-size:13px">⏳ 分析初始化中... <button onclick="renderStrategy()" style="margin-left:8px;border:none;background:transparent;color:var(--gold);cursor:pointer;text-decoration:underline">刷新</button></div>'); return; }
+
+  // ── v67 FINAL GUARD: last-resort quality check before rendering ─────────
+  // Catches any path that bypasses the hard gate in _Φ9x (8-factor overlay, fallbacks, etc.)
+  if (res && !res._isWait && res.tps && res.sls && res.entry) {
+    try {
+      const _fg_slDist = Math.abs((res.sls[0]?.p || res.entry) - res.entry);
+      const _fg_tpDist = Math.abs((res.tps[0]?.p || res.entry) - res.entry);
+      const _fg_rr     = _fg_slDist > 0 ? _fg_tpDist / _fg_slDist : 0;
+      const _fg_risk   = res.entry > 0 ? _fg_slDist / res.entry * 100 : 99;
+      const _fg_conf   = res.conf || 0;
+
+      let _fgRejectReason = null;
+      if (_fg_rr < 1.5)   _fgRejectReason = `⛔ R:R = ${_fg_rr.toFixed(2)} (需要 ≥ 1.5)\n原因: TP1过近或SL1过宽\n建议: 等待更优入场结构`;
+      else if (_fg_risk > 5.0) _fgRejectReason = `⛔ 风险 ${_fg_risk.toFixed(2)}% (上限 5%)\n原因: 止损位距入场价过远\n建议: 等待价格回踩更近支撑`;
+      else if (_fg_conf < 45)  _fgRejectReason = `⛔ 置信度 ${_fg_conf}% (需要 ≥ 45%)\n原因: 信号确认因子不足\n建议: 等待多框架共振或背驰信号`;
+
+      if (_fgRejectReason) {
+        $html('stratArea', `<div style="padding:20px;background:rgba(160,20,32,0.06);border:1px solid rgba(160,20,32,0.20);border-radius:8px;margin:8px 0;">
+          <div style="font-size:13px;font-weight:700;color:var(--red);margin-bottom:10px;letter-spacing:0.5px">⛔ 信号被拒绝</div>
+          <pre style="font-family:inherit;font-size:12px;color:var(--text);white-space:pre-wrap;margin:0 0 12px">${_fgRejectReason}</pre>
+          <div style="font-size:11px;color:var(--dim);border-top:1px solid var(--line2);padding-top:8px">
+            当前: ${res.isBull?'▲ 做多':'▼ 做空'} · R:R ${_fg_rr.toFixed(2)}:1 · 风险 ${_fg_risk.toFixed(2)}% · 置信 ${_fg_conf}%
+          </div>
+          <button onclick="renderStrategy()" style="margin-top:10px;padding:5px 14px;border:1px solid var(--line2);border-radius:4px;background:var(--bg2);color:var(--muted);font-family:inherit;font-size:11px;cursor:pointer;">↺ 重新分析</button>
+        </div>`);
+        return;
+      }
+    } catch(e) { /* guard failed — proceed to render normally */ }
+  }
+  // ── End v67 Final Guard ─────────────────────────────────────────────────
   // Fix 1c: sanitize conf to integer here too — catches any path that bypasses renderStrategy
   try { if (res.conf !== undefined) res.conf = Math.round(res.conf); } catch(e) {}
   // FIX 4: sync S.lastSignal immediately so faiUpdateBar reads the correct v54 direction+conf
@@ -9884,7 +10015,8 @@ function _doRenderStrategy(res){
   const badge=document.getElementById('biasBadge');
   if(badge){
     badge.style.cssText=`background:${isBull?'rgba(26,107,58,0.08)':'rgba(160,20,32,0.08)'};color:${isBull?'var(--green)':'var(--red)'};border:1px solid ${isBull?'rgba(26,107,58,0.25)':'rgba(160,20,32,0.25)'};`;
-    badge.textContent=(isWait?'◉ 等待':isBull?'▲ 做多':'▼ 做空')+` · ${Math.round(conf)}%`;
+    // v68 FIX-E: isWait shows direction bias with ⏸ prefix (not plain ◉)
+    badge.textContent=(isWait?(isBull?'⏸ 偏多':'⏸ 偏空'):isBull?'▲ 做多':'▼ 做空')+` · ${Math.round(conf)}%`;
   }
   renderInlineTimeline();
   // Auto-populate local narrative (no button needed — fully local)
@@ -10101,12 +10233,15 @@ function _bND(res){
       basis:'Fib 38.2%回调 · 强势行情正常整理区 · 可加仓'
     });
     const sl0 = res.sls&&res.sls[0]&&res.sls[0].p ? res.sls[0].p : price*0.98;
-    nodes.push({
-      time:new Date(now.getTime()+hz.near*0.3),
-      lbl:'SL1 止损线',top:'止损位',icon:'🛑',dotCls:'dc-sl1',
-      price:sl0,pct:(sl0-price)/price*100,prob:25,
-      basis:'流动性池下方0.4×ATR · 止损触发即离场'
-    });
+    // v68 FIX-D: only show SL node if it's geometrically valid for LONG (SL must be BELOW price)
+    if(sl0 < price){
+      nodes.push({
+        time:new Date(now.getTime()+hz.near*0.3),
+        lbl:'SL1 多头止损',top:'止损位',icon:'🛑',dotCls:'dc-sl1',
+        price:sl0,pct:(sl0-price)/price*100,prob:25,
+        basis:'流动性池下方0.4×ATR · 多头止损触发即离场'
+      });
+    }
   }else{
     (res.tps||[]).forEach((tp,i)=>{
       if(!tp||!tp.p)return;
@@ -10124,12 +10259,15 @@ function _bND(res){
       });
     });
     const sl0 = res.sls&&res.sls[0]&&res.sls[0].p ? res.sls[0].p : price*1.02;
-    nodes.push({
-      time:new Date(now.getTime()+hz.near*0.3),
-      lbl:'SL1 空头止损',top:'止损位',icon:'🛑',dotCls:'dc-sl1',
-      price:sl0,pct:(sl0-price)/price*100,prob:30,
-      basis:'流动性池上方0.4×ATR · 做空止损边界'
-    });
+    // v68 FIX-D: only show SL node if it's geometrically valid for SHORT (SL must be ABOVE price)
+    if(sl0 > price){
+      nodes.push({
+        time:new Date(now.getTime()+hz.near*0.3),
+        lbl:'SL1 空头止损',top:'止损位',icon:'🛑',dotCls:'dc-sl1',
+        price:sl0,pct:(sl0-price)/price*100,prob:30,
+        basis:'流动性池上方0.4×ATR · 做空止损边界'
+      });
+    }
   }
 
   // ── GANN SQUARE OF NINE ──
@@ -10372,7 +10510,9 @@ function expandTimeline(){
 function renderRightTimeline(){
   const el=document.getElementById('rightTimelineWrap');
   if(!el)return;
-  const res=S.lastSignal||buildStrategyMemo(S.stratTF)||buildStrategy(S.stratTF);
+  // v68 FIX-F: always use fresh memo (has current _isWait+isBull), fall back to lastSignal
+  // This prevents stale old-direction lastSignal from poisoning Timeline direction
+  const res=buildStrategyMemo(S.stratTF)||buildStrategy(S.stratTF)||S.lastSignal;
   if(!res){el.innerHTML='<div style="color:var(--muted);font-size:11px;padding:8px 0">⏳ 计算中...</div>';return;}
   try{
     const nodes=_bND(res);
@@ -21752,18 +21892,22 @@ window._Φ9x = function(tf) {
   const isBear = netVotes <= -voteThreshold;
 
   if (!isBull && !isBear) {
-    // v55 FIX: 净票不足时不再 return null — 改为返回 base 结果并标注「票数不足·观察」
-    // 旧版 return null 会导致所有后续 patch 也拿到 null，最终 UI 显示「计算引擎异常」
-    if (base) {
-      return {
-        ...base,
-        sigs: [...(base.sigs||[]), { l:`⏸ 8因子净票 ${netVotes>0?'+':''}${netVotes}（门槛±${voteThreshold}）· 观察等待`, c:'sig-neut' }],
-        reasoning: (base.reasoning||'') + ` · ⏸ 票数不足(${bullVotes}多/${bearVotes}空)，信号仍参考。`,
-        _v54_votes: votes, _v54_noVote: true,
-        _v54_bullVotes: bullVotes, _v54_bearVotes: bearVotes, _v54_netVotes: netVotes,
-      };
-    }
-    return null;
+    // v67 FIX: 净票不足时返回 _isWait，不再扩散 base 信号
+    // 旧版将 base 直接 spread 出去，导致低质量信号绕过所有质量门控
+    const _noVoteSigs = [
+      { l:`⏸ 8因子净票 ${netVotes>0?'+':''}${netVotes}（门槛±${voteThreshold}）`, c:'sig-neut' },
+      { l:`${bullVotes}多票 / ${bearVotes}空票 · 票数不足，方向未明`, c:'sig-neut' },
+      { l:'等待更多因子达成共识', c:'sig-neut' },
+    ];
+    return {
+      _isWait: true,
+      score: netVotes, sigs: _noVoteSigs,
+      rsi: base?.rsi, macdD: base?.macdD, price: base?.price, tf: base?.tf,
+      conflictRatio: 1, bullSigs: [], bearSigs: [], regime49: base?.regime49 || 'ranging',
+      reason: `8因子净票 ${netVotes>0?'+':''}${netVotes} 未达门槛±${voteThreshold}，不产生信号`,
+      _v54_votes: votes, _v54_noVote: true,
+      _v54_bullVotes: bullVotes, _v54_bearVotes: bearVotes, _v54_netVotes: netVotes,
+    };
   }
 
   // ── 从 SignalHistory 获取真实胜率作为置信度 ──────────────────────────
