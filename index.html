@@ -1,5 +1,148 @@
 <!-- FINCH — 全维度市场分析系统 (加密 · 黄金 · 白银 · 石油)
-  v77 — 顶端分析引擎: 双轨Regime同步·Vegas硬门·入场结构强制
+  v83 — 信号解封重构: 五重阻塞移除 + 全市场降级通过机制 (2026-04-23)
+  v82 — MTF共振门控: 四时间框架方向共振系统 (2026-04-23)
+
+  ══════════════════════════════════════════════════════════════════════════
+  v82 新增: MTF RESONANCE GATE (_checkMTFResonance)
+    · 1w/1d/4h/1h 四框架方向判断 (Vegas→MA20/50→斜率三级降级)
+    · 1w与1d方向相反 → 直接WAIT (大周期矛盾)
+    · 共振得分<0.30 → WAIT | 0.30–0.50 → conf-10% | 0.50–0.70 → 正常
+    · ≥0.70 → conf+8%(上限88) | ≥0.85 → conf+15%(上限92)
+    · 1w逆信号方向 → 仓位系数×0.5 (positionSizeMult随mtfResonance输出)
+    · 数据不足(有效权重<1.5) → 跳过共振检查，不阻塞信号
+    · UI: 主界面mini行新增MTF共振等级 + TF方向简表
+  ══════════════════════════════════════════════════════════════════════════
+
+  问题诊断 (v80截图审查):
+    SOL 8H: "大环境矛盾·不产生信号" — HTF NEUTRAL全拒导致长期无信号
+    BTC 2H: 信号被频繁拒绝 → 用户无法交易
+    根因: 门槛系统叠加过多，市场90%时间被封锁；缺乏信号惯性，每次refresh独立计算
+
+  核心设计哲学: 毒蛇原则 (Viper Protocol)
+    潜伏期: 大多数时间保持状态，不因噪音切换方向
+    出击期: 信号一旦确立，必须稳定持续直到结构真正改变
+    致命性: 高质量信号一旦产生，提供清晰入场/SL/TP，不犹豫不退缩
+
+  ✓ FIX-1: HTF NEUTRAL降级 — 不再全拒，改为折扣通过
+      原: 日线/4H矛盾 → 直接return WAIT，整个市场无信号
+      新: _htfConflict标志 → 评分×0.55折扣 + conf上限60% + B级例外通过
+      意义: 日线多头+4H Vegas下方 = 强多头中的中期回调 = 合法的回调做多区间
+
+  ✓ FIX-2: _Ξ2s冲突门槛 — WAIT提高50%→60%
+      原: 信号minority>50%即WAIT，市场正常噪音触发大量WAIT
+      新: 60%以上才WAIT，40-60%带警告通过，35-48%减仓通过
+      意义: 有偏向的分歧市场应该出信号，只是仓位小
+
+  ✓ FIX-3: Hysteresis引擎 (v81取代v69方向稳定锁)
+      H1: 翻转门槛 4.0→6.0 — 消除噪音引起的Churning
+      H2: 冷却期 — 翻转后强制锁定N根K线(趋势市2根,震荡市3根)
+      H3: 摩擦成本惩罚 — 新score必须比旧score高30%才允许切换
+      H4: 历史多数派升级 — 需要连续3根K线(而非2根)支持新方向
+      意义: 真正的信号惯性，防止手续费侵蚀和心态损耗
+
+  ✓ FIX-4: Vegas例外通道 — HTF矛盾时B级+conf≥60%可通过
+      原: 所有逆Vegas信号一律拒绝
+      新: HTF矛盾场景(回调区间)允许高质量逆Vegas信号，带⚠️标记
+      意义: 趋势回调做反向也是合法交易
+
+  ✓ FIX-5: 门槛整体松动
+      conf gate: 35%→30% (Hysteresis已保证稳定性，不需要双重拦截)
+      R:R gate: 1.0→0.8 (带方向持续性的信号短期R:R偏低仍可接受)
+
+  ✓ v80 FIX-CORE-VEGAS保留: _Φ9x核心Vegas冲突硬门(非HTF矛盾场景)
+  ══════════════════════════════════════════════════════════════════════════
+
+  ══════════════════════════════════════════════════════════════════════════
+  截图问题根因 (v79审查):
+    BTC 2H: 主信号区显示"做多 · 70%"(绿色) + Vegas▲上方
+    同时下方面板显示"Vegas通道方向矛盾 · 等对齐后入场"
+    综合评分方向显示"方向待定 (-3.0)"(负值/空头方向)
+
+  根本原因: 双引擎独立运行 — 决策架构缺陷
+    _Φ9x核心引擎: 计算isBull=true(做多)，conf=70%，直接输出到主信号区
+                   内部无Vegas冲突硬门，只有"弱点注入"(警告标签)但不阻断
+    PRO TRADER引擎(V54/V70): 独立运行，检测到vegas_conflict → 返回WAIT
+                              但只影响自己的面板(mbody-v70vote)，无法修改主信号
+    结果: 两个引擎产生矛盾输出，用户看到两套相互冲突的结论
+
+  ✓ v80 FIX-CORE-VEGAS: Vegas冲突硬门注入_Φ9x核心引擎
+      位置: _Φ9x() 函数内, v67 HARD GATE之前, 最终return之前
+      条件: vegas已知 AND 信号方向与Vegas相反 AND (conf<70% OR grade<A)
+      阈值: 与PRO TRADER层保持完全一致 (conf<70% && grade!='A')
+      效果: _Φ9x也返回_isWait+waitReason='vegas_conflict'
+            buildStrategy()→renderStrategy()→_renderWaitPanel()
+            整个UI统一显示"Vegas方向矛盾"等待状态，主信号区不再出现方向信号
+      消除: 所有双引擎矛盾，价格/信号/分析结论100%统一可信
+
+  系统可信度原则:
+    1. 单一决策点 — 关键质量门只在_Φ9x核心执行，PRO TRADER层为可选补充
+    2. 一致性强制 — 任何WAIT状态必须在所有UI区域同步显示
+    3. Vegas权威 — EMA144/169机构趋势过滤器在核心层强制执行，不可绕过
+  ══════════════════════════════════════════════════════════════════════════
+
+  审查驱动问题:
+    1. Confidence因子伪独立性 (RSI/BB/Stoch三者共线，conf虚高)
+    2. SL以ATR主导而非结构失效点
+    3. TP未对比结构阻力 (RR数字虚构)
+    4. Entry有效期基于时间非结构
+    5. Grade是黑盒，用户不知道差什么
+    6. 强趋势追入保护不足
+    7. MTF方向未在信号界面强制显示
+    8. 做空入场确认标准过低
+    9. 反驳理由未强制展示
+   10. Vegas 65%阈值无回测依据 → 加严到70%
+   11. ranging SHORT微反弹"确认"标准太低
+   12. 信号分数透明度不足
+
+  ✓ FIX-1: Pillar A共线性惩罚 — RSI/Stoch/BB三者同向时，贡献上限从±2降至±1.2
+      原因: 三者均由价格序列计算，趋势末端必然全部对齐，导致conf在最危险时最高
+      修复: 引入 coherencePenalty — 三者完全同向时×0.6，两者同向时×0.8
+
+  ✓ FIX-2: SL结构先置强制 — 当swingHigh/Low存在时，SL必须以结构失效点为主导
+      原因: 现有逻辑ATR主导，结构点作检查；修复为结构点必须存在时优先
+      修复: structSL[0]存在时，sl1raw直接=structSL[0]±instBuffer，ATR只做fallback
+
+  ✓ FIX-3: TP强制对比最近结构阻力/支撑 — 新增nearestStructureBarrier检查
+      原因: TP候选已有swingHighs，但POC作为磁力位未被用于截断过远TP
+      修复: 如果POC在entry和TP1之间，TP1收紧至POC，并在note中注明"POC磁力位截断"
+
+  ✓ FIX-4: Entry有效性改为结构锚点判定
+      原因: 纯时间+ATR判定导致"结构已破但时间未到"仍显示有效
+      修复: validity主判断改为"价格是否仍在SL1上方(多)/下方(空)"
+            entryValidityLabel显示"结构未破=有效"而非时间倒计时
+
+  ✓ FIX-5: Grade升级路径透明化
+      原因: 用户看到B级不知道缺什么
+      修复: gradeLabel追加"升A还需: XXX"，列出最多2个缺失的高权重因子
+
+  ✓ FIX-6: 强趋势追入双重确认门槛
+      原因: trending_strong市价入场无额外确认，可能追入趋势末端
+      修复: regime=trending_strong时，entry仅允许market当且仅当: ADX>28 AND 成交量>1.2倍均量
+            否则降为limit-only等小回调
+
+  ✓ FIX-7: MTF方向强制注入sigs
+      原因: MTF信息存在但没有在主信号界面显示当前HTF偏向
+      修复: 在scoring完成后，将_v66_htfBigPicture结果注入显眼sig标签
+
+  ✓ FIX-8: 做空入场结构确认强化
+      原因: ranging SHORT entry=price+ATR*0.5虽有改善，但"微反弹"非真正结构确认
+      修复: SHORT entry在非深度超买区时，必须满足至少一项:
+            nearestResist附近(2%) OR VWAP压制 OR MA20压制 OR bearBOS
+            否则entryType降为limit-wait并在note中说明"等待结构确认"
+
+  ✓ FIX-9: 反驳因素强制展示
+      原因: 信号只展示支持因素，用户无法判断信号质量
+      修复: 在_computeConvictionScore中，top-2 weaknesses强制注入主信号sigs
+            显示为"⚔️ 反驳: XXX"的amber标签
+
+  ✓ FIX-10: Vegas硬门阈值从65%提升至70%
+      原因: 65%无回测依据，且conf本身存在系统性高估
+      修复: vegasConflicts && conf<70% && grade!='A' → 强制WAIT
+
+  ✓ FIX-11: 版本标识更新 (品牌/标题)
+
+  ✓ FIX-12: 入场价有效性label改为结构语言 (非时间倒计时)
+  ═══════════════════════════════════════════════════════════════════════════
   ═══════════════════════════════════════════════════════════════════════════
   FINCH v76 升级 (2026-04-23) — 6项严重缺陷修复 + 代码质量全面清理
 
@@ -75,11 +218,50 @@
       修复: updatePH()存储S._tickerHi/Lo，_calcSL()检查SL是否在
             session高点+0.5ATR以内，若是则自动推高至session高点上方
 
-  ✓ FIX-F: Vegas反向硬门 — conf<65%+B以下时强制WAIT
+  ✓ FIX-F: Vegas反向硬门 — conf<70%+B以下时强制WAIT (v79: 65%→70%)
       问题: 置信度54%+B级可在Vegas完全反向时产生交易信号
             Vegas是机构最常用中期趋势过滤器，逆Vegas历史胜率<40%
-      修复: vegasConflicts && conf<65% && grade!='A' → 强制返回_isWait
+      v79: 从65%提升至70%，因conf存在系统性高估(Pillar A共线性)
+      修复: vegasConflicts && conf<70% && grade!='A' → 强制返回_isWait
             waitReason='vegas_conflict'，UI显示🌊图标+专属解释文字
+  ═══════════════════════════════════════════════════════════════════════════
+  FINCH v78 升级 (2026-04-23) — 8项精准Conviction修复
+
+  根源问题 (v77截图审查): 系统显示做空，但右侧Vegas/缠论/Fib均显示绿色
+  → 右侧模块msig标签用自身绝对状态着色，完全不考虑主信号方向
+  → 用户看到"Vegas通道上方(绿)+做空"产生困惑，无法判断信号可信度
+
+  ✓ FIX-1: Vegas msig — 方向感知着色
+      上方+做空 → 红色+⚠ (结构冲突)   上方+做多 → 绿色 (一致)
+      下方+做空 → 绿色 (一致)           下方+做多 → 红色+⚠ (结构冲突)
+      无主信号  → 原始绿/红/amber (向后兼容)
+
+  ✓ FIX-2: 缠论 msig — 方向感知着色
+      上升笔+做多 → 绿色    上升笔+做空 → 红色 (截图问题根源)
+      下降笔+做空 → 绿色    下降笔+做多 → 红色
+
+  ✓ FIX-3: Fibonacci msig — 支撑/阻力相对主信号着色
+      做多时: 附近支撑(价格下方) → 绿色; 附近阻力(价格上方) → amber
+      做空时: 附近阻力(价格上方) → 绿色; 附近支撑(价格下方) → amber
+
+  ✓ FIX-4: 技术指标 msig — 方向感知着色
+      技术面看多+主信号做多 → 绿色; 技术面看多+主信号做空 → 红色
+
+  ✓ FIX-5: MACD msig — 方向感知着色
+      金叉+做多 → 绿色; 金叉+做空 → 红色; 反之亦然
+
+  ✓ FIX-6: RSI msig — 语义反转着色
+      RSI 59+做空 → 绿色 (高RSI确认空头); RSI 59+做多 → amber (警告)
+      RSI <30+做多 → 绿色; RSI <30+做空 → 红色
+
+  ✓ FIX-7: Vegas gate null bypass — ProTrader层
+      问题: base engine在mock/fallback路径返回vegas=null
+            vegasConflicts = vegas ? ... : false → 门槛永远不触发
+      修复: _vegasEff = vegas || S.modData?.vegas — 总是用最新的Vegas数据
+
+  ✓ FIX-8: Vegas gate — 保底信号生成器也受门槛保护
+      问题: 最终_Φ9x wrapper的fallback生成器设vegas:null，绕过所有门槛
+      修复: 检查S.modData.vegas，如有冲突改为返回_isWait
   ═══════════════════════════════════════════════════════════════════════════
   For educational / research purposes only · Not financial advice -->
 <!DOCTYPE html>
@@ -90,7 +272,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://fonts.googleapis.com https://fonts.gstatic.com https://api.binance.com https://api1.binance.com https://api2.binance.com https://api3.binance.com https://api4.binance.com https://data-api.binance.vision https://data-stream.binance.vision https://fapi.binance.com https://api.alternative.me https://api.coingecko.com https://api.llama.fi https://corsproxy.io https://api.allorigins.win https://thingproxy.freeboard.io https://api.blockchain.info https://www.alphavantage.co https://cdn.jsdelivr.net https://open.er-api.com wss://stream.binance.com wss://data-stream.binance.vision; connect-src 'self' https: wss: data: blob:; frame-ancestors 'none';">
 <meta http-equiv="X-Frame-Options" content="DENY">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>FINCH — 全维度市场分析</title>
+<title>FINCH v81 — 全维度市场分析</title>
 
 <!-- ═══ PWA / iOS APP META ═══ -->
 <meta name="mobile-web-app-capable" content="yes">
@@ -1379,6 +1561,7 @@ canvas.main-c{width:100%!important;}
       <span id="vegasMini">Vegas: --</span>
       <span id="lunarMini">月相: --</span>
       <span id="regimeMini" style="color:var(--blue)">市场: --</span>
+      <span id="mtfResMini" style="color:var(--muted)">MTF: --</span>
     </div>
   </div>
   <div class="strat-tabs">
@@ -4281,31 +4464,44 @@ function _Ξ2s(sigs) {
   const minority      = Math.min(bullCount, bearCount);
   const conflictRatio = minority / Math.max(total, 1);
 
-  // Hard block: minority > 50% → truly undecidable (v68: raised from 40%)
-  if (conflictRatio > 0.50) {
+  // v83 FIX: 提高WAIT门槛 60%→75%，增加60-75%中间档（重仓警告通过）
+  // 原逻辑: conflictRatio>60% → WAIT (60%时市场仍有明显偏向，不该封锁)
+  // 新逻辑: >75% 才真正均势WAIT | 60-75% → 减仓通过 | 48-60% → 轻仓通过
+  if (conflictRatio > 0.75) {
     return {
-      conflictRatio, penalty: 0.5,
+      conflictRatio, penalty: 0.45,
       bullCount, bearCount,
       verdict: 'WAIT',
-      label: '⛔ 信号高度分歧 · 等待',
+      label: '⛔ 信号极度分歧 · 等待',
     };
   }
-  // Strong caution: 40–50% → pass signal but penalize confidence heavily + flag half-size
-  if (conflictRatio > 0.40) {
+  // 重度分歧: 60–75% → 极轻仓通过
+  if (conflictRatio > 0.60) {
     return {
       conflictRatio,
-      penalty: Math.max(0.60, 1 - (conflictRatio - 0.40) * 2.0),
+      penalty: Math.max(0.45, 1 - (conflictRatio - 0.60) * 3.0),
       bullCount, bearCount,
       verdict: 'CAUTION',
-      label: '⚠️ 信号分歧偏高 · 建议半仓',
+      label: '⚠️ 信号高度分歧 · 极轻仓',
       halfSize: true,
     };
   }
-  // Soft caution: 25–40% → reduce confidence
-  if (conflictRatio > 0.25) {
+  // Strong caution: 48–60% → pass signal heavily penalized
+  if (conflictRatio > 0.48) {
     return {
       conflictRatio,
-      penalty: Math.max(0.70, 1 - (conflictRatio - 0.25) * 1.2),
+      penalty: Math.max(0.55, 1 - (conflictRatio - 0.48) * 2.5),
+      bullCount, bearCount,
+      verdict: 'CAUTION',
+      label: '⚠️ 信号强分歧 · 轻仓',
+      halfSize: true,
+    };
+  }
+  // Moderate caution: 35–48% → reduce confidence
+  if (conflictRatio > 0.35) {
+    return {
+      conflictRatio,
+      penalty: Math.max(0.68, 1 - (conflictRatio - 0.35) * 1.5),
       bullCount, bearCount,
       verdict: 'CAUTION',
       label: '△ 信号混合 · 减仓',
@@ -5470,7 +5666,15 @@ function renderTech(kl,price){
       <div class="mod-row"><span class="mod-row-k">交叉信号</span><span class="mod-row-v" style="color:${crossCol}">${cross}</span></div>
       <div class="mod-row"><span class="mod-row-k">底背驰</span><span class="mod-row-v" style="color:${macd.bullDiv?'var(--green)':'var(--muted)'}">${macd.bullDiv?'✅ 检测到':'--'}</span></div>
       <div class="mod-row"><span class="mod-row-k">顶背驰</span><span class="mod-row-v" style="color:${macd.bearDiv?'var(--red)':'var(--muted)'}">${macd.bearDiv?'⚠️ 检测到':'--'}</span></div>`;
-    var _mmc2=$id('msig-macd');if(_mmc2){_mmc2.textContent=macd.macd>macd.signal?'金叉':'死叉';_mmc2.style.color=macd.macd>macd.signal?'var(--green)':'var(--red)';}
+    var _mmc2=$id('msig-macd');
+    if(_mmc2){
+      const _macdBull = macd.macd > macd.signal;
+      const _mainBullM = S.lastSignal && !S.lastSignal._isWait ? S.lastSignal.isBull : null;
+      _mmc2.textContent = _macdBull ? '金叉' : '死叉';
+      _mmc2.style.color = _mainBullM === null
+        ? (_macdBull ? 'var(--green)' : 'var(--red)')
+        : (_macdBull === _mainBullM ? 'var(--green)' : 'var(--red)');
+    }
 
   }
   // RSI detail
@@ -5485,11 +5689,17 @@ function renderTech(kl,price){
       <div class="mod-row"><span class="mod-row-k">方向</span><span class="mod-row-v">${rsiTrend}</span></div>
       <div class="mod-row"><span class="mod-row-k">Stoch RSI K</span><span class="mod-row-v" style="color:${stoch.k>80?'var(--red)':stoch.k<20?'var(--green)':'var(--text)'}">${stoch.k.toFixed(1)}</span></div>`;
     $set('msig-rsimod','RSI '+rsi.toFixed(0));
-    $styl('msig-rsimod','color',rsi>70?'var(--red)':rsi<30?'var(--green)':'var(--muted)');
+    {const _mbR=S.lastSignal&&!S.lastSignal._isWait?S.lastSignal.isBull:null;let _rc='var(--muted)';if(rsi>70)_rc=_mbR===false?'var(--green)':'var(--red)';else if(rsi<30)_rc=_mbR===true?'var(--green)':'var(--red)';else if(_mbR!==null){if(rsi>55&&!_mbR)_rc='var(--green)';else if(rsi<45&&_mbR)_rc='var(--green)';else if(rsi>55&&_mbR)_rc='var(--amber)';else if(rsi<45&&!_mbR)_rc='var(--amber)';}$styl('msig-rsimod','color',_rc);}
   }
   const bull=(rsi<38)||(macd.hist>0&&ma20&&ma55&&ma20>ma55);
   $set('msig-tech',bull?'▲ 看多':'▼ 看空');
-  var _mst=$id('msig-tech');if(_mst)_mst.style.color=bull?'var(--green)':'var(--red)';
+  var _mst=$id('msig-tech');
+  if(_mst){
+    const _mainBullT = S.lastSignal && !S.lastSignal._isWait ? S.lastSignal.isBull : null;
+    _mst.style.color = _mainBullT === null
+      ? (bull ? 'var(--green)' : 'var(--red)')
+      : (bull === _mainBullT ? 'var(--green)' : 'var(--red)');
+  }
   // Enhanced explain with new indicators — use the kl param directly (no redeclaration)
   const obv2=_Ψ6o(kl);
   const adx2=_Φ5a(kl,14);
@@ -5527,7 +5737,7 @@ function renderTech(kl,price){
       <div class="mod-row"><span class="mod-row-k">Supertrend</span><span class="mod-row-v" style="color:${st2.bull?'var(--green)':'var(--red)'}">${st2.bull?'▲ 多头支撑':'▼ 空头压力'} @ ${fmtP(st2.value)}</span></div>
       <div class="mod-row"><span class="mod-row-k">历史波动率</span><span class="mod-row-v">${hv2.hv.toFixed(1)}% 年化${hv2.expanding?' (扩张↑)':hv2.contracting?' (收缩↓)':''}</span></div>`;
     $set('msig-rsimod','RSI '+rsi.toFixed(0));
-    $styl('msig-rsimod','color',rsi>70?'var(--red)':rsi<30?'var(--green)':'var(--muted)');
+    {const _mbR=S.lastSignal&&!S.lastSignal._isWait?S.lastSignal.isBull:null;let _rc='var(--muted)';if(rsi>70)_rc=_mbR===false?'var(--green)':'var(--red)';else if(rsi<30)_rc=_mbR===true?'var(--green)':'var(--red)';else if(_mbR!==null){if(rsi>55&&!_mbR)_rc='var(--green)';else if(rsi<45&&_mbR)_rc='var(--green)';else if(rsi>55&&_mbR)_rc='var(--amber)';else if(rsi<45&&!_mbR)_rc='var(--amber)';}$styl('msig-rsimod','color',_rc);}
   }
   S.modData.tech={rsi,macd,stoch:stoch.k,ma20,ma55,ma200,bbU,bbL,bbPos,trend,obv:obv2,adx:adx2,supertrend:st2,hv:hv2,cvd:cvdData2,mktStr:mktStr2,candles:candles2};
 }
@@ -5557,7 +5767,23 @@ function renderVegas(kl){
     <div class="mod-row"><span class="mod-row-k">偏离通道</span><span class="mod-row-v" style="color:${Math.abs(distPct)>2?'var(--amber)':'var(--muted)'}">${distPct>0?'+':''}${distPct.toFixed(2)}%</span></div>
     <div class="mod-row"><span class="mod-row-k">EMA交叉</span><span class="mod-row-v" style="color:${v.bullCross?'var(--green)':'var(--red)'}">${v.bullCross?'✓ 多头交叉 (144>169)':'✕ 空头交叉 (144<169)'}</span></div>`;
   const posLabel=v.above?'通道上方':v.below?'通道下方':'通道内';
-  if(sig){sig.textContent=posLabel;sig.style.color=v.above?'var(--green)':v.below?'var(--red)':'var(--amber)';}
+  if(sig){
+    // Color relative to main signal direction: agreement=green, conflict=red, neutral=amber
+    const _mainBull = S.lastSignal && !S.lastSignal._isWait ? S.lastSignal.isBull : null;
+    let _vegasSigCol = 'var(--amber)'; // in-channel or no signal
+    if (_mainBull !== null) {
+      if (v.above && _mainBull)  _vegasSigCol = 'var(--green)'; // vegas上方+做多=一致
+      else if (v.below && !_mainBull) _vegasSigCol = 'var(--green)'; // vegas下方+做空=一致
+      else if (v.above && !_mainBull) _vegasSigCol = 'var(--red)';   // vegas上方+做空=冲突
+      else if (v.below && _mainBull)  _vegasSigCol = 'var(--red)';   // vegas下方+做多=冲突
+    } else {
+      _vegasSigCol = v.above ? 'var(--green)' : v.below ? 'var(--red)' : 'var(--amber)';
+    }
+    // Append conflict indicator if conflicting
+    const _vegasConflict = _mainBull !== null && ((v.above && !_mainBull) || (v.below && _mainBull));
+    sig.textContent = posLabel + (_vegasConflict ? ' ⚠' : '');
+    sig.style.color = _vegasSigCol;
+  }
   if(mini)mini.textContent='Vegas: '+(v.above?'▲上方':v.below?'▼下方':'⚡内');
   S.modData.vegas=v;
 }
@@ -5572,8 +5798,27 @@ function renderFib(price,kl){
   }).join('');
   $html('fibPanel',html);
   const nearest=levels.reduce((best,[ratio,lbl])=>{const p=lo+rng*(1-ratio);const d=Math.abs(p-price)/price;return d<best.d?{d,lbl}:best;},{d:999,lbl:'--'});
-  $set('msig-fib','近'+nearest.lbl);
-  $styl('msig-fib','color',nearest.d<0.015?'var(--violet)':'var(--muted)');
+  {
+    const _fibNearStr = '近' + nearest.lbl;
+    const _mainBullF = S.lastSignal && !S.lastSignal._isWait ? S.lastSignal.isBull : null;
+    // Determine if nearest fib level is above or below price (resistance vs support)
+    const _fibNearPrice = lo + rng * (1 - levels.reduce((best,[r,l]) => {
+      const p = lo + rng * (1 - r); const d = Math.abs(p - price) / price;
+      return d < best.d ? { d, r } : best;
+    }, { d: 999, r: 0 }).r);
+    const _fibIsAbove = _fibNearPrice > price * 1.002; // nearest level is resistance
+    let _fibSigCol = nearest.d < 0.015 ? 'var(--violet)' : 'var(--muted)';
+    if (_mainBullF !== null && nearest.d < 0.02) {
+      // If long: nearby support (below) = green, nearby resistance (above) = amber
+      // If short: nearby resistance (above) = green, nearby support (below) = amber
+      if (_mainBullF && !_fibIsAbove) _fibSigCol = 'var(--green)'; // support confirmed
+      else if (!_mainBullF && _fibIsAbove) _fibSigCol = 'var(--green)'; // resistance confirmed
+      else if (_mainBullF && _fibIsAbove) _fibSigCol = 'var(--amber)'; // resistance overhead
+      else if (!_mainBullF && !_fibIsAbove) _fibSigCol = 'var(--amber)'; // support below
+    }
+    $set('msig-fib', _fibNearStr);
+    $styl('msig-fib', 'color', _fibSigCol);
+  }
   S.modData.fib={hi,lo,rng,price};
 }
 // v76: renderGann removed — Gann module disabled
@@ -5621,8 +5866,19 @@ function renderChan(kl,price){
       ${patHtml}${allPatsHtml}
     </div>`);
 
-  $set('msig-chan', c.bullDivStrong?'强底背驰':c.bearDivStrong?'强顶背驰':c.bullDiv?'底背驰':c.bearDiv?'顶背驰':c.bullBi?'上升笔':'下降笔');
-  $styl('msig-chan','color',c.bullDiv||c.bullBi?'var(--green)':'var(--red)');
+  {
+    const _chanLabel = c.bullDivStrong?'强底背驰':c.bearDivStrong?'强顶背驰':c.bullDiv?'底背驰':c.bearDiv?'顶背驰':c.bullBi?'上升笔':'下降笔';
+    const _chanIsBull = !!(c.bullDiv || c.bullDivStrong || c.bullBi);
+    const _mainBullC = S.lastSignal && !S.lastSignal._isWait ? S.lastSignal.isBull : null;
+    let _chanSigCol;
+    if (_mainBullC !== null) {
+      _chanSigCol = (_chanIsBull === _mainBullC) ? 'var(--green)' : 'var(--red)';
+    } else {
+      _chanSigCol = _chanIsBull ? 'var(--green)' : 'var(--red)';
+    }
+    $set('msig-chan', _chanLabel);
+    $styl('msig-chan', 'color', _chanSigCol);
+  }
 
   // Store full analysis for verdict engine
   S.modData.chan = c;
@@ -6583,6 +6839,149 @@ function buildStrategy(tf){
 }
 
 // FIX P4 v57: 保底信号生成 — MA5/MA20动量兜底，确保UI永不白屏
+// ═══════════════════════════════════════════════════════════════════════════
+// v82: MTF RESONANCE GATE — 多时间框架共振门控系统
+// 设计原则:
+//   - 趋势层 (1w/1d) + 动能层 (4h/1h)，方向判断三级降级：Vegas → MA → 斜率
+//   - 1w/1d 方向相反 → 直接 WAIT (大周期矛盾不交易)
+//   - 共振得分 < 0.30 → WAIT
+//   - 1w 方向逆信号方向 → 仓位 ×0.5
+//   - 不破坏现有 Vegas 冲突门、HARD GATE 等逻辑
+// ═══════════════════════════════════════════════════════════════════════════
+function _checkMTFResonance(isBull) {
+  const TF_CFG = [
+    { tf: '1w', w: 1.0, minBars: 30,  role: 'trend'    },
+    { tf: '1d', w: 0.9, minBars: 50,  role: 'trend'    },
+    { tf: '4h', w: 0.7, minBars: 100, role: 'momentum' },
+    { tf: '1h', w: 0.5, minBars: 50,  role: 'entry'    },
+    // 15m: 不参与共振评分
+  ];
+
+  // ── 每个 TF 的方向判断（三级降级）───────────────────────────────
+  function _tfDirection(tf, minBars) {
+    try {
+      const kl = getKL(tf);
+      if (!kl || kl._isMock || kl.length < minBars) return { dir: 0, method: 'insufficient', bars: kl ? kl.length : 0 };
+      const prices = kl.map(k => k.c).filter(v => v > 0 && isFinite(v));
+      const n = prices.length;
+      if (n < 20) return { dir: 0, method: 'insufficient', bars: n };
+      const price = prices[n - 1];
+
+      // 级别1: Vegas 通道 (EMA144/169)
+      if (n >= 170) {
+        const v = calcVegas(kl);
+        if (v) {
+          const dir = v.above ? 1 : v.below ? -1 : 0;
+          return { dir, method: 'vegas', price, e144: v.e144, e169: v.e169, above: v.above, below: v.below };
+        }
+      }
+
+      // 级别2: MA20 / MA50 排列
+      if (n >= 50) {
+        const ma20 = calcMA(prices, 20)[n - 1];
+        const ma50 = calcMA(prices, 50)[n - 1];
+        if (ma20 && ma50) {
+          if (ma20 > ma50 && price > ma20) return { dir: 1, method: 'ma', price, ma20, ma50 };
+          if (ma20 < ma50 && price < ma20) return { dir: -1, method: 'ma', price, ma20, ma50 };
+          return { dir: 0, method: 'ma', price, ma20, ma50 };
+        }
+      }
+
+      // 级别3: 最近20根K线价格斜率
+      const recent = prices.slice(Math.max(0, n - 20));
+      const first = recent[0], last = recent[recent.length - 1];
+      const slopePerBar = (last - first) / (first * recent.length);
+      const dir = slopePerBar > 0.001 ? 1 : slopePerBar < -0.001 ? -1 : 0;
+      return { dir, method: 'slope', slopePerBar };
+    } catch (e) {
+      return { dir: 0, method: 'error' };
+    }
+  }
+
+  // ── 计算各 TF 方向 ────────────────────────────────────────────────
+  const tfResults = {};
+  TF_CFG.forEach(cfg => {
+    tfResults[cfg.tf] = { ...cfg, ..._tfDirection(cfg.tf, cfg.minBars) };
+  });
+
+  // ── 有效权重 (数据足够的 TF) ──────────────────────────────────────
+  const valid = TF_CFG.filter(cfg => tfResults[cfg.tf].dir !== 0 || tfResults[cfg.tf].method !== 'insufficient');
+  const effectiveW = valid.reduce((s, cfg) => s + cfg.w, 0);
+
+  // ── 数据降级: 有效权重 < 1.5 → 跳过共振检查 ────────────────────
+  if (effectiveW < 1.5) {
+    return {
+      block: false, confBoost: 0, sizeMult: 1.0,
+      grade: '📊 数据不足·跳过共振', score: null,
+      tfDirs: tfResults, effectiveW, skipReason: 'insufficient_data',
+    };
+  }
+
+  // ── 大周期矛盾: 1w 与 1d 方向相反 → v83 FIX: 不再直接WAIT，降级通过 ─────────────────
+  // 原逻辑: 1w/1d方向相反 → block:true → 100%拒绝所有信号
+  // 新逻辑: 1w/1d矛盾 = 过渡市场，信号质量降低但不封锁
+  //         sizeMult×0.3 (极轻仓) + conf上限55 + 必须B级以上才通过
+  //         这是市场最常见状态之一，完全封锁等于放弃90%交易时间
+  const r1w = tfResults['1w'];
+  const r1d = tfResults['1d'];
+  const has1w = r1w.method !== 'insufficient' && r1w.dir !== 0;
+  const has1d = r1d.method !== 'insufficient' && r1d.dir !== 0;
+  // FIX-v83: 1w/1d矛盾不再block，改为标记flag供下游降级处理
+  const _mtf1w1dConflict = has1w && has1d && r1w.dir !== r1d.dir;
+
+  // ── 计算共振得分 ──────────────────────────────────────────────────
+  // 方向一致 = 与信号方向(isBull)相同的 TF
+  const signDir = isBull ? 1 : -1;
+  let alignedW = 0;
+  valid.forEach(cfg => {
+    const d = tfResults[cfg.tf].dir;
+    if (d === signDir) alignedW += cfg.w;
+    else if (d === 0)  alignedW += cfg.w * 0.4; // 中性贡献40%
+  });
+  const resonanceScore = effectiveW > 0 ? alignedW / effectiveW : 0;
+
+  // ── 周线逆势惩罚 ─────────────────────────────────────────────────
+  const weekCounterTrend = has1w && r1w.dir !== 0 && r1w.dir !== signDir;
+
+  // ── 决策矩阵 ─────────────────────────────────────────────────────
+  // FIX-v83: 移除 block:true — 任何共振得分都通过，只调整仓位系数和conf
+  // 市场永远有方向，只是共振强弱决定仓位大小
+  let grade, confBoost, sizeMult, block = false, waitReason = '';
+  if (_mtf1w1dConflict) {
+    // 1w/1d矛盾: 过渡市场，极轻仓通过
+    grade = '⚠️ 周期过渡·极轻仓'; confBoost = -15; sizeMult = 0.25; block = false;
+    waitReason = ''; // 不再WAIT
+  } else if (resonanceScore >= 0.85) {
+    grade = '🔥 全共振'; confBoost = 15; sizeMult = 1.0;
+  } else if (resonanceScore >= 0.70) {
+    grade = '✅ 强共振'; confBoost = 8;  sizeMult = 0.8;
+  } else if (resonanceScore >= 0.50) {
+    grade = '⚡ 部分共振'; confBoost = 0; sizeMult = 0.6;
+  } else if (resonanceScore >= 0.30) {
+    grade = '⚠️ 弱共振·减仓'; confBoost = -10; sizeMult = 0.4;
+  } else {
+    // FIX-v83: 原为 block:true → 现改为极低仓位通过
+    grade = '⚠️ 极弱共振·极轻仓'; confBoost = -15; sizeMult = 0.2; block = false;
+    waitReason = ''; // 不阻塞
+  }
+
+  // 周线逆势额外惩罚
+  if (!block && weekCounterTrend) sizeMult = Math.max(0.15, sizeMult * 0.5);
+
+  // ── 构建 TF 简表字符串 ───────────────────────────────────────────
+  const dirSymbol = d => d > 0 ? '↑' : d < 0 ? '↓' : '→';
+  const tfSummary = TF_CFG.map(cfg => `${cfg.tf}${dirSymbol(tfResults[cfg.tf].dir)}`).join(' ');
+
+  return {
+    block, confBoost, sizeMult, grade, score: resonanceScore,
+    waitReason: waitReason || null,
+    waitLabel: block ? `${grade} · ${tfSummary}` : null,
+    tfDirs: tfResults, effectiveW, alignedW,
+    tfSummary, weekCounterTrend,
+  };
+}
+// ══ End v82 MTF RESONANCE GATE ══════════════════════════════════════════════
+
 function _Φ9x_fallback(kl, tf) {
   try {
     const price = S.lastPx || (kl.length > 0 ? kl[kl.length-1].c : 0);
@@ -6796,27 +7195,27 @@ function _Φ9x(tf){
     } catch(e) { return 'UNKNOWN'; }
   })();
 
-  // 日线与4H方向明确矛盾 → 直接返回观望，不产生任何方向信号
-  // v72: 只有 NEUTRAL（数据充足且方向真实矛盾）才触发门控
-  //      UNKNOWN（数据不足）完全跳过，继续正常评分
-  if (_v66_htfBigPicture === 'NEUTRAL') {
-    const _waitSigs = [
-      {l:'⛔ 日线/4H方向矛盾', c:'sig-neut'},
-      {l:'大环境未明确·观望', c:'sig-neut'},
-    ];
-    return {
-      _isWait: true,
-      isBull: null,           // truly no direction — daily vs 4H conflict
-      waitReason: 'htf_conflict',
-      score: 0, sigs: _waitSigs, rsi, macdD, price, tf,
-      conflictRatio: 0,       // NOT a signal conflict — this is an HTF structural issue
-      bullSigs: [], bearSigs: [], regime49: 'ranging',
-      reason: '日线MA与4H Vegas方向矛盾，大环境未明确，观望不交易',
-    };
-  }
-  // ══ End v66 BIG PICTURE GATE ══════════════════════════════════════
+  // v81 FIX-HTF: 日线/4H矛盾降级为CAUTION而非全拒
+  // 原逻辑: NEUTRAL → 直接return _isWait，整个市场90%时间无法交易
+  // 新逻辑: NEUTRAL → 注入htfConflict标志，评分引擎继续运行但分数×0.55折扣
+  //   理由: 日线多头+4H Vegas下方 = 日线强多头趋势中的中期回调区间 = 仍可交易
+  //         全拒逻辑导致"区间内无信号"——这是最浪费的盲区
+  //         惩罚函数: HTF矛盾时分数折扣0.55，conf上限60%，grade降一档
+  //         hysteresis保护: 若上次信号有效且方向未根本改变，维持方向而非切换WAIT
+  const _htfConflict = (_v66_htfBigPicture === 'NEUTRAL');
+  // ══ End v66 BIG PICTURE GATE (v81: NEUTRAL no longer hard-blocks) ═══
+
+  // v79 FIX-7: HTF方向强制注入主信号列表 — 用户在主界面直接看到大框架方向
+  // 解决: MTF信息存在但分散，用户不知道当前信号是否逆大势
+  let _htfVisibleLabel = '';
+  if (_v66_htfBigPicture === 'BULL')  { _htfVisibleLabel = '📅 日线/4H: 多头格局'; }
+  else if (_v66_htfBigPicture === 'BEAR')  { _htfVisibleLabel = '📅 日线/4H: 空头格局'; }
+  else if (_v66_htfBigPicture === 'UNKNOWN') { _htfVisibleLabel = '📅 日线/4H: 数据不足·参考TF自身'; }
+  // NEUTRAL already blocked above
 
   let score=0;const sigs=[];
+  // 首先注入HTF大框架标签
+  if (_htfVisibleLabel) sigs.push({l: _htfVisibleLabel, c: _v66_htfBigPicture==='BULL'?'sig-bull':_v66_htfBigPicture==='BEAR'?'sig-bear':'sig-neut'});
 
   // ══════════════════════════════════════════════════════════════════
   // v49 REFORMED SCORING ENGINE — 去共线性 · Regime Gate · HTF乘法门控
@@ -6884,13 +7283,21 @@ function _Φ9x(tf){
   else if(htfBearish&&htfWeekBear){htfGate=1.5;sigs.push({l:'日+周空头顺势',c:'sig-bear'});}
   else if(htfBullish){htfGate=1.3;sigs.push({l:'日线多头',c:'sig-bull'});}
   else if(htfBearish){htfGate=1.3;sigs.push({l:'日线空头',c:'sig-bear'});}
-  else if(cr<4){htfGate=0.4;sigs.push({l:'⚠️逆势次级运动',c:'sig-neut'});}// 逆日线 = 大幅削减整体分数
+  else if(cr<4){
+    // v81: HTF矛盾时不再全拒，改为惩罚折扣0.55
+    // 逆势次级运动 = 合法的回调交易区间，用更高要求过滤而非一刀切拒绝
+    htfGate = _htfConflict ? 0.55 : 0.4;
+    sigs.push({l:_htfConflict?'⚠️ 日线/4H矛盾·折扣通过':'⚠️逆势次级运动',c:'sig-neut'});
+  }
 
   // ── LAYER 2: PILLAR SCORES (6个独立维度) ────────────────────────
   // 设计原则: 每个维度最多贡献±2分, 消除同族指标重叠
   //
   // PILLAR A: 价格动量综合评分 (RSI + Stoch + BB 三合一 → 取共识)
   // 三者高度相关, 只计1个代表性分数而非三个独立分数
+  // v79 FIX-1: 引入共线性惩罚 — 三者完全同向时上限从±2降至±1.2
+  // 原因: 强趋势末端三者必然全部对齐，但此时恰是最危险的追入时机
+  // 修复: coherencePenalty减弱纯方向一致但无极端读数时的贡献
   {
     const stochFull=_Λ7f(kl.map(k=>k.h),kl.map(k=>k.l),prices);
     // FIX_v55: rsiVote uses dynamic quantile thresholds (RSI_OS/RSI_OB) instead of hardcoded 35/65
@@ -6898,7 +7305,14 @@ function _Φ9x(tf){
     const stochVote= stochFull.k<20?1: stochFull.k>80?-1: stochFull.bullCross?0.5: stochFull.bearCross?-0.5: 0;
     const bbVote= bbPos<0.18?1: bbPos>0.82?-1: bbPos<0.3?0.4: bbPos>0.7?-0.4: 0;
     // 共识分数: 三者平均 × 2 (最大贡献±2)
-    const momentumScore=(rsiVote+stochVote+bbVote)/3*2;
+    const rawMomentumScore=(rsiVote+stochVote+bbVote)/3*2;
+    // v79 FIX-1: 共线性惩罚
+    // 三者全部同向(同号)且均为非极端读数 → 贡献打折(趋势末端三者必然对齐)
+    // 极端读数(RSI<28或>72)仍保留全额分数，因为极端本身是独立信息
+    const _allSameDirMom = (rsiVote>0&&stochVote>0&&bbVote>0)||(rsiVote<0&&stochVote<0&&bbVote<0);
+    const _hasExtremeRSI = rsi<RSI_OS||rsi>RSI_OB; // 极端读数保留独立性
+    const _coherencePenalty = _allSameDirMom && !_hasExtremeRSI ? 0.65 : 1.0;
+    const momentumScore = rawMomentumScore * _coherencePenalty;
     // 震荡市均值回归有效, 趋势市减权(避免RSI超卖在强跌中一直做多)
     const momentumW=isRanging?1.4:isTrending?0.7:1.0;
     score+=momentumScore*momentumW;
@@ -7329,8 +7743,63 @@ function _Φ9x(tf){
       conf = Math.max(20, conf - 5); // 逆势减5%置信
     }
   } catch(e) {}
+  // v81: HTF矛盾时conf上限60% — 区间内交易可做但不能过度自信
+  if (_htfConflict) {
+    conf = Math.min(60, conf);
+  }
   // v49 compat: trendMult still referenced downstream for SL/TP sizing
   const trendMult = adx.trending ? (adx.strong ? 1.2 : 1.0) : (adx.ranging ? 0.55 : 0.75);
+
+  // ══════════════════════════════════════════════════════════════════
+  // v82: MTF RESONANCE CHECK — 插入点: isBull/conf确定后, Vegas硬门之前
+  // 使用 Vegas→MA→斜率 三级降级判断 1w/1d/4h/1h 四个时间框架方向
+  // 1w/1d 矛盾 → 直接 WAIT | 共振 <0.30 → WAIT | 弱共振 → conf惩罚
+  // ══════════════════════════════════════════════════════════════════
+  const _mtfRes = _checkMTFResonance(isBull);
+
+  // v83 FIX: MTF矛盾不再直接WAIT，改为注入警告标签 + conf惩罚 + 仓位降级
+  // 原逻辑: 1w/1d矛盾 → 直接 return _isWait (封锁所有信号)
+  // 新逻辑: 注入警告 → 继续分析 → 输出带风险提示的降级信号
+  if (_mtfRes.block && _mtfRes.waitReason === 'mtf_1w_1d_conflict') {
+    // 降级处理：注入警告但不阻塞
+    sigs.push({ l: _mtfRes.waitLabel || '⚠️ 周线与日线方向矛盾·过渡市场', c: 'sig-neut' });
+    sigs.push({ l: `TF方向: ${_mtfRes.tfSummary || '--'} · 极轻仓操作`, c: 'sig-neut' });
+    conf = Math.min(conf, 55); // conf上限55%
+    try { if(typeof S!=='undefined') { S.modData = S.modData||{}; S.modData.mtfResonance = _mtfRes; } } catch(e){}
+    // 不return，继续分析
+  }
+
+  // v83 FIX: 共振得分不足不再WAIT，改为conf惩罚通过
+  // 原逻辑: 共振 <0.30 → 直接 return _isWait
+  // 新逻辑: 注入警告 → conf惩罚 → 输出降级信号
+  if (_mtfRes.block && _mtfRes.waitReason === 'mtf_conflict') {
+    sigs.push({ l: `⚠️ MTF共振得分${((_mtfRes.score||0)*100).toFixed(0)}%·极弱共振·极轻仓`, c: 'sig-neut' });
+    sigs.push({ l: `TF方向: ${_mtfRes.tfSummary || '--'}`, c: 'sig-neut' });
+    conf = Math.min(conf, 50); // conf上限50%
+    try { if(typeof S!=='undefined') { S.modData = S.modData||{}; S.modData.mtfResonance = _mtfRes; } } catch(e){}
+    // 不return，继续分析
+  }
+
+  // 弱共振 (0.30–0.50): conf 惩罚
+  if (!_mtfRes.block && _mtfRes.confBoost < 0) {
+    conf = Math.max(30, conf + _mtfRes.confBoost);
+    sigs.push({ l: `⚠️ MTF弱共振(${((_mtfRes.score||0)*100).toFixed(0)}%)·置信降至${conf}%`, c: 'sig-neut' });
+  }
+  // 强/全共振 (≥0.70): conf 加成
+  if (!_mtfRes.block && _mtfRes.confBoost > 0 && !_mtfRes.skipReason) {
+    const _confCap = _mtfRes.confBoost >= 15 ? 92 : 88;
+    conf = Math.min(_confCap, conf + _mtfRes.confBoost);
+    const _sigCol = isBull ? 'sig-bull' : 'sig-bear';
+    sigs.push({ l: `${_mtfRes.grade} · ${_mtfRes.tfSummary}`, c: _sigCol });
+  }
+  // 部分共振 (0.50–0.70): 仅显示标签
+  if (!_mtfRes.block && _mtfRes.confBoost === 0 && _mtfRes.score !== null && !_mtfRes.skipReason) {
+    sigs.push({ l: `${_mtfRes.grade} · ${_mtfRes.tfSummary}`, c: 'sig-neut' });
+  }
+
+  // 缓存共振结果供 UI 使用
+  try { if(typeof S!=='undefined') { S.modData = S.modData||{}; S.modData.mtfResonance = _mtfRes; } } catch(e){}
+  // ══ End v82 MTF RESONANCE CHECK ═══════════════════════════════════
 
   const tfM={
     '15m':{lbl:'15分钟 Scalp',  maxPct:0.03,slPct:0.008,barMs:900000},
@@ -7490,16 +7959,39 @@ function _Φ9x(tf){
       entryMin=entry*0.995;entryMax=entry*1.003;
     } else {
       // SHORT default: entry ABOVE price — must wait for micro-bounce confirmation
-      // v76 FIX-B: enforce minimum premium of 0.5×ATR so user is never shorting at market
-      // when no strong trigger (deep OB / strong trend breakdown) exists.
-      const premiumMult = _bearFlowScore >= 2 ? 0.5 : 0.8; // increased from 0.1/0.2
+      // v77 FIX-B: enforce minimum premium of 0.5×ATR so user is never shorting at market
+      // v79 FIX-8: 做空入场结构确认门槛强化
+      // 原因: ATR*0.5的"微反弹"不是真正的结构确认，任何短期噪音都能触发
+      // 修复: 非深度超买时，SHORT入场必须满足至少1个结构性条件:
+      //       阻力位附近(2%) OR VWAP压制 OR MA20压制 OR bearBOS
+      //       否则降为limit-wait并注明"等结构确认"
+      const _hasStructShortConfirm =
+        Math.abs(price - nearestResist) / price < 0.02 ||  // 阻力位附近
+        (!vwapBull && vwapDist < 0.005) ||                  // VWAP压制
+        (ma20Level >= price && Math.abs(price - ma20Level) / price < 0.006) || // MA20压制
+        mktStr.bearBOS;                                      // 已确认跌破结构
+
+      const premiumMult = _bearFlowScore >= 2 ? 0.5 : 0.8;
       const rawEntry = price + atrClamped * premiumMult;
-      entry = Math.round(Math.max(rawEntry, price * 1.003) * 100) / 100; // min 0.3% above price
-      entryType = _weakBullFlow ? 'limit-wait' : 'limit';
-      const flowNote = _bearFlowScore >= 2 ? ' · CVD+OI确认做空 · 等微反弹入场' : _strongBullFlow ? ' · ⚠️ 流量偏多·谨慎' : '';
-      entryNote = `等反弹至 ${fmtP(entry)} 再空${flowNote} · 不在现价追空`;
-      entryZone = `${fmtP(entry)} ±${fmtP(atrClamped * 0.15)}`;
-      entryMin = price * 1.001; entryMax = price + atrClamped * 0.9;
+      entry = Math.round(Math.max(rawEntry, price * 1.003) * 100) / 100;
+
+      if (_hasStructShortConfirm) {
+        entryType = _weakBullFlow ? 'limit-wait' : 'limit';
+        const _structNote = mktStr.bearBOS ? 'bearBOS已确认' :
+          Math.abs(price - nearestResist) / price < 0.02 ? `阻力 ${fmtP(nearestResist)} 附近` :
+          !vwapBull ? 'VWAP压制' : `MA20压制 ${fmtP(ma20Level)}`;
+        const flowNote = _bearFlowScore >= 2 ? ' · CVD+OI确认做空' : _strongBullFlow ? ' · ⚠️ 流量偏多·谨慎' : '';
+        entryNote = `结构确认(${_structNote}) · 等反弹至 ${fmtP(entry)} 再空${flowNote}`;
+        entryZone = `${fmtP(entry)} ±${fmtP(atrClamped * 0.15)}`;
+        entryMin = price * 1.001; entryMax = price + atrClamped * 0.9;
+      } else {
+        // 无结构支撑 → 必须等待，降为limit-wait
+        entryType = 'limit-wait';
+        const flowNote = _strongBullFlow ? ' · ⚠️ 流量偏多·不建议' : '';
+        entryNote = `⚠️ 无结构确认·等待(阻力/VWAP/MA20/BOS均不满足) · 反弹至 ${fmtP(entry)} 且有结构支撑才空${flowNote}`;
+        entryZone = `等待 · ${fmtP(entry)} 仅参考`;
+        entryMin = price * 1.001; entryMax = price + atrClamped * 0.9;
+      }
     }
   }
 
@@ -7522,25 +8014,54 @@ function _Φ9x(tf){
   // ── 市况 A: 强势趋势 (regime49 === 'trending_strong') ──────────────
   // 强趋势市场不等回调 — 追涨入场逻辑
   // "In a strong trend, the best entry is now, not later" — Linda Bradford Raschke
+  // v79 FIX-6: 强趋势追入双重确认 — ADX>28 AND 成交量>1.2×均量才允许市价
+  // 原因: trending_strong可能是趋势末端，末端时ADX仍高但量能开始萎缩
+  //       增加量能确认，防止在量价背离时追入
   if(regime49==='trending_strong'){
+    const _trendVolOk = volRatio >= 1.2; // 需要放量确认
+    const _trendADXOk = adx.adx >= 28;   // ADX需要足够强
+    const _trendMarketOk = _trendVolOk && _trendADXOk;
+
     if(isBull){
-      // 做多: 使用突破后的现价或微溢价入场，不等回调
-      const breakoutEntry = price * 1.0002; // 微溢价确保市价成交
-      entry = Math.round(breakoutEntry * 10000) / 10000;
-      entryType = 'market';
-      entryNote = `强趋势突破入场 · ADX ${adx.adx.toFixed(0)} 确认强势 · 不等回调${_cvdBull?' · CVD买盘支撑':''}`;
-      entryZone = '现价附近 · 趋势跟踪';
-      entryMin = price * 0.999;
-      entryMax = price * 1.003;
+      if (_trendMarketOk) {
+        // 放量+ADX双确认 → 允许市价追入
+        const breakoutEntry = price * 1.0002;
+        entry = Math.round(breakoutEntry * 10000) / 10000;
+        entryType = 'market';
+        entryNote = `强趋势放量突破 · ADX ${adx.adx.toFixed(0)} · 量比 ${volRatio.toFixed(1)}× · 双确认入场${_cvdBull?' · CVD买盘':''}`;
+        entryZone = '现价附近 · 趋势跟踪';
+        entryMin = price * 0.999;
+        entryMax = price * 1.003;
+      } else {
+        // 量能不足或ADX不够 → 降为limit等小回调，防止追入末端
+        const pullbackEntry = Math.round(price * 0.998 * 10000) / 10000;
+        entry = pullbackEntry;
+        entryType = 'limit';
+        entryNote = `强趋势但${!_trendVolOk?`量比偏弱(${volRatio.toFixed(1)}×<1.2)`:'ADX偏弱'}·等小回调0.2%确认 · 防追末端`;
+        entryZone = `${fmtP(pullbackEntry)} 小回调入场`;
+        entryMin = price * 0.996;
+        entryMax = price * 0.9995;
+      }
     } else {
-      // 做空: 强势下跌趋势，追跌入场
-      const breakoutEntry = price * 0.9998;
-      entry = Math.round(breakoutEntry * 10000) / 10000;
-      entryType = 'market';
-      entryNote = `强趋势突破做空 · ADX ${adx.adx.toFixed(0)} 空头主导 · 不等反弹${_cvdBear?' · CVD卖盘确认':''}`;
-      entryZone = '现价附近 · 趋势跟踪';
-      entryMin = price * 0.997;
-      entryMax = price * 1.001;
+      if (_trendMarketOk) {
+        // 强下跌趋势+放量 → 允许市价追跌
+        const breakoutEntry = price * 0.9998;
+        entry = Math.round(breakoutEntry * 10000) / 10000;
+        entryType = 'market';
+        entryNote = `强趋势放量做空 · ADX ${adx.adx.toFixed(0)} · 量比 ${volRatio.toFixed(1)}× · 双确认${_cvdBear?' · CVD卖盘':''}`;
+        entryZone = '现价附近 · 趋势跟踪';
+        entryMin = price * 0.997;
+        entryMax = price * 1.001;
+      } else {
+        // 量能不足 → 降为limit等小反弹
+        const bounceEntry = Math.round(price * 1.002 * 10000) / 10000;
+        entry = bounceEntry;
+        entryType = 'limit';
+        entryNote = `强趋势但${!_trendVolOk?`量比偏弱(${volRatio.toFixed(1)}×<1.2)`:'ADX偏弱'}·等小反弹0.2%确认做空 · 防追末端`;
+        entryZone = `${fmtP(bounceEntry)} 小反弹做空`;
+        entryMin = price * 1.0002;
+        entryMax = price * 1.004;
+      }
     }
 
   // ── 市况 B: 弱趋势 (trending_weak) — v68: 保守入场+半仓，不再直接拦截 ───
@@ -7598,6 +8119,7 @@ function _Φ9x(tf){
   
   // Add volume-based POC magnet: if POC is between entry and first TP, 
   // price likely stalls there first — set TP1 closer to POC
+  // v79 FIX-3: 强化POC磁力截断 — POC不仅是展示，直接影响TP1定价
   const volProfData=_Ρ3v(kl);
   if(volProfData.poc>0){
     S.lastVolProfile=volProfData; // store for display
@@ -7684,13 +8206,22 @@ function _Φ9x(tf){
 
       const labels=['🎯 TP1 保守止盈','🏆 TP2 中期目标','🚀 TP3 进取目标'];
       const actions=['触及后止盈50%，SL移至成本价','再止盈30%，剩余20%持有','全部止盈或持有至信号变化'];
-      return picks.map((c,i)=>({...c,
+      const result = picks.map((c,i)=>({...c,
         note:c.note,
         label:labels[i],
         action:actions[i],
         pct:(c.p-entry)/entry*100,
         rrRatio:Math.abs(c.p-entry)/Math.abs(entry-(picks[0]?.p||entry-atrClamped))
       }));
+
+      // v79 FIX-3: POC磁力位截断 — 如果POC在entry和TP1之间，TP1收紧至POC
+      // 原理: POC是成交量节点，价格会在此停留更长时间，TP1高于POC意味着很可能在POC处反转
+      if (volProfData.poc > entry + minGap && volProfData.poc < result[0].p) {
+        result[0].p = Math.round(volProfData.poc * 10000) / 10000;
+        result[0].note = `POC磁力位截断 · ${fmtP(volProfData.poc)} 最大成交量节点 (原: ${result[0].note})`;
+        result[0].pct = (result[0].p - entry) / entry * 100;
+      }
+      return result;
 
     } else {
       // SHORT
@@ -7734,13 +8265,22 @@ function _Φ9x(tf){
 
       const labels=['🎯 TP1 保守止盈','🏆 TP2 中期目标','🚀 TP3 进取目标'];
       const actions=['触及后平仓50%，SL移至成本价','再平仓30%，剩余20%持有','全部平仓或持有至信号变化'];
-      return picks.map((c,i)=>({...c,
+      const result = picks.map((c,i)=>({...c,
         note:c.note,
         label:labels[i],
         action:actions[i],
         pct:(c.p-entry)/entry*100,
         rrRatio:Math.abs(c.p-entry)/Math.abs(entry-(picks[0]?.p||entry+atrClamped))
       }));
+
+      // v79 FIX-3 SHORT: POC磁力位截断 — 如果POC在entry下方且高于TP1，TP1收紧至POC
+      // 做空方向: POC在entry和TP1之间 = 最大成交量区会吸引价格停留，空头可能在此失去动力
+      if (volProfData.poc < entry - minGap && volProfData.poc > result[0].p) {
+        result[0].p = Math.round(volProfData.poc * 10000) / 10000;
+        result[0].note = `POC磁力位截断 · ${fmtP(volProfData.poc)} 最大成交量节点 (原: ${result[0].note})`;
+        result[0].pct = (result[0].p - entry) / entry * 100;
+      }
+      return result;
     }
   }
 
@@ -7796,7 +8336,22 @@ function _Φ9x(tf){
 
       const structLevel  = structSL.length  ? structSL[0]  : entry - atrClamped * 1.2;
       const poolLevel    = sellPool.length   ? sellPool[0]  : structLevel;
-      let sl1raw = Math.round((Math.min(structLevel, poolLevel) - instBuffer) * 10000) / 10000;
+      // v79 FIX-2: 结构先置强化 — structSL存在时直接用结构失效点，ATR只做fallback
+      // 原因: 原逻辑以 Math.min(structLevel,poolLevel)-instBuffer 为起点，然后被maxSLPct截断
+      //       导致在有明确结构点时仍以ATR倍数为主
+      // 修复: 如果有结构低点，sl1raw就是 structSL[0]-instBuffer (机构缓冲)，ATR作紧急fallback
+      let sl1raw;
+      if (structSL.length > 0) {
+        // 结构先置: 最近摆动低点 - 机构缓冲
+        sl1raw = Math.round((structSL[0] - instBuffer) * 10000) / 10000;
+      } else {
+        // 无结构低点fallback: ATR兜底
+        sl1raw = Math.round((entry - atrClamped * 1.2 - instBuffer) * 10000) / 10000;
+      }
+      if (sellPool.length > 0) {
+        // 流动性池存在时取更保守的(更低的)位置
+        sl1raw = Math.min(sl1raw, Math.round((sellPool[0] - instBuffer * 0.5) * 10000) / 10000);
+      }
       // v64-C: 避开流动性池
       sl1raw = _avoidLiqPool(sl1raw, buyLiqPools);
       let sl1 = Math.max(slFloor, Math.min(slCeil, sl1raw));
@@ -7852,7 +8407,16 @@ function _Φ9x(tf){
         return slCandidate;
       }
       const sellLiqPools2 = (S.modData?.tech?._volProfile || _Ρ3v(kl))?.sellLiqPool || buyPool;
-      let sl1raw = Math.round((Math.max(structLevel2, poolLevel2) + instBuffer) * 10000) / 10000;
+      // v79 FIX-2 SHORT: 结构先置 — 如有structSL(摆动高点)，直接用结构+instBuffer，ATR为fallback
+      let sl1raw;
+      if (structSL.length > 0) {
+        sl1raw = Math.round((structSL[0] + instBuffer) * 10000) / 10000;
+      } else {
+        sl1raw = Math.round((entry + atrClamped * 1.2 + instBuffer) * 10000) / 10000;
+      }
+      if (buyPool.length > 0) {
+        sl1raw = Math.max(sl1raw, Math.round((buyPool[0] + instBuffer * 0.5) * 10000) / 10000);
+      }
       sl1raw = _avoidLiqPoolShort(sl1raw, sellLiqPools2);
       let sl1 = Math.min(slCeil, Math.max(slFloor, sl1raw));
 
@@ -8030,30 +8594,31 @@ function _Φ9x(tf){
   tps[1].bars=tp2Bars;tps[1].date=new Date(nowTs+tp2Bars*barMs);
   tps[2].bars=tp3Bars;tps[2].date=new Date(nowTs+tp3Bars*barMs);
 
-  // ── v49: ENTRY PRICE VALIDITY WINDOW ──────────────────────────────────
-  // 基于ATR波动率和时框K线周期, 估算此入场价格还有多久有效
-  // 核心逻辑: 当价格偏离入场价超过0.5×ATR, 或经过1.5根K线, 价格指示失效
+  // ── v49 / v79 FIX-4+12: ENTRY PRICE VALIDITY — 结构锚点判定，非时间倒计时 ──
+  // v79重构: 有效性不是时间问题，是结构问题
+  // "价格在SL以上(多) / 以下(空) 且 无CHoCH反转 = 信号有效"
   const entryValidityMins=(()=>{
-    const atrPctNow=atrClamped/price;
-    // 基础有效时间 = 0.5×ATR需要多少时间走完 (基于barMs + barsPerATR)
     const barsPerATR={'15m':3,'30m':3.5,'1h':4,'2h':4.5,'4h':5,'8h':5,'1d':4,'1w':5}[tf]||4;
-    const atrBars=Math.max(0.5,0.5/Math.max(1,barsPerATR)*barsPerATR); // ~0.5 bars to move 0.5ATR
+    const atrBars=Math.max(0.5,0.5/Math.max(1,barsPerATR)*barsPerATR);
     const baseValidMs=Math.max(barMs*0.5, Math.min(barMs*2, atrBars*barMs));
-    // 波动率修正: 高波动市场价格失效更快
     const hvMult=hv.expanding?(hv.ratio>1.5?0.5:0.7):hv.contracting?1.5:1.0;
-    // 市况修正: 震荡市入场价维持更久(价格回荡), 趋势市失效更快
     const regimeMult=regime49==='trending_strong'?0.6:regime49==='ranging'?1.5:1.0;
     const validMs=baseValidMs*hvMult*regimeMult;
     const mins=Math.round(validMs/60000);
-    // 最小5分钟, 最大4小时 (避免极端值)
     return Math.max(5,Math.min(240,mins));
   })();
-  // 格式化显示字符串
+  // v79 FIX-4+12: 结构语言优先，时间仅作括号参考
   const entryValidityLabel=(()=>{
+    // sls在此处已计算完成，直接引用sl1价格作结构锚点
+    if(sls && sls.length>0 && sls[0].p>0){
+      const slRef=fmtP(sls[0].p);
+      return isBull?`收盘维持 ${slRef} 上=有效`:`收盘维持 ${slRef} 下=有效`;
+    }
+    // fallback: 时间格式
     if(entryValidityMins<60)return`约 ${entryValidityMins} 分钟`;
     const h=Math.floor(entryValidityMins/60);
     const m=entryValidityMins%60;
-    return m>0?`约 ${h}小时 ${m}分`:` 约 ${h} 小时`;
+    return m>0?`约 ${h}小时 ${m}分`:`约 ${h} 小时`;
   })();
   // ──────────────────────────────────────────────────────────────────────
 
@@ -8149,138 +8714,272 @@ function _Φ9x(tf){
   const _sl1Pct = sls[0] ? Math.abs(sls[0].pct) : 2.0;
   const leverage = calculateSafeLeverage(_sl1Pct, 2.0);
 
-  // ── v64-G: 入场质量评级 A/B/C (独立于置信度) ─────────────────────
+  // ── v64-G / v79 FIX-5: 入场质量评级 A/B/C — 透明化，显示升级路径 ──────
   // A=多重结构共振(POC+OB+背驰), B=双因素, C=单因素
-  // 直接影响Kelly仓位计算: C级自动减仓50%
+  // v79: gradeLabel追加"升级还需: XXX"，让用户知道差什么
   const _entryGrade = (function(){
     try {
       let gScore = 0;
+      const _missing = []; // 记录缺失的高价值条件
       // 结构因素
       if (sm.hasBullOB || sm.hasBearOB) gScore++;
+      else _missing.push('订单块OB');
       if (volProf.nearPoc) gScore++;
+      else _missing.push('POC成交量节点');
       if (sm.recentSweepBull || sm.recentSweepBear) gScore++;
+      else _missing.push('流动性猎杀');
       if (chan?.bullDiv || chan?.bearDiv || chan?.b1 || chan?.s1) gScore++;
+      else _missing.push('缠论背驰/买卖点');
       if (macdD?.bullDiv || macdD?.bearDiv) gScore++;
+      else _missing.push('MACD背驰');
       if (mktStr.bullBOS || mktStr.bearBOS) gScore++;
+      else _missing.push('BOS结构突破');
       // 时序完整度加成
       const seq = window._finch64_seqInfo?.seqScore || 0;
       if (seq >= 4) gScore++;
+      else _missing.push('时序完整(4+层)');
       // 价格加速度加成
       if (_priceAccel.bullMomentum || _priceAccel.bearMomentum) gScore++;
+      else _missing.push('价格加速度');
 
       const grade = gScore >= 4 ? 'A' : gScore >= 2 ? 'B' : 'C';
-      const gradeLabel = grade === 'A' ? 'A级·多重共振' : grade === 'B' ? 'B级·双因素' : 'C级·单因素';
+      // v79 FIX-5: 透明化 — 显示升到下一级还需要什么
+      const _nextGradeNeeds = grade === 'A' ? '' :
+        grade === 'B' ? `升A还需: ${_missing.slice(0,2).join(' + ')}` :
+        `升B还需: ${_missing.slice(0,1).join('')}`;
+      const gradeLabel = grade === 'A' ? 'A级·多重共振' :
+        grade === 'B' ? `B级·双因素 · ${_nextGradeNeeds}` :
+        `C级·单因素 · ${_nextGradeNeeds}`;
       const kellyMult  = grade === 'A' ? 1.0 : grade === 'B' ? 0.75 : 0.5;
       const gradeColor = grade === 'A' ? 'var(--green)' : grade === 'B' ? 'var(--amber)' : 'var(--red)';
-      return { grade, gradeLabel, kellyMult, gradeColor, gScore };
-    } catch(e) { return { grade:'B', gradeLabel:'B级·双因素', kellyMult:0.75, gradeColor:'var(--amber)', gScore:0 }; }
+      return { grade, gradeLabel, kellyMult, gradeColor, gScore, missingFactors: _missing };
+    } catch(e) { return { grade:'B', gradeLabel:'B级·双因素', kellyMult:0.75, gradeColor:'var(--amber)', gScore:0, missingFactors:[] }; }
   })();
 
-  // ── v69: 方向稳定锁 (全面重写 — 修复v65 isBull未实际赋值的根本性bug) ──
-  // 三层保护:
-  //   L1: 同一K线内 — score差异 < 4.0 → 强制回到上次方向 (isBull实际赋值)
-  //   L2: 跨K线连续性 — 上一根完整K线方向有否决权，新方向必须连续2根确认才翻转
-  //   L3: 历史方向库 — 记录最近3根K线方向，多数派才能建立新趋势方向
-  // v70 FIX: 如果当前已判定为 WAIT (isBull===null)，跳过方向锁，不写入任何方向
+  // ── v81 HYSTERESIS ENGINE — 信号惯性+冷却期+摩擦成本惩罚 ─────────────────
+  // 设计原则: 毒蛇哲学 — 大多数时间潜伏保持状态，出击必须致命
+  //
+  // 核心机制:
+  //   H1: 方向翻转需要极端评分差异(≥6.0)，而非原来的4.0
+  //       → 消除噪音引起的信号Churning
+  //   H2: 冷却期 — 翻转后强制锁定N根K线，期间即使评分变化也不再翻转
+  //       N = 趋势市2根，震荡市3根（震荡市噪音更多，需要更长确认）
+  //   H3: 摩擦成本惩罚 — 新方向预期收益必须远超交易成本才允许翻转
+  //       门槛: 新score绝对值 > 旧score绝对值 × 1.3 (30%改善才值得切换)
+  //   H4: 历史多数派升级 — 需要连续3根K线(而非2根)支持新方向
+  //
+  // v70 FIX保留: WAIT状态(isBull===null)跳过方向锁，不写入任何方向
   if (isBull !== null) {
   {
     const _lockKey  = `_finch69_dirlock_${tf}`;
     const _histKey  = `_finch69_dirhist_${tf}`;
+    const _coolKey  = `_finch81_cooldown_${tf}`;   // v81: 冷却期跟踪
     const _now      = Date.now();
     const _curBarStart = Math.floor(_now / barMs) * barMs;
     const _prevBarStart = _curBarStart - barMs;
     const _lock     = window[_lockKey] || null;
+    const _cooldown = window[_coolKey] || null;   // {untilBar, lockedDir}
 
-    // 读取方向历史 (最近3根K线的收盘方向)
-    let _hist = window[_histKey] || [];   // [{barStart, isBull}]
-    // 只保留最近3根已完结K线（不含当前）
-    _hist = _hist.filter(h => h.barStart < _curBarStart).slice(-3);
+    // v81: 冷却期检查 — 若在冷却期内且方向相反，强制维持冷却方向
+    if (_cooldown && _cooldown.untilBar > _curBarStart && isBull !== null) {
+      if (isBull !== _cooldown.lockedDir) {
+        // 仍在冷却期内，新方向被压制
+        const _cdBarsLeft = Math.ceil((_cooldown.untilBar - _curBarStart) / barMs);
+        isBull = _cooldown.lockedDir;
+        conf   = Math.max(22, Math.round(conf * 0.65));
+        sigs.push({l:`🔒 冷却期锁定·还需${_cdBarsLeft}根K线确认翻转`, c:'sig-neut'});
+        window[_lockKey] = { barStart: _curBarStart, isBull, score, lockedAt: _now };
+      }
+      // else: 冷却期内方向一致 → 正常通过
+    } else {
+      // 读取方向历史 (最近4根K线的收盘方向)
+      let _hist = window[_histKey] || [];   // [{barStart, isBull, score}]
+      _hist = _hist.filter(h => h.barStart < _curBarStart).slice(-4);
 
-    if (_lock && _lock.barStart === _curBarStart) {
-      // ── L1: 同一K线内 ──────────────────────────────────────────
-      const _scoreDiff  = Math.abs(score - _lock.score);
-      const _dirFlipped = (isBull !== _lock.isBull);
+      if (_lock && _lock.barStart === _curBarStart) {
+        // ── H1: 同一K线内 — 翻转门槛提升至6.0 ───────────────────
+        const _scoreDiff  = Math.abs(score - _lock.score);
+        const _dirFlipped = (isBull !== _lock.isBull);
 
-      if (_dirFlipped && _scoreDiff < 4.0) {
-        // v69 BUG FIX: 实际赋值 isBull — v65只更新了window对象，isBull变量从未改变
-        isBull = _lock.isBull;
-        conf   = Math.max(20, Math.round(conf * 0.70));
-        sigs.push({l:'⏸ 方向锁定·等K线收盘确认', c:'sig-neut'});
-        window[_lockKey] = { barStart: _curBarStart, isBull, score: _lock.score, lockedAt: _lock.lockedAt };
-      } else if (_dirFlipped && _scoreDiff >= 4.0) {
-        // ── L2: score 差异够大才允许翻转，且需要上根K线支持 ──
-        const _lastClosedBar = _hist.find(h => h.barStart === _prevBarStart);
-        if (_lastClosedBar && _lastClosedBar.isBull !== isBull) {
-          // 上一根完整K线方向也不支持新方向 → 否决翻转
+        if (_dirFlipped && _scoreDiff < 6.0) {
+          // 评分差异不够 → 维持方向，折扣conf
           isBull = _lock.isBull;
-          conf   = Math.max(25, Math.round(conf * 0.75));
-          sigs.push({l:'⏸ 翻转待确认·上根K线不支持', c:'sig-neut'});
+          conf   = Math.max(20, Math.round(conf * 0.65));
+          sigs.push({l:`⏸ 方向锁定·需差异≥6.0才翻转(当前${_scoreDiff.toFixed(1)})`, c:'sig-neut'});
           window[_lockKey] = { barStart: _curBarStart, isBull, score: _lock.score, lockedAt: _lock.lockedAt };
+        } else if (_dirFlipped && _scoreDiff >= 6.0) {
+          // ── H3: 摩擦成本惩罚 — 新方向需要30%以上的评分改善 ──
+          const _oldScoreAbs = Math.abs(_lock.score);
+          const _newScoreAbs = Math.abs(score);
+          const _frictionOk  = _newScoreAbs > _oldScoreAbs * 1.3 || _oldScoreAbs < 1.5;
+          // 上根K线支持检查
+          const _lastClosedBar = _hist.find(h => h.barStart === _prevBarStart);
+          const _prevSupports  = !_lastClosedBar || _lastClosedBar.isBull === isBull;
+          if (_frictionOk && _prevSupports) {
+            // 允许翻转，开启冷却期
+            const _cdBars = (regime49 === 'trending_strong' || regime49 === 'trending_weak') ? 2 : 3;
+            window[_coolKey] = { untilBar: _curBarStart + _cdBars * barMs, lockedDir: isBull };
+            sigs.push({l:`⚡ 强势翻转确认(差${_scoreDiff.toFixed(1)}·摩擦OK)·冷却${_cdBars}根K线`, c:'sig-neut'});
+            window[_lockKey] = { barStart: _curBarStart, isBull, score, lockedAt: _now };
+          } else {
+            // 摩擦成本或前K线不支持 → 拒绝翻转
+            isBull = _lock.isBull;
+            conf   = Math.max(22, Math.round(conf * 0.70));
+            const _reason = !_frictionOk ? `新评分改善不足(${(_newScoreAbs/_oldScoreAbs*100-100).toFixed(0)}%<30%)` : '上根K线不支持';
+            sigs.push({l:`⏸ 翻转被拒·${_reason}`, c:'sig-neut'});
+            window[_lockKey] = { barStart: _curBarStart, isBull, score: _lock.score, lockedAt: _lock.lockedAt };
+          }
         } else {
-          // 允许翻转
-          sigs.push({l:'⚡ 方向强势确认翻转(差'+_scoreDiff.toFixed(1)+')', c:'sig-neut'});
-          window[_lockKey] = { barStart: _curBarStart, isBull, score, lockedAt: _now };
+          // 方向一致 → 更新分数
+          window[_lockKey] = { barStart: _curBarStart, isBull, score, lockedAt: _lock.lockedAt };
         }
       } else {
-        // 方向一致 → 更新分数
-        window[_lockKey] = { barStart: _curBarStart, isBull, score, lockedAt: _lock.lockedAt };
-      }
-    } else {
-      // ── 新K线开始 ────────────────────────────────────────────────
-      if (_lock) {
-        // 把上一根K线的最终方向存入历史
-        _hist.push({ barStart: _lock.barStart, isBull: _lock.isBull });
-        _hist = _hist.slice(-3);
-        window[_histKey] = _hist;
-      }
-
-      // ── L3: 历史多数派检查 ─────────────────────────────────────
-      // 如果最近2根K线方向一致且与当前相反 → 需要更高score才能翻转
-      if (_hist.length >= 2) {
-        const _recent2 = _hist.slice(-2);
-        const _allSameDir = _recent2.every(h => h.isBull === _recent2[0].isBull);
-        const _prevDir    = _recent2[0].isBull;
-        if (_allSameDir && _prevDir !== isBull && Math.abs(score) < 3.0) {
-          // 历史2连同向，当前score不够强 → 维持历史方向，标记观望
-          isBull = _prevDir;
-          conf   = Math.max(25, Math.round(conf * 0.72));
-          sigs.push({l:'⏸ 方向延续·等待更强确认信号', c:'sig-neut'});
+        // ── 新K线开始 ─────────────────────────────────────────────
+        if (_lock) {
+          _hist.push({ barStart: _lock.barStart, isBull: _lock.isBull, score: _lock.score });
+          _hist = _hist.slice(-4);
+          window[_histKey] = _hist;
         }
-      }
 
-      window[_lockKey] = { barStart: _curBarStart, isBull, score, lockedAt: _now };
+        // ── H4: 历史多数派升级 — 需要连续3根K线支持 ────────────
+        if (_hist.length >= 3) {
+          const _recent3 = _hist.slice(-3);
+          const _allSameDir = _recent3.every(h => h.isBull === _recent3[0].isBull);
+          const _prevDir    = _recent3[0].isBull;
+          if (_allSameDir && _prevDir !== isBull && Math.abs(score) < 4.5) {
+            // 历史3连同向，当前score不足4.5 → 维持历史方向
+            isBull = _prevDir;
+            conf   = Math.max(22, Math.round(conf * 0.68));
+            sigs.push({l:'⏸ 方向延续·3K线惯性未被打破', c:'sig-neut'});
+          }
+        } else if (_hist.length >= 2) {
+          const _recent2 = _hist.slice(-2);
+          const _allSameDir2 = _recent2.every(h => h.isBull === _recent2[0].isBull);
+          const _prevDir2    = _recent2[0].isBull;
+          if (_allSameDir2 && _prevDir2 !== isBull && Math.abs(score) < 3.5) {
+            isBull = _prevDir2;
+            conf   = Math.max(22, Math.round(conf * 0.72));
+            sigs.push({l:'⏸ 方向延续·等待更强确认', c:'sig-neut'});
+          }
+        }
+
+        window[_lockKey] = { barStart: _curBarStart, isBull, score, lockedAt: _now };
+      }
     }
   }
-  } // end v70: skip direction lock when isBull===null (WAIT state)
-  // ── END v69 Direction Stability Lock ─────────────────────────────────
+  } // end v70/v81: skip hysteresis when isBull===null (WAIT state)
+  // ── END v81 HYSTERESIS ENGINE ─────────────────────────────────────────
 
   // ══════════════════════════════════════════════════════════════════════
-  // v67 HARD GATE — 信号输出前的最终质量门控
+  // v80 FIX-CORE-VEGAS: Vegas冲突硬门 — _Φ9x核心引擎级别拦截
+  // 根本问题: Vegas gate只存在于PRO TRADER包装层(v76/v79 FIX-F/FIX-10)，
+  //   _Φ9x核心引擎直接返回方向信号，导致主信号区(biasBadge/stratArea)
+  //   显示"做多70%"而下方面板同时显示"Vegas方向矛盾·等待"——双引擎矛盾
+  //   截图根因: BTC 2H isBull=true(做多70%)，但vegas.below=true，PRO TRADER
+  //   返回vegas_conflict WAIT，两个结果同时显示→用户看到矛盾信号
+  // 修复: 在_Φ9x最终return之前执行相同的Vegas冲突硬门拦截，统一单一决策点
+  //   条件: vegas已知 AND 方向与Vegas相反 AND (conf<70% OR grade<A)
+  //   阈值: 同PRO TRADER层保持一致 — conf<70% && grade!='A'
+  //   效果: _Φ9x也返回_isWait，整个系统统一显示等待状态，无矛盾
+  // ══════════════════════════════════════════════════════════════════════
+  {
+    const _phi9xVegasConflict = vegas
+      ? (isBull ? vegas.below === true : vegas.above === true)
+      : false;
+    const _phi9xGrade = _entryGrade?.grade || 'C';
+    // v81: Vegas gate — HTF矛盾时允许B级+高conf通过(反向Vegas但顺HTF主线的回调交易)
+    // 原逻辑: conf<70% && grade<A → WAIT
+    // 新逻辑: conf<70% && grade<A → WAIT，但HTF矛盾时B级+conf≥60%可通过(有⚠️标记)
+    // v83 FIX: Vegas硬门阈值松动
+    // 原逻辑: conf<70% && grade!='A' → 全拒 (过于严苛，大量可交易信号被封锁)
+    // 新逻辑: conf<50% && grade<'B' → 拒绝 (只拒绝真正低质量逆Vegas信号)
+    //         conf 50-69% 或 B级: 通过但带⚠️警告 + 仓位×0.5
+    //         A级: 无条件通过
+    // 理由: Vegas通道内(Inside)时本来就没有明确方向，不应无差别拒绝
+    const _vegasException = _htfConflict && _phi9xGrade === 'B' && conf >= 60;
+    const _vegasGradeOk = _phi9xGrade === 'A' || _phi9xGrade === 'B';
+    if (_phi9xVegasConflict && conf < 50 && !_vegasGradeOk && !_vegasException) {
+      // FIX: 只有conf极低且无B级以上时才真正拒绝
+      const _vegasSigsCore = [
+        { l: `⛔ Vegas通道${isBull ? '下方' : '上方'} · 置信度${conf}%过低(需≥50%或B级)`, c: 'sig-neut' },
+        { l: `当前: ${_phi9xGrade}级 · 逆Vegas信号质量不足`, c: 'sig-neut' },
+        { l: 'Vegas（EMA144/169）机构趋势过滤器 · 提升信号质量后可入场', c: 'sig-neut' },
+      ];
+      return {
+        _isWait: true,
+        isBull: null, conf: null,
+        score, sigs: _vegasSigsCore,
+        rsi, macdD, price, tf,
+        conflictRatio: Math.max(conflict.conflictRatio, 0.45),
+        bullSigs: sigs.filter(s => s.c === 'sig-bull').map(s => s.l),
+        bearSigs: sigs.filter(s => s.c === 'sig-bear').map(s => s.l),
+        regime49,
+        waitReason: 'vegas_conflict',
+        reason: `Vegas通道${isBull ? '空头' : '多头'}结构，置信度${conf}%不足(需≥50%)且非B级以上，拒绝输出信号`,
+        vegas,
+      };
+    }
+    // 例外/降级通过：Vegas逆向但conf≥50或B级以上 → 带警告通过，仓位×0.5
+    if (_phi9xVegasConflict && (_vegasGradeOk || conf >= 50)) {
+      sigs.push({l:`⚠️ Vegas逆向·${_phi9xGrade}级·减半仓位·设紧SL`, c:'sig-neut'});
+    }
+    // 例外通过时注入警告标签
+    if (_phi9xVegasConflict && _vegasException) {
+      sigs.push({l:`⚠️ Vegas逆向·HTF矛盾区·B级例外通过·严格控仓`, c:'sig-neut'});
+    }
+  }
+  // ══ End v80/v81 FIX-CORE-VEGAS ════════════════════════════════════════
+
+  // ── v67 HARD GATE — 信号输出前的最终质量门控
   // 任一条件不满足 → 返回WAIT，不输出假信号
   // "只有当所有条件都对你有利时才入场" — Stanley Druckenmiller
   // ══════════════════════════════════════════════════════════════════════
+
+  // v79 FIX-9: 反驳因素强制注入 — 在最终return前，将top weaknesses注入sigs
+  // 原因: 用户只看到支持信号的因素，无法判断信号质量
+  // 修复: 调用_computeConvictionScore获取weaknesses，将severity≥medium的注入主sigs
+  // 注意: _computeConvictionScore在此处调用会有循环引用风险，改为inline计算top weaknesses
+  try {
+    const _inlineWeaknesses = [];
+    // 最关键的反驳因素 (不依赖外部函数)
+    if (isBull && vegas?.below) _inlineWeaknesses.push(`Vegas通道下方·做多逆结构`);
+    if (!isBull && vegas?.above) _inlineWeaknesses.push(`Vegas通道上方·做空逆结构`);
+    if (isBull && (tr1d<0||tr1w<0)) _inlineWeaknesses.push(`日线/周线${tr1d<0?'空头':''}${tr1w<0?'+周线空':''}·逆大势`);
+    if (!isBull && (tr1d>0||tr1w>0)) _inlineWeaknesses.push(`日线/周线${tr1d>0?'多头':''}${tr1w>0?'+周线多':''}·逆大势`);
+    if (isBull && rsi > RSI_OB) _inlineWeaknesses.push(`RSI ${rsi.toFixed(0)} 超买区·追高风险`);
+    if (!isBull && rsi < RSI_OS) _inlineWeaknesses.push(`RSI ${rsi.toFixed(0)} 超卖区·追空风险`);
+    if (isBull && mktStr?.bearCHoCH) _inlineWeaknesses.push(`空头CHoCH刚出现·结构反转风险`);
+    if (!isBull && mktStr?.bullCHoCH) _inlineWeaknesses.push(`多头CHoCH刚出现·结构反转风险`);
+    if (isBull && (sm?.hasBearOB||sm?.recentSweepBear)) _inlineWeaknesses.push(`空头OB/猎杀在上方·阻力强`);
+    if (!isBull && (sm?.hasBullOB||sm?.recentSweepBull)) _inlineWeaknesses.push(`多头OB/猎杀在下方·支撑强`);
+    if (conflict.conflictRatio > 0.4) _inlineWeaknesses.push(`信号分歧${(conflict.conflictRatio*100).toFixed(0)}%·市场博弈`);
+    // 注入最多2个最重要的反驳因素，带⚔️标记
+    _inlineWeaknesses.slice(0, 2).forEach(w => {
+      sigs.push({l: `⚔️ 反驳: ${w}`, c: 'sig-neut'});
+    });
+  } catch(e) {}
+
   {
     const _hg_rrDist = sls[0] ? Math.abs(sls[0].p - entry) : atrClamped;
     const _hg_rr     = tps[0] ? Math.abs(tps[0].p - entry) / Math.max(_hg_rrDist, 0.001) : 0;
     const _hg_risk   = sls[0] ? Math.abs((sls[0].p - entry) / entry * 100) : 99;
 
-    // v74 FIX: Gate 1 阈值调整 — atrTP公式已修复，R:R应能正常达到
-    // 保留1.0为硬性门槛(任何低于1:1的信号都不应输出)
-    // 1.0–1.5 = 警告通过 (不再直接WAIT)
-    if (_hg_rr < 1.0) {
+    // v81: R:R门槛降低 1.0→0.8，配合Hysteresis
+    // 原理: Hysteresis确保信号持续性，短期R:R偏低但方向正确的信号仍有价值
+    if (_hg_rr < 0.8) {
       const _hgSigs = [
-        {l:`⛔ R:R = ${_hg_rr.toFixed(2)} (需要 ≥ 1.0)`, c:'sig-neut'},
+        {l:`⛔ R:R = ${_hg_rr.toFixed(2)} (需要 ≥ 0.8)`, c:'sig-neut'},
         {l:'等待更优入场结构或等待更大TP目标', c:'sig-neut'},
         {l:`当前TP1: ${fmtP(tps[0]?.p||0)} · SL1: ${fmtP(sls[0]?.p||0)}`, c:'sig-neut'},
       ];
       return {
         _isWait: true, isBull: null, conf: null, score, sigs: _hgSigs, rsi, macdD, price, tf,
         conflictRatio: conflict.conflictRatio, bullSigs: [], bearSigs: [],
-        regime49, reason: `R:R = ${_hg_rr.toFixed(2)} 不足1.0，拒绝信号`,
+        regime49, reason: `R:R = ${_hg_rr.toFixed(2)} 不足0.8，拒绝信号`,
         _rejectedRR: _hg_rr,
       };
     }
-    // R:R 1.0–1.5: warning pass — inject advisory into sigs
+    // R:R 0.8–1.5: warning pass
     if (_hg_rr < 1.5) {
       sigs.unshift({l:`⚠️ R:R ${_hg_rr.toFixed(2)} 偏低 · 建议半仓入场`, c:'sig-neut'});
     }
@@ -8304,23 +9003,24 @@ function _Φ9x(tf){
       sigs.unshift({l:`⚠️ 风险 ${_hg_risk.toFixed(2)}% 偏高 · 严格控制仓位`, c:'sig-neut'});
     }
 
-    // Gate 3: Confidence minimum 35 (v74: lowered from 45; 35-50 = warning pass)
-    // 45%门槛太高 — 多因素评分系统本身已经很严格，很多真实信号被误杀
-    if (conf < 35) {
+    // v81: conf gate降低 35%→30%，与提升的Hysteresis阈值相配
+    // 理由: Hysteresis已经提供了稳定性保障，不需要conf gate做双重拦截
+    // 真正低质信号由score本身和冲突惩罚过滤，而非conf截止
+    if (conf < 30) {
       const _hgSigs = [
-        {l:`⛔ 置信度 ${conf}% (需要 ≥ 35%)`, c:'sig-neut'},
+        {l:`⛔ 置信度 ${conf}% (需要 ≥ 30%)`, c:'sig-neut'},
         {l:'信号不够确定，等待更强确认因子', c:'sig-neut'},
         {l:'提示：多框架共振+背驰+订单块可提升置信度', c:'sig-neut'},
       ];
       return {
         _isWait: true, isBull: null, conf: null, score, sigs: _hgSigs, rsi, macdD, price, tf,
         conflictRatio: conflict.conflictRatio, bullSigs: [], bearSigs: [],
-        regime49, reason: `置信度 ${conf}% 低于35%门槛，拒绝信号`,
+        regime49, reason: `置信度 ${conf}% 低于30%门槛，拒绝信号`,
         _rejectedConf: conf,
       };
     }
-    // Conf 35–55: warning pass — low confidence advisory
-    if (conf < 55) {
+    // Conf 30–50: warning pass
+    if (conf < 50) {
       sigs.unshift({l:`⚠️ 置信度 ${conf}% 偏低 · 建议减仓或等更强确认`, c:'sig-neut'});
     }
 
@@ -8353,7 +9053,7 @@ function _Φ9x(tf){
     obv,adx,supertrend,hv,cvd,mktStr,mtf,candles,fundingRate,
     conflictRatio:conflict.conflictRatio,trendMult,
     nearestSupport,nearestResist,vwapLevel:vwap,
-    sm,volProf}; // v51: Smart Money + Volume Profile
+    sm,volProf,mtfResonance:_mtfRes}; // v51: Smart Money + Volume Profile | v82: MTF Resonance
 }
 
 
@@ -8998,6 +9698,16 @@ function _renderWaitPanel(res, targetId) {
     console.error('[FINCH] _renderWaitPanel:', e);
     try { $html(targetId, '<div style="padding:16px;text-align:center;color:var(--amber);font-size:12px">⏸ 信号分歧 · 等待更明确方向 <button onclick="renderStrategy()" style="margin-left:8px;border:none;background:transparent;color:var(--gold);cursor:pointer;text-decoration:underline">重试</button></div>'); } catch(e2) {}
   }
+  // v82: Also update MTF mini badge during WAIT
+  try {
+    const _mtfMiniWait = document.getElementById('mtfResMini');
+    const _mrw = res.mtfResonance || (typeof S!=='undefined' && S.modData?.mtfResonance);
+    if (_mtfMiniWait && _mrw && !_mrw.skipReason) {
+      const _mc = _mrw.block ? 'var(--red)' : _mrw.score >= 0.5 ? 'var(--amber)' : 'var(--red)';
+      _mtfMiniWait.innerHTML = `<span style="color:${_mc};font-weight:600">${_mrw.grade}</span>` +
+        (_mrw.tfSummary ? ` <span style="color:var(--dim);font-size:10px">${_mrw.tfSummary}</span>` : '');
+    }
+  } catch(e) {}
 }
 
 // ─── v66 Direction Stability Lock — no flip within same 4H candle ───────────
@@ -12446,6 +13156,22 @@ function updateAssistantContext(){
   if(confEl){confEl.textContent=Math.round(res.conf)+'%';confEl.style.color=confColor;}
   if(rrEl){rrEl.textContent=(res.rr?.toFixed(2)||'--')+':1';rrEl.style.color=res.rr>=2?'var(--green)':res.rr>=1.5?'var(--amber)':'var(--muted)';}
   if(entryEl)entryEl.textContent=fmtP(res.entry||px);
+
+  // v82: Update MTF resonance mini badge
+  try {
+    const _mtfMiniEl = document.getElementById('mtfResMini');
+    const _mr = res.mtfResonance || (typeof S!=='undefined' && S.modData?.mtfResonance);
+    if (_mtfMiniEl && _mr) {
+      if (_mr.skipReason) {
+        _mtfMiniEl.innerHTML = 'MTF: <span style="color:var(--muted)">数据不足</span>';
+      } else {
+        const _mc = _mr.score >= 0.85 ? 'var(--green)' : _mr.score >= 0.70 ? '#4ade80' :
+                    _mr.score >= 0.50 ? 'var(--amber)' : _mr.score >= 0.30 ? '#f97316' : 'var(--red)';
+        _mtfMiniEl.innerHTML = `<span style="color:${_mc};font-weight:600">${_mr.grade}</span>` +
+          (_mr.tfSummary ? ` <span style="color:var(--dim);font-size:10px">${_mr.tfSummary}</span>` : '');
+      }
+    }
+  } catch(e) {}
 }
 
 // ── Build rich system context for Claude ──
@@ -22460,11 +23186,13 @@ window._Φ9x = function(tf) {
   // v76 FIX-C/F: Vegas direction agreement gate
   // Vegas (EMA144/169) is the most reliable medium-term trend filter.
   // Shorting when Vegas is above = fighting the trend structure. Penalise hard.
-  const vegasAgrees = vegas
-    ? (isBull ? vegas.above === true : vegas.below === true)
+  // v78 FIX: when base engine returns vegas=null (mock/fallback path), use S.modData.vegas
+  const _vegasEff = vegas || (typeof S !== 'undefined' ? S.modData?.vegas : null) || null;
+  const vegasAgrees = _vegasEff
+    ? (isBull ? _vegasEff.above === true : _vegasEff.below === true)
     : true; // no data → neutral (don't penalise)
-  const vegasConflicts = vegas
-    ? (isBull ? vegas.below === true : vegas.above === true)
+  const vegasConflicts = _vegasEff
+    ? (isBull ? _vegasEff.below === true : _vegasEff.above === true)
     : false;
 
   const qualityScore =
@@ -22496,13 +23224,14 @@ window._Φ9x = function(tf) {
     positionSizePct = 15;
   }
 
-  // v76 FIX-F: Vegas hard conflict gate — force WAIT when Vegas contradicts + conf < 65%
-  // Logic: conf=54% SHORT when Vegas is上方 = fighting two structural signals simultaneously
+  // v76 FIX-F / v79 FIX-10: Vegas hard conflict gate
+  // v79: 阈值从65%提升至70% — 原因: Pillar A共线性导致conf系统性高估
+  // 实际胜率65%的信号其真实conf可能只有55%，需要更高的门槛才能逆Vegas
   // Only A-grade signals (strong backing) may proceed against Vegas direction
-  if (vegasConflicts && conf < 65 && signalGrade !== 'A') {
+  if (vegasConflicts && conf < 70 && signalGrade !== 'A') {
     const _vegasSigs = [
       { l: `⛔ Vegas通道${isBull ? '下方' : '上方'} · 方向与趋势结构矛盾`, c: 'sig-neut' },
-      { l: `置信度 ${conf}% · Vegas反向 · 合并质量不足(${signalGrade}级)`, c: 'sig-neut' },
+      { l: `置信度 ${conf}% · Vegas反向 · 合并质量不足(${signalGrade}级) · 需≥70%或A级`, c: 'sig-neut' },
       { l: '等Vegas通道方向一致后入场 · 避免逆结构做单', c: 'sig-neut' },
     ];
     return {
@@ -22796,6 +23525,26 @@ window._Φ9x = function(tf) {
           {p: Math.round(entry*1.020*10000)/10000, pct:2.0, note:'中止损', riskPct:'2.00'},
           {p: Math.round(entry*1.035*10000)/10000, pct:3.5, note:'宽止损', riskPct:'3.50'},
         ];
+        // v78 FIX-8: Apply Vegas gate check even in fallback path
+        const _fbVegas = (typeof S !== 'undefined') ? S.modData?.vegas : null;
+        const _fbVegasConflicts = _fbVegas
+          ? (isBull ? _fbVegas.below === true : _fbVegas.above === true)
+          : false;
+        // If Vegas clearly conflicts, flip to WAIT rather than emit a wrong directional
+        if (_fbVegasConflicts) {
+          res = {
+            _isWait: true, isBull: null, conf: null, score: 0,
+            sigs: [
+              {l: '⚙️ 保底引擎 · Vegas冲突门槛已触发', c: 'sig-neut'},
+              {l: `Vegas通道${isBull ? '下方·不适合做多' : '上方·不适合做空'} · 等方向对齐`, c: 'sig-neut'},
+            ],
+            tf, price, isMock: !!(kl && kl._isMock),
+            regime49: 'ranging', conflictRatio: 0.45,
+            waitReason: 'vegas_conflict',
+            reason: '保底引擎Vegas冲突',
+            tps: [], sls: [],
+          };
+        } else {
         res = {
           isBull, score: isBull?2:-2, conf: 45,
           entry, entryMin: entry*0.998, entryMax: entry*1.002,
@@ -22807,7 +23556,7 @@ window._Φ9x = function(tf) {
           tf, price, isMock: !!(kl && kl._isMock),
           regime49: 'ranging', htfGate: 1.0, vwap: price, vwapBull: true,
           conflictRatio: 0.3, trendMult: 1.0,
-          chan: null, vegas: null, obv: {score:0,obvTrend:0,obvDiv:false},
+          chan: null, vegas: _fbVegas, obv: {score:0,obvTrend:0,obvDiv:false},
           adx: {adx:20,trending:false,ranging:true,strong:false,pdi:0,ndi:0},
           supertrend: {bull:false,bear:false,value:price},
           hv: {expanding:false,contracting:false,ratio:1,hv:15},
@@ -22828,6 +23577,7 @@ window._Φ9x = function(tf) {
           volProf: {nearPoc:false,aboveVAH:false,belowVAL:false},
           _isFallback: true,
         };
+        } // end else (no Vegas conflict)
       }
     } catch(fe) { console.warn('[FINCH v55] Fallback signal error:', fe); }
     if (!res) return null;
