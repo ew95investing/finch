@@ -1,269 +1,3 @@
-<!-- FINCH — 全维度市场分析系统 (加密 · 黄金 · 白银 · 石油)
-  v83 — 信号解封重构: 五重阻塞移除 + 全市场降级通过机制 (2026-04-23)
-  v82 — MTF共振门控: 四时间框架方向共振系统 (2026-04-23)
-
-  ══════════════════════════════════════════════════════════════════════════
-  v82 新增: MTF RESONANCE GATE (_checkMTFResonance)
-    · 1w/1d/4h/1h 四框架方向判断 (Vegas→MA20/50→斜率三级降级)
-    · 1w与1d方向相反 → 直接WAIT (大周期矛盾)
-    · 共振得分<0.30 → WAIT | 0.30–0.50 → conf-10% | 0.50–0.70 → 正常
-    · ≥0.70 → conf+8%(上限88) | ≥0.85 → conf+15%(上限92)
-    · 1w逆信号方向 → 仓位系数×0.5 (positionSizeMult随mtfResonance输出)
-    · 数据不足(有效权重<1.5) → 跳过共振检查，不阻塞信号
-    · UI: 主界面mini行新增MTF共振等级 + TF方向简表
-  ══════════════════════════════════════════════════════════════════════════
-
-  问题诊断 (v80截图审查):
-    SOL 8H: "大环境矛盾·不产生信号" — HTF NEUTRAL全拒导致长期无信号
-    BTC 2H: 信号被频繁拒绝 → 用户无法交易
-    根因: 门槛系统叠加过多，市场90%时间被封锁；缺乏信号惯性，每次refresh独立计算
-
-  核心设计哲学: 毒蛇原则 (Viper Protocol)
-    潜伏期: 大多数时间保持状态，不因噪音切换方向
-    出击期: 信号一旦确立，必须稳定持续直到结构真正改变
-    致命性: 高质量信号一旦产生，提供清晰入场/SL/TP，不犹豫不退缩
-
-  ✓ FIX-1: HTF NEUTRAL降级 — 不再全拒，改为折扣通过
-      原: 日线/4H矛盾 → 直接return WAIT，整个市场无信号
-      新: _htfConflict标志 → 评分×0.55折扣 + conf上限60% + B级例外通过
-      意义: 日线多头+4H Vegas下方 = 强多头中的中期回调 = 合法的回调做多区间
-
-  ✓ FIX-2: _Ξ2s冲突门槛 — WAIT提高50%→60%
-      原: 信号minority>50%即WAIT，市场正常噪音触发大量WAIT
-      新: 60%以上才WAIT，40-60%带警告通过，35-48%减仓通过
-      意义: 有偏向的分歧市场应该出信号，只是仓位小
-
-  ✓ FIX-3: Hysteresis引擎 (v81取代v69方向稳定锁)
-      H1: 翻转门槛 4.0→6.0 — 消除噪音引起的Churning
-      H2: 冷却期 — 翻转后强制锁定N根K线(趋势市2根,震荡市3根)
-      H3: 摩擦成本惩罚 — 新score必须比旧score高30%才允许切换
-      H4: 历史多数派升级 — 需要连续3根K线(而非2根)支持新方向
-      意义: 真正的信号惯性，防止手续费侵蚀和心态损耗
-
-  ✓ FIX-4: Vegas例外通道 — HTF矛盾时B级+conf≥60%可通过
-      原: 所有逆Vegas信号一律拒绝
-      新: HTF矛盾场景(回调区间)允许高质量逆Vegas信号，带⚠️标记
-      意义: 趋势回调做反向也是合法交易
-
-  ✓ FIX-5: 门槛整体松动
-      conf gate: 35%→30% (Hysteresis已保证稳定性，不需要双重拦截)
-      R:R gate: 1.0→0.8 (带方向持续性的信号短期R:R偏低仍可接受)
-
-  ✓ v80 FIX-CORE-VEGAS保留: _Φ9x核心Vegas冲突硬门(非HTF矛盾场景)
-  ══════════════════════════════════════════════════════════════════════════
-
-  ══════════════════════════════════════════════════════════════════════════
-  截图问题根因 (v79审查):
-    BTC 2H: 主信号区显示"做多 · 70%"(绿色) + Vegas▲上方
-    同时下方面板显示"Vegas通道方向矛盾 · 等对齐后入场"
-    综合评分方向显示"方向待定 (-3.0)"(负值/空头方向)
-
-  根本原因: 双引擎独立运行 — 决策架构缺陷
-    _Φ9x核心引擎: 计算isBull=true(做多)，conf=70%，直接输出到主信号区
-                   内部无Vegas冲突硬门，只有"弱点注入"(警告标签)但不阻断
-    PRO TRADER引擎(V54/V70): 独立运行，检测到vegas_conflict → 返回WAIT
-                              但只影响自己的面板(mbody-v70vote)，无法修改主信号
-    结果: 两个引擎产生矛盾输出，用户看到两套相互冲突的结论
-
-  ✓ v80 FIX-CORE-VEGAS: Vegas冲突硬门注入_Φ9x核心引擎
-      位置: _Φ9x() 函数内, v67 HARD GATE之前, 最终return之前
-      条件: vegas已知 AND 信号方向与Vegas相反 AND (conf<70% OR grade<A)
-      阈值: 与PRO TRADER层保持完全一致 (conf<70% && grade!='A')
-      效果: _Φ9x也返回_isWait+waitReason='vegas_conflict'
-            buildStrategy()→renderStrategy()→_renderWaitPanel()
-            整个UI统一显示"Vegas方向矛盾"等待状态，主信号区不再出现方向信号
-      消除: 所有双引擎矛盾，价格/信号/分析结论100%统一可信
-
-  系统可信度原则:
-    1. 单一决策点 — 关键质量门只在_Φ9x核心执行，PRO TRADER层为可选补充
-    2. 一致性强制 — 任何WAIT状态必须在所有UI区域同步显示
-    3. Vegas权威 — EMA144/169机构趋势过滤器在核心层强制执行，不可绕过
-  ══════════════════════════════════════════════════════════════════════════
-
-  审查驱动问题:
-    1. Confidence因子伪独立性 (RSI/BB/Stoch三者共线，conf虚高)
-    2. SL以ATR主导而非结构失效点
-    3. TP未对比结构阻力 (RR数字虚构)
-    4. Entry有效期基于时间非结构
-    5. Grade是黑盒，用户不知道差什么
-    6. 强趋势追入保护不足
-    7. MTF方向未在信号界面强制显示
-    8. 做空入场确认标准过低
-    9. 反驳理由未强制展示
-   10. Vegas 65%阈值无回测依据 → 加严到70%
-   11. ranging SHORT微反弹"确认"标准太低
-   12. 信号分数透明度不足
-
-  ✓ FIX-1: Pillar A共线性惩罚 — RSI/Stoch/BB三者同向时，贡献上限从±2降至±1.2
-      原因: 三者均由价格序列计算，趋势末端必然全部对齐，导致conf在最危险时最高
-      修复: 引入 coherencePenalty — 三者完全同向时×0.6，两者同向时×0.8
-
-  ✓ FIX-2: SL结构先置强制 — 当swingHigh/Low存在时，SL必须以结构失效点为主导
-      原因: 现有逻辑ATR主导，结构点作检查；修复为结构点必须存在时优先
-      修复: structSL[0]存在时，sl1raw直接=structSL[0]±instBuffer，ATR只做fallback
-
-  ✓ FIX-3: TP强制对比最近结构阻力/支撑 — 新增nearestStructureBarrier检查
-      原因: TP候选已有swingHighs，但POC作为磁力位未被用于截断过远TP
-      修复: 如果POC在entry和TP1之间，TP1收紧至POC，并在note中注明"POC磁力位截断"
-
-  ✓ FIX-4: Entry有效性改为结构锚点判定
-      原因: 纯时间+ATR判定导致"结构已破但时间未到"仍显示有效
-      修复: validity主判断改为"价格是否仍在SL1上方(多)/下方(空)"
-            entryValidityLabel显示"结构未破=有效"而非时间倒计时
-
-  ✓ FIX-5: Grade升级路径透明化
-      原因: 用户看到B级不知道缺什么
-      修复: gradeLabel追加"升A还需: XXX"，列出最多2个缺失的高权重因子
-
-  ✓ FIX-6: 强趋势追入双重确认门槛
-      原因: trending_strong市价入场无额外确认，可能追入趋势末端
-      修复: regime=trending_strong时，entry仅允许market当且仅当: ADX>28 AND 成交量>1.2倍均量
-            否则降为limit-only等小回调
-
-  ✓ FIX-7: MTF方向强制注入sigs
-      原因: MTF信息存在但没有在主信号界面显示当前HTF偏向
-      修复: 在scoring完成后，将_v66_htfBigPicture结果注入显眼sig标签
-
-  ✓ FIX-8: 做空入场结构确认强化
-      原因: ranging SHORT entry=price+ATR*0.5虽有改善，但"微反弹"非真正结构确认
-      修复: SHORT entry在非深度超买区时，必须满足至少一项:
-            nearestResist附近(2%) OR VWAP压制 OR MA20压制 OR bearBOS
-            否则entryType降为limit-wait并在note中说明"等待结构确认"
-
-  ✓ FIX-9: 反驳因素强制展示
-      原因: 信号只展示支持因素，用户无法判断信号质量
-      修复: 在_computeConvictionScore中，top-2 weaknesses强制注入主信号sigs
-            显示为"⚔️ 反驳: XXX"的amber标签
-
-  ✓ FIX-10: Vegas硬门阈值从65%提升至70%
-      原因: 65%无回测依据，且conf本身存在系统性高估
-      修复: vegasConflicts && conf<70% && grade!='A' → 强制WAIT
-
-  ✓ FIX-11: 版本标识更新 (品牌/标题)
-
-  ✓ FIX-12: 入场价有效性label改为结构语言 (非时间倒计时)
-  ═══════════════════════════════════════════════════════════════════════════
-  ═══════════════════════════════════════════════════════════════════════════
-  FINCH v76 升级 (2026-04-23) — 6项严重缺陷修复 + 代码质量全面清理
-
-  ✓ BUG 2: CVD WebSocket 内存泄漏 / 切换币种时连接堆积
-      问题: close()后 onclose 仍存活，10秒后自动重连建立错误连接
-      修复: 关闭前先将 onclose/onerror/onmessage 置 null，再 close，
-            再 null 整个对象；增加 S.sym !== sym 守卫防延迟调度错误重连
-
-  ✓ BUG 3: 冷却期功能是空壳 (依赖未定义的 window._FINCH_CD)
-      修复: 完全删除 _initCooldownDisplay / _updateCooldownDisplay 函数，
-            移除 refresh loop 中的调用和 _v54bInit 中的初始化调用
-
-  ✓ BUG 4: 模拟盘排行榜假数据误导用户
-      问题: 不足3笔时展示5条硬编码假交易，胜率/盈亏因子全是杜撰数字
-      修复: 0笔→暂无记录提示；<5笔→样本积累进度；≥5笔→真实统计
-
-  ✓ 缺陷 1: 回测禁用按钮覆盖盲区
-      问题: 弹窗内动态创建的按钮不被 getElementById 覆盖
-      修复: 注入 CSS <style> rule (attribute selector + !important)，
-            覆盖所有含 runFinchBacktest/Backtest 的按钮，无需 MutationObserver
-
-  ✓ 缺陷 3: 双注入锁竞争
-      问题: _injectInProgress (v46) 与 _v53InjectGuard (v53) 各自独立，
-            可同时持有导致 stratArea 双重注入
-      修复: 统一为 window._FINCH_INJECT_LOCK，两路共享同一1000ms超时锁
-
-  ✓ 代码质量: 假数据与死代码全面清除
-      • SignalHistoryTracker._seeds 16条硬编码假胜率全部移除
-      • get() 方法改为只读真实 _store（≥5笔才计算）
-      • renderLeaderboardHTML() 改为遍历 _store，空时显示积累提示
-      • _GannAdvanced / getLunar / renderGann / renderLunar / renderMystic
-        函数体全部替换为安全空 stub（消除 2000+ 行死代码）
-
-  ⚠ 诊断确认 (无需修复，v75已正确实现):
-      BUG 1: renderAllModules — 三处调用均已存在 (bgLoad / STEP3 / loadAllUnified)
-      缺陷 2: entry 偏离检查已在 SL/TP 计算之前执行 (line ~7632 vs ~7679)
-
-  ══════════════════════════════════════════════════════════════════════════
-  FINCH v77 升级 (2026-04-23) — 6项顶端分析逻辑修复（精准审查驱动）
-
-  问题根源（v76截图审查）:
-    BTC/USDT 8H 做空信号: 入场=现价78625, Vegas▲上方, 置信度54%, B级
-    → 系统在强多头日 (+4.35%) 于79.7%日内位置，逆Vegas结构触发做空信号
-    → 入场价=现价（应为等反弹入场），SL暴露于今日高点1.6%以内
-
-  ✓ FIX-A: 双轨Regime不同步根本修复
-      问题: _Φ9x内部regime49 与 FINCH_V43.regime.classify 使用不同ADX阈值
-            和不同标签体系，UI显示"弱势趋势·等回调"但入场逻辑用的是ranging
-      修复: _Φ9x计算regime49后立即写回S.modData.phi9xRegime，
-            所有下游模块读取同一来源
-
-  ✓ FIX-B: ranging做空默认入场价强制提升
-      问题: ranging SHORT default entry = price+ATR*0.1~0.2 ≈ 现价附近
-            用户以实质等同于市价的价格做空，毫无结构确认
-      修复: 最小溢价提升为ATR*0.5，且不低于price*1.003 (+0.3%)
-            强制等微反弹至确认位再空，entryType改为limit
-
-  ✓ FIX-C: PRO TRADER评级体系加入Vegas协同加权
-      问题: qualityScore未考虑Vegas方向，B级信号可在Vegas反向时通过
-      修复: Vegas同向+1分，Vegas反向-2分，门槛整体上调1分
-            确保逆Vegas信号需要更强的其他因子支撑才能达到B级
-
-  ✓ FIX-D: PRO TRADER SHORT入场价安全夹强制>=现价
-      问题: clamp只防止SHORT entry<price*0.995（太低才触发）
-            允许entry=现价-小幅，实质为追空入场
-      修复: 非深度超买(RSI>75+bbPos>0.85)时，SHORT entry不低于price*1.001
-            非trending_strong时，不低于price*1.001+0.1% limit单
-
-  ✓ FIX-E: SHORT SL加入session高低点感知
-      问题: SL仅基于ATR倍数和swingHighs(已完成K线)，不感知当日最高价
-            强多头日当日高点未进入完成K线，导致SL落在今日高点1%内
-            任何惯性延续都会触发SL
-      修复: updatePH()存储S._tickerHi/Lo，_calcSL()检查SL是否在
-            session高点+0.5ATR以内，若是则自动推高至session高点上方
-
-  ✓ FIX-F: Vegas反向硬门 — conf<70%+B以下时强制WAIT (v79: 65%→70%)
-      问题: 置信度54%+B级可在Vegas完全反向时产生交易信号
-            Vegas是机构最常用中期趋势过滤器，逆Vegas历史胜率<40%
-      v79: 从65%提升至70%，因conf存在系统性高估(Pillar A共线性)
-      修复: vegasConflicts && conf<70% && grade!='A' → 强制返回_isWait
-            waitReason='vegas_conflict'，UI显示🌊图标+专属解释文字
-  ═══════════════════════════════════════════════════════════════════════════
-  FINCH v78 升级 (2026-04-23) — 8项精准Conviction修复
-
-  根源问题 (v77截图审查): 系统显示做空，但右侧Vegas/缠论/Fib均显示绿色
-  → 右侧模块msig标签用自身绝对状态着色，完全不考虑主信号方向
-  → 用户看到"Vegas通道上方(绿)+做空"产生困惑，无法判断信号可信度
-
-  ✓ FIX-1: Vegas msig — 方向感知着色
-      上方+做空 → 红色+⚠ (结构冲突)   上方+做多 → 绿色 (一致)
-      下方+做空 → 绿色 (一致)           下方+做多 → 红色+⚠ (结构冲突)
-      无主信号  → 原始绿/红/amber (向后兼容)
-
-  ✓ FIX-2: 缠论 msig — 方向感知着色
-      上升笔+做多 → 绿色    上升笔+做空 → 红色 (截图问题根源)
-      下降笔+做空 → 绿色    下降笔+做多 → 红色
-
-  ✓ FIX-3: Fibonacci msig — 支撑/阻力相对主信号着色
-      做多时: 附近支撑(价格下方) → 绿色; 附近阻力(价格上方) → amber
-      做空时: 附近阻力(价格上方) → 绿色; 附近支撑(价格下方) → amber
-
-  ✓ FIX-4: 技术指标 msig — 方向感知着色
-      技术面看多+主信号做多 → 绿色; 技术面看多+主信号做空 → 红色
-
-  ✓ FIX-5: MACD msig — 方向感知着色
-      金叉+做多 → 绿色; 金叉+做空 → 红色; 反之亦然
-
-  ✓ FIX-6: RSI msig — 语义反转着色
-      RSI 59+做空 → 绿色 (高RSI确认空头); RSI 59+做多 → amber (警告)
-      RSI <30+做多 → 绿色; RSI <30+做空 → 红色
-
-  ✓ FIX-7: Vegas gate null bypass — ProTrader层
-      问题: base engine在mock/fallback路径返回vegas=null
-            vegasConflicts = vegas ? ... : false → 门槛永远不触发
-      修复: _vegasEff = vegas || S.modData?.vegas — 总是用最新的Vegas数据
-
-  ✓ FIX-8: Vegas gate — 保底信号生成器也受门槛保护
-      问题: 最终_Φ9x wrapper的fallback生成器设vegas:null，绕过所有门槛
-      修复: 检查S.modData.vegas，如有冲突改为返回_isWait
-  ═══════════════════════════════════════════════════════════════════════════
-  For educational / research purposes only · Not financial advice -->
 <!DOCTYPE html>
 <html lang="zh">
 <head>
@@ -272,7 +6,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://fonts.googleapis.com https://fonts.gstatic.com https://api.binance.com https://api1.binance.com https://api2.binance.com https://api3.binance.com https://api4.binance.com https://data-api.binance.vision https://data-stream.binance.vision https://fapi.binance.com https://api.alternative.me https://api.coingecko.com https://api.llama.fi https://corsproxy.io https://api.allorigins.win https://thingproxy.freeboard.io https://api.blockchain.info https://www.alphavantage.co https://cdn.jsdelivr.net https://open.er-api.com wss://stream.binance.com wss://data-stream.binance.vision; connect-src 'self' https: wss: data: blob:; frame-ancestors 'none';">
 <meta http-equiv="X-Frame-Options" content="DENY">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>FINCH v81 — 全维度市场分析</title>
+<title>FINCH v84 — 全维度市场分析</title>
 
 <!-- ═══ PWA / iOS APP META ═══ -->
 <meta name="mobile-web-app-capable" content="yes">
@@ -2165,7 +1899,6 @@ canvas.main-c{width:100%!important;}
 </div>
 
 
-
 <script>
 'use strict';
 // ── Null-safe DOM helpers — prevents ALL "Cannot read properties of null" crashes ──
@@ -2235,7 +1968,6 @@ function buildStrategyMemo(tf){
   return cached;
 }
 
-// ═══════════════════════════════════════════════════════════════════
 //  FINCH v45 — MULTI-ASSET ENGINE  (pure Binance + er-api, no AV key)
 //
 //  Data sources:
@@ -2247,7 +1979,6 @@ function buildStrategyMemo(tf){
 //
 //  Kline history: Binance Futures for metals | er-api + simulated for forex
 //  Refresh: Binance futures ticker every 3s (metals), er-api every 4min (forex)
-// ═══════════════════════════════════════════════════════════════════
 
 // ── No AV key needed in v45 ──────────────────────────────────────
 const AV_BASE = ''; // kept for backward compat stubs
@@ -2406,9 +2137,7 @@ async function _fetchWithProxies(url, timeout=6000) {
 // Stub — AV no longer used in v45
 async function avRawFetch(params) { throw new Error('AV not used — use Binance/er-api'); }
 
-// ══════════════════════════════════════════════════════════════════
 //  SPOT QUOTE ENGINE
-// ══════════════════════════════════════════════════════════════════
 
 // Daily H/L tracker — resets at MYT midnight
 const _dailyHL = {};
@@ -2615,9 +2344,7 @@ async function tdQuote(sym) {
   }
 }
 
-// ══════════════════════════════════════════════════════════════════
 //  KLINE ENGINE
-// ══════════════════════════════════════════════════════════════════
 
 const _resampleFactors = {'2h':2,'4h':4,'8h':8};
 
@@ -2857,9 +2584,7 @@ function showAVKeyDialog(){
   document.body.appendChild(modal);
 }
 
-// ─────────────────────────────────────────────
 //  ASSET CLASS FILTER — UI
-// ─────────────────────────────────────────────
 function setAssetFilter(cls, btn) {
   _assetFilter = cls;
   document.querySelectorAll('.acb-btn').forEach(b => b.classList.remove('active'));
@@ -2872,9 +2597,7 @@ function _matchesFilter(p) {
   if(_assetFilter === 'market') return p.cls !== 'crypto';
   return p.cls === _assetFilter;
 }
-// ─────────────────────────────────────────────
 //  SELF-LEARNING ENGINE v2 (persistent via localStorage)
-// ─────────────────────────────────────────────
 const LEARN_KEY = 'finch_v38_learn';
 const LEARN_MAX = 200; // max stored outcomes
 
@@ -3082,7 +2805,6 @@ function learnClearAll() {
 
 // Hook paper trading close to auto-record learning
 const _origClosePaper = typeof closePaperPosition === 'function' ? closePaperPosition : null;
-
 
 
 // ═══ FORMAT ═══
@@ -3946,9 +3668,7 @@ function reRenderCharts(){
   if(kl.length){renderChart(kl,S.sym);renderSubChart(kl);}
 }
 
-// ═══════════════════════════════════════════════════════════
 // INDICATORS ENGINE v11 — Enhanced Multi-Factor Analysis
-// ═══════════════════════════════════════════════════════════
 function calcMA(prices,n){
   if(!prices||prices.length<n)return new Array(prices?prices.length:0).fill(null);
   const ma=new Array(prices.length).fill(null);
@@ -4553,15 +4273,12 @@ function _Ω9a(price,kl){
   return[{n:'1×1 (45°)',m:1},{n:'2×1 (63°)',m:2},{n:'1×2 (27°)',m:0.5},{n:'4×1 (76°)',m:4}]
     .map(a=>({...a,price:lp+ppb*a.m*bars,diff:(lp+ppb*a.m*bars-price)/price*100}));
 }
-// ╔══════════════════════════════════════════════════════════════════════╗
 // ║  FINCH INTELLIGENCE v3 — 专业级市场结构分析引擎                       ║
-// ║                                                                      ║
 // ║  模块1: 缠论完整体系 — 笔/线段/中枢/背驰/三类买卖点                  ║
 // ║  模块2: 趋势结构识别 — HH/HL/LL/LH + 供需换手区 + 动能衰竭          ║
 // ║  模块3: 图表形态识别 — 头肩/双顶底/三角/旗形/楔形/圆弧底             ║
 // ║  模块4: 江恩升级 — 时间窗口共振/价格平方/自然周期嵌套               ║
 // ║  模块5: 多级别嵌套分析 — 小级别反弹 vs 大级别反转区分               ║
-// ╚══════════════════════════════════════════════════════════════════════╝
 
 // ── 模块1: 缠论完整体系 ──────────────────────────────────────────────────
 function _ChanFull(kl, price) {
@@ -5047,7 +4764,6 @@ function _PatternRecognition(kl, price) {
   } catch(e) { return { patterns: [], dominant: null, score: 0 }; }
 }
 
-// ════════════════════════════════════════════════════════════════════════════
 // FINCH v51 — ORDER BLOCK + FAIR VALUE GAP ENGINE (Smart Money Concepts)
 // 原理:
 //   Order Block (OB): 机构在某根K线大量建仓/平仓的区域。价格回测该区域时
@@ -5056,7 +4772,6 @@ function _PatternRecognition(kl, price) {
 //   再继续运动。是高概率回撤入场点。
 //   Liquidity Sweep: 价格短暂刺穿关键高/低点，吃掉止损单后快速反向。
 //   这是机构"猎杀散户止损"的典型行为，刺穿后快速收回 = 高概率反转。
-// ════════════════════════════════════════════════════════════════════════════
 function _SmartMoney(kl, price) {
   if (!kl || kl.length < 30) return { orderBlocks:[], fvgs:[], sweeps:[], smScore:0, hasBullOB:false, hasBearOB:false, recentSweepBull:false, recentSweepBear:false };
   try {
@@ -5254,14 +4969,12 @@ function _SmartMoney(kl, price) {
   } catch(e) { return { orderBlocks:[], fvgs:[], sweeps:[], smScore:0, hasBullOB:false, hasBearOB:false, recentSweepBull:false, recentSweepBear:false }; }
 }
 
-// ════════════════════════════════════════════════════════════════════════════
 // FINCH v51 — VOLUME PROFILE APPROXIMATION (Price Acceptance Analysis)
 // 原理: 真正的量价分析不是看"今天成交量多少"，而是"在哪个价位成交量最多"。
 // 成交量最大的价位 = 市场认可的公平价值 (Point of Control / POC)
 // 当价格远离POC向上 = 上方阻力相对轻 (但也意味着脆弱)
 // 当价格回踩POC    = 高概率支撑
 // Value Area High/Low: 70%成交量所在的价格区间
-// ════════════════════════════════════════════════════════════════════════════
 function _VolumeProfile(kl, price) {
   if (!kl || kl.length < 30) return { poc:price, vah:price, val:price, priceVsPoc:0, accepted:false, nearPoc:false, aboveVAH:false, belowVAL:false };
   try {
@@ -5396,11 +5109,9 @@ function getLunar(){
   return { name:"--", icon:"--", bias:"neut", note:"", phase:0, dTN:0, dTF:0, sun:"--", pf:0.5 };
 }
 
-// ═══════════════════════════════════════════════════════════════
 // FINCH VERDICT ENGINE — 顶级分析师裁决系统
 // Cuts through signal noise to deliver ONE clear actionable verdict
 // like a professional analyst: definitive, structured, risk-aware
-// ═══════════════════════════════════════════════════════════════
 function _Ψ7v(res){
   if(!res)return null;
   // v70 FIX: WAIT状态下直接返回null，不执行任何方向逻辑，防止覆盖 isBull=null
@@ -5925,12 +5636,10 @@ async function loadMacro(){
   }catch(e){}
 }
 
-// ═══════════════════════════════════════════════════════════════════
 // FINCH — FREE MARKET INTELLIGENCE LAYER
 // Sources: CoinGecko (free/unlimited) · DeFi Llama (free/unlimited)
 //          Alternative.me F&G · Binance (already live)
 // All endpoints are 100% free, no API key required, no rate limit issues
-// ═══════════════════════════════════════════════════════════════════
 
 // ── Global intelligence cache ──
 const INTEL = {
@@ -6350,10 +6059,7 @@ function updateIntelScore(intelSignal) {
 }
 
 
-
-// ╔══════════════════════════════════════════════════════════════╗
 // ║  FINCH v40 — 🐋 WHALE FLOW MONITOR                          ║
-// ╚══════════════════════════════════════════════════════════════╝
 const WHALE={
   lastFetch:0,fetchInterval:60000,
   alerts:[],flow:null,takerRatio:null,oi:null,
@@ -6839,7 +6545,6 @@ function buildStrategy(tf){
 }
 
 // FIX P4 v57: 保底信号生成 — MA5/MA20动量兜底，确保UI永不白屏
-// ═══════════════════════════════════════════════════════════════════════════
 // v82: MTF RESONANCE GATE — 多时间框架共振门控系统
 // 设计原则:
 //   - 趋势层 (1w/1d) + 动能层 (4h/1h)，方向判断三级降级：Vegas → MA → 斜率
@@ -6847,7 +6552,6 @@ function buildStrategy(tf){
 //   - 共振得分 < 0.30 → WAIT
 //   - 1w 方向逆信号方向 → 仓位 ×0.5
 //   - 不破坏现有 Vegas 冲突门、HARD GATE 等逻辑
-// ═══════════════════════════════════════════════════════════════════════════
 function _checkMTFResonance(isBull) {
   const TF_CFG = [
     { tf: '1w', w: 1.0, minBars: 30,  role: 'trend'    },
@@ -7152,11 +6856,9 @@ function _Φ9x(tf){
   const nF382=Math.abs(price-fib382)/price<0.022;
   const nF50=Math.abs(price-(fibLo+(fibHi-fibLo)*0.5))/price<0.018;
 
-  // ══════════════════════════════════════════════════════════════════
   // v66 BIG PICTURE TREND GATE — 1D MA + 4H Vegas must align first
   // 日线与4H方向矛盾时直接返回WAIT，不产生任何信号
   // v72 FIX: 数据不足时返回 UNKNOWN → 跳过过滤，不阻塞信号
-  // ══════════════════════════════════════════════════════════════════
   const _v66_htfBigPicture = (function(){
     try {
       const kl1d = getKL('1d');
@@ -7217,14 +6919,12 @@ function _Φ9x(tf){
   // 首先注入HTF大框架标签
   if (_htfVisibleLabel) sigs.push({l: _htfVisibleLabel, c: _v66_htfBigPicture==='BULL'?'sig-bull':_v66_htfBigPicture==='BEAR'?'sig-bear':'sig-neut'});
 
-  // ══════════════════════════════════════════════════════════════════
   // v49 REFORMED SCORING ENGINE — 去共线性 · Regime Gate · HTF乘法门控
   // 架构原则:
   //   1. REGIME GATE (第一层) — 先判市况，决定启用哪类信号子集
   //   2. PILLAR SCORES (第二层) — 6个独立维度，每维度只贡献1个分数
   //   3. HTF MULTIPLIER (第三层) — 日线/周线作为乘法门控
   //   4. INDEPENDENT SIGNALS (第四层) — 资金/链上/背驰等真正独立信息
-  // ══════════════════════════════════════════════════════════════════
 
   // ── LAYER 0: REGIME DETECTION ─────────────────────────────────
   // 判断当前市况：趋势强/趋势弱/震荡/突破前夕
@@ -7750,11 +7450,9 @@ function _Φ9x(tf){
   // v49 compat: trendMult still referenced downstream for SL/TP sizing
   const trendMult = adx.trending ? (adx.strong ? 1.2 : 1.0) : (adx.ranging ? 0.55 : 0.75);
 
-  // ══════════════════════════════════════════════════════════════════
   // v82: MTF RESONANCE CHECK — 插入点: isBull/conf确定后, Vegas硬门之前
   // 使用 Vegas→MA→斜率 三级降级判断 1w/1d/4h/1h 四个时间框架方向
   // 1w/1d 矛盾 → 直接 WAIT | 共振 <0.30 → WAIT | 弱共振 → conf惩罚
-  // ══════════════════════════════════════════════════════════════════
   const _mtfRes = _checkMTFResonance(isBull);
 
   // v83 FIX: MTF矛盾不再直接WAIT，改为注入警告标签 + conf惩罚 + 仓位降级
@@ -7819,10 +7517,8 @@ function _Φ9x(tf){
   const chanSup=chan?.chanSup||price*0.97;
   const chanRes=chan?.chanRes||price*1.03;
 
-  // ═══════════════════════════════════════════════════
   // PRECISION ENTRY ENGINE — 精准入场系统
   // Multi-condition entry with exact price targets
-  // ═══════════════════════════════════════════════════
 
   // Find key nearby levels for entry snapping
   const nearestSupport=swingLows.length?swingLows[0]:price*(1-atrClamped/price*1.5);
@@ -8007,7 +7703,6 @@ function _Φ9x(tf){
   // ── FIX-A v65: REGIME-AWARE ENTRY ENGINE (根本性重构) ──────────────────
   // 核心原则: 市况决定入场方式，不是一套逻辑打天下
   // 强趋势 → 突破入场(现价附近), 震荡 → 区间边缘限价, 弱趋势 → 等待确认
-  // ─────────────────────────────────────────────────────────────────────
   const regimeMeta=S.modData.regime||{regime:'ranging'};
   const slippagePct={'15m':0.0003,'30m':0.0003,'1h':0.0005,'2h':0.0006,'4h':0.0008,'8h':0.0010,'1d':0.001,'1w':0.0015}[tf]||0.0005;
 
@@ -8151,12 +7846,10 @@ function _Φ9x(tf){
     entryNote+=' · 入场价已修正至当前价附近';
   }
 
-  // ═══════════════════════════════════════════════════
   // PRECISION TP BUILD — 结构性精准止盈系统
   // 优先级: 结构高低点(P10) > Fibonacci延伸(P9) > 缠论位(P9)
   //         > 整数关口(P7) > Regime自适应ATR倍数(P4-6)
   // 科学依据: 价格在结构/Fib位附近停顿概率>ATR均值法高35%+
-  // ═══════════════════════════════════════════════════
   function _bTP(){
     const candidates=[];
 
@@ -8284,10 +7977,7 @@ function _Φ9x(tf){
     }
   }
 
-  // ═══════════════════════════════════════════════════
-  // ═══════════════════════════════════════════════════════════════════
   // INSTITUTIONAL SL BUILD — Wall Street Desk Standard
-  // ═══════════════════════════════════════════════════════════════════
   // Philosophy (PTJ / Druckenmiller / Kovner):
   //   1. SL = STRUCTURAL INVALIDATION, not ATR multiple
   //      → Place BEYOND the last significant swing, not AT it
@@ -8297,7 +7987,6 @@ function _Φ9x(tf){
   //   4. SL1 = active management level (tightest structurally valid)
   //      SL2 = full invalidation (wider structure fails)
   //      SL3 = catastrophic stop (thesis completely wrong)
-  // ═══════════════════════════════════════════════════════════════════
   function _bSL(){
     // FIX-B v65: 结构性止损 — SL放在真正的结构失效点
     // "我的止损放在市场证明我错了的位置，不是放在我害怕亏损的位置" — Paul Tudor Jones
@@ -8620,7 +8309,6 @@ function _Φ9x(tf){
     const m=entryValidityMins%60;
     return m>0?`约 ${h}小时 ${m}分`:`约 ${h} 小时`;
   })();
-  // ──────────────────────────────────────────────────────────────────────
 
   const tfNames={'15m':'15分钟超短线','30m':'30分钟短线','1h':'1小时日内','2h':'2小时日内','4h':'4小时波段','8h':'8小时波段','1d':'日线','1w':'周线'};
   const parts=[];
@@ -8870,7 +8558,6 @@ function _Φ9x(tf){
   } // end v70/v81: skip hysteresis when isBull===null (WAIT state)
   // ── END v81 HYSTERESIS ENGINE ─────────────────────────────────────────
 
-  // ══════════════════════════════════════════════════════════════════════
   // v80 FIX-CORE-VEGAS: Vegas冲突硬门 — _Φ9x核心引擎级别拦截
   // 根本问题: Vegas gate只存在于PRO TRADER包装层(v76/v79 FIX-F/FIX-10)，
   //   _Φ9x核心引擎直接返回方向信号，导致主信号区(biasBadge/stratArea)
@@ -8881,7 +8568,6 @@ function _Φ9x(tf){
   //   条件: vegas已知 AND 方向与Vegas相反 AND (conf<70% OR grade<A)
   //   阈值: 同PRO TRADER层保持一致 — conf<70% && grade!='A'
   //   效果: _Φ9x也返回_isWait，整个系统统一显示等待状态，无矛盾
-  // ══════════════════════════════════════════════════════════════════════
   {
     const _phi9xVegasConflict = vegas
       ? (isBull ? vegas.below === true : vegas.above === true)
@@ -8933,7 +8619,6 @@ function _Φ9x(tf){
   // ── v67 HARD GATE — 信号输出前的最终质量门控
   // 任一条件不满足 → 返回WAIT，不输出假信号
   // "只有当所有条件都对你有利时才入场" — Stanley Druckenmiller
-  // ══════════════════════════════════════════════════════════════════════
 
   // v79 FIX-9: 反驳因素强制注入 — 在最终return前，将top weaknesses注入sigs
   // 原因: 用户只看到支持信号的因素，无法判断信号质量
@@ -9057,9 +8742,7 @@ function _Φ9x(tf){
 }
 
 
-// ═══════════════════════════════════════════════════════════════════════════
 // FINCH v41 UPGRADE — THREE NEW INTELLIGENCE MODULES
-// ═══════════════════════════════════════════════════════════════════════════
 
 // ── MODULE A: ENTRY CONVICTION SCORE ────────────────────────────────────────
 // 核心问题："这个入场信号背后有多少层结构支撑？"
@@ -9713,7 +9396,6 @@ function _renderWaitPanel(res, targetId) {
 // ─── v66 Direction Stability Lock — no flip within same 4H candle ───────────
 let _v66_lastDir = null;
 let _v66_lastDirBarStart = 0;
-// ─────────────────────────────────────────────────────────────────────────────
 
 // ═══ RENDER STRATEGY ═══
 function renderStrategy(){
@@ -10059,9 +9741,7 @@ function _doRenderStrategy(res){
   const nowMYT2=toMYT(new Date());
   const timeStr=`${String(nowMYT2.getUTCHours()).padStart(2,'0')}:${String(nowMYT2.getUTCMinutes()).padStart(2,'0')}:${String(nowMYT2.getUTCSeconds()).padStart(2,'0')} MYT`;
 
-  // ═══════════════════════════════════════════════════
   // FINCH — Comprehensive Strategy + Mystic Integration
-  // ═══════════════════════════════════════════════════
 
   // ── Time estimator ──
   function estTime(targetPrice,barMsVal){
@@ -12547,9 +12227,7 @@ function renderPortScenario(){
   verdictEl.innerHTML=verdictHtml;
 }
 
-// ═══════════════════════════════════════════════════
 // PAPER TRADING ENGINE
-// ═══════════════════════════════════════════════════
 const PT={
   balance:10000,
   startBalance:10000,
@@ -13105,11 +12783,8 @@ function addCustom(){
 }
 
 
-
-// ═══════════════════════════════════════════════════════════════
 // FINCH SMART ASSISTANT ENGINE
 // Real-time market analysis chat assistant powered by Claude API
-// ═══════════════════════════════════════════════════════════════
 
 // ── Assistant State ──
 const ASST={
@@ -13996,11 +13671,9 @@ window.addEventListener('resize',()=>{
   }
 });
 
-// ═══════════════════════════════════════════════════════════════
 // FINCH AUTO-TRADE ENGINE v21
 // One-click paper trade from signal · Smart TP/SL auto-set
 // Uses existing PT system · No extra storage
-// ═══════════════════════════════════════════════════════════════
 
 let _atSize=200, _atLev=1;
 
@@ -14207,7 +13880,6 @@ const _origPtSave=ptSave;
 let _ptSaveOverrideActive=false;
 
 
-
 // ══ MOBILE COIN SHEET ══
 function showMobileCoinSheet(){
   const sheet=document.getElementById('mobileCoinSheet');
@@ -14263,12 +13935,10 @@ function renderMobileCoinList(q=''){
 // Similar setup = same direction, same RSI zone, same regime
 // This gives HISTORICAL CONTEXT to the current signal confidence
 function runMiniBacktest(res, kl){
-  // ═══════════════════════════════════════════════════════════════
   // FINCH v50 — 多条件相似信号回测引擎
   // 过滤器: RSI区间 + EMA趋势 + MACD方向 + 成交量确认 + ATR波动过滤
   // 形态加权: 若当前有形态信号(头肩/三角/旗形)，只统计同类形态历史
   // 自适应前向窗口: 基于ATR动态调整，避免短周期wick误判
-  // ═══════════════════════════════════════════════════════════════
   if(!kl||kl.length<120)return null;
   try{
     const prices=kl.map(k=>k.c);
@@ -14496,7 +14166,7 @@ async function init(){
     }
   }
   setTimeout(()=>_refreshMetalPrices(),2000);
-  setInterval(()=>_refreshMetalPrices(),10000); // metals update every 10s
+  setInterval(()=>_refreshMetalPrices(),60000); // metals update every 60s
 
   // ── Step 4: Full data load for BTC ──
   await selectSym('BTCUSDT');
@@ -14553,11 +14223,9 @@ async function init(){
 init();
 
 
-// ╔══════════════════════════════════════════════════════════════════════╗
 // ║  FINCH BRAIN ENGINE — 纯本地主动推理系统                             ║
 // ║  完全基于现有 S.lastSignal / S.lastPx 指标，无需额外 API 调用         ║
 // ║  独立模块，不干扰任何现有渲染逻辑                                     ║
-// ╚══════════════════════════════════════════════════════════════════════╝
 
 var BRAIN = {
   lastInferTime: 0,
@@ -14824,10 +14492,8 @@ function startBrainEngine(){
   }, 5000);
 }
 
-// ╔══════════════════════════════════════════════════════════════════════╗
 // ║  FINCH MACRO PULSE — 5分钟宏观脉搏 (使用 Claude API)                ║
 // ║  独立模块，不干扰任何现有逻辑                                         ║
-// ╚══════════════════════════════════════════════════════════════════════╝
 
 var _macroPulseLock = false;
 var _macroPulseCdown = 300;
@@ -14931,14 +14597,12 @@ async function refreshMacroPulse(manual){
   }
 }
 
-// ╔══════════════════════════════════════════════════════════════════════╗
 // ║  FINCH MODULE 1 — 精确江恩时间节点 (Precise Gann Time Nodes)        ║
 // ║  算法原理：                                                           ║
 // ║  1. 自然日周期：30/45/60/90/120/135/180/270/360天从当前日期推算      ║
 // ║  2. 价格平方根周期：√price × 倍数，再²还原成价格，预测价格目标        ║
 // ║  3. 历史摆动周年：重大高低点的1年/2年纪念日重现               ║
 // ║  4. 置信度：多周期共振 > 单周期，结合当前信号方向加权                 ║
-// ╚══════════════════════════════════════════════════════════════════════╝
 
 function preciseGannTimeNodes(price, kl) {
   // ── 安全检查 ──
@@ -15362,7 +15026,6 @@ renderGann = function(price) {
 };
 
 
-// ╔══════════════════════════════════════════════════════════════════════╗
 // ║  FINCH MODULE 2 — 完整回测系统 (Full Backtest Engine)               ║
 // ║  算法原理：                                                           ║
 // ║  1. 在每根K线收盘时运行 _Φ9x() 策略引擎                             ║
@@ -15370,7 +15033,6 @@ renderGann = function(price) {
 // ║  3. 按信号类型分拆胜率：哪个指标历史最准                             ║
 // ║  4. 月度收益热力图、资金曲线、最大回撤                               ║
 // ║  安全保护：全部在本地计算，不发送任何API请求                          ║
-// ╚══════════════════════════════════════════════════════════════════════╝
 
 // ── 回测状态 ──
 let _btRunning = false;
@@ -15381,16 +15043,13 @@ async function runFinchBacktest() {
   alert('回测已禁用，请使用模拟交易积累实盘数据');
 }
 
-// ╔══════════════════════════════════════════════════════════════════════╗
 // ║  _btInternalScore v2 — 回测专用评分器（完全重写）                    ║
-// ║                                                                      ║
 // ║  五大核心改进：                                                       ║
 // ║  1. 趋势过滤：MA20 vs MA50 过滤逆势信号，逆势权重降低60%             ║
 // ║  2. 多信号确认：需要至少2个独立指标同向才开仓                        ║
 // ║  3. 不对称R:R：TP=ATR×2.2，SL=ATR×1.0，期望值>0                   ║
 // ║  4. 量能确认：成交量须高于均量80%                                    ║
 // ║  5. 仅顺势开仓：_trendAligned标志决定最终是否执行                    ║
-// ╚══════════════════════════════════════════════════════════════════════╝
 function _btInternalScore(kl, price, tf) {
   try {
     if (!kl || kl.length < 30 || !price) return null;
@@ -15495,16 +15154,13 @@ function _btInternalScore(kl, price, tf) {
   } catch(e) { return null; }
 }
 
-// ╔══════════════════════════════════════════════════════════════════════╗
 // ║  _runBacktestEngine v2 — 回测引擎（完全重写）                        ║
-// ║                                                                      ║
 // ║  关键改进：                                                           ║
 // ║  1. 止损冷却期：止损后等待2根K线冷静再入场                           ║
 // ║  2. 移动止损：盈利超过1×ATR后自动将SL移至成本价                      ║
 // ║  3. 双重TP目标：TP1=2.2×ATR（部分平仓），TP2=4.0×ATR（持有部分）    ║
 // ║  4. 趋势对齐强制过滤：_trendAligned=false的信号直接跳过             ║
 // ║  5. 期望值计算：winRate×avgWin - lossRate×avgLoss                   ║
-// ╚══════════════════════════════════════════════════════════════════════╝
 function _runBacktestEngine(kl, tf, periodBars, positionSizePct, commission) {
   if (!kl || !Array.isArray(kl) || kl.length < 30)
     return { error: `K线数据不足（${kl ? kl.length : 0}根），需要至少30根K线`, trades: [] };
@@ -15890,7 +15546,6 @@ function renderBacktestResult(r) {
 }
 
 
-// ╔══════════════════════════════════════════════════════════════════════╗
 // ║  FINCH MODULE 3 — 自学习权重优化 (Self-Learning Weight System)       ║
 // ║  算法原理：                                                           ║
 // ║  1. 从回测结果中提取每个信号因子的历史准确率                          ║
@@ -15898,7 +15553,6 @@ function renderBacktestResult(r) {
 // ║  3. 权重上下限保护防止过度优化：min 0.3×，max 2.0×                   ║
 // ║  4. 回滚机制：若新权重导致综合得分下降超5%则自动恢复                  ║
 // ║  5. 市场状态自适应：趋势/震荡市下各指标权重不同                       ║
-// ╚══════════════════════════════════════════════════════════════════════╝
 
 // ── 权重存储（localStorage持久化） ──
 const WEIGHT_KEY = 'finch_learned_weights_v1';
@@ -16133,22 +15787,18 @@ setTimeout(() => {
   try { loadLearnedWeights(); renderLearningPanel(); } catch(e) { console.warn('Learning panel init failed:', e); }
 }, 1000);
 
-// ╔══════════════════════════════════════════════════════════════════════╗
 // ║  FINCH MODULE 4 — 大师级思维框架                                     ║
 // ║  RAY DALIO "全天候" 原则 × NAVAL RAVIKANT 财富杠杆论                 ║
-// ║                                                                      ║
 // ║  Ray Dalio 核心：                                                     ║
 // ║  · 不相关资产组合 → 最优风险调整后收益（全天候策略）                   ║
 // ║  · 经济机器运转：增长↑/↓ × 通胀↑/↓ = 4个市场象限                    ║
 // ║  · 永远对冲尾部风险；"我可能是错的" 的激进开放心态                    ║
 // ║  · 痛苦 + 反思 = 进步（Principles 第1定律）                           ║
-// ║                                                                      ║
 // ║  Naval Ravikant 核心：                                               ║
 // ║  · 财富 = 睡觉时仍在赚钱的资产                                       ║
 // ║  · 杠杆 = 代码 / 媒体 / 资本（无需许可的放大器）                     ║
 // ║  · 投资判断力而非时间；做价值最大化，非努力最大化                     ║
 // ║  · 耐心 + 机会主义 = 复利的护城河                                    ║
-// ╚══════════════════════════════════════════════════════════════════════╝
 
 // ── 大师框架：市场象限分析 ──
 // 基于 Ray Dalio 全天候策略的四象限模型
@@ -16560,16 +16210,7 @@ resetLearnedWeights = function() {
 
 // ── 3.3 Version constants + console branding ──
 const FINCH_VERSION = '2026';
-const FINCH_BUILD = '2026-04';
-
-// Console welcome banner
-setTimeout(() => {
-  try {
-    console.log('%c🐦 FINCH v' + FINCH_VERSION + ' (Build: ' + FINCH_BUILD + ')', 'color:#8B6914;font-size:16px;font-weight:bold;');
-    
-    console.log('%c⚖️ Gann+Chan结构推理 · 次级运动识别 · 关键位多次测试检测 · 时间节点共振 · 自学习权重', 'color:#581890;font-size:12px;');
-  } catch(e) {}
-}, 500);
+const FINCH_BUILD = '2026-04-v84';
 
 // ── Patch renderBacktestResult to add export + rerun buttons ──
 const _origRenderBacktestResult = renderBacktestResult;
@@ -16600,7 +16241,6 @@ if (_origRenderSummary) {
   };
 }
 
-// ╔══════════════════════════════════════════════════════════════════════════════╗
 // ║  FINCH v39 — 江恩缠论结构推理引擎                                           ║
 // ║  原理消化自以下分析框架：                                                     ║
 // ║  · 江恩时间节点 (Gann Time Cycles): 关键日期共振 → 变盘概率                   ║
@@ -16609,7 +16249,6 @@ if (_origRenderSummary) {
 // ║  · 高位调整 vs 趋势反转 区分: 跌破关键位才确认反转                            ║
 // ║  · 不放量突破 = 假突破警告 (Volume Confirmation Gate)                        ║
 // ║  · 次级运动顺势机会 vs 主趋势 区分 (Primary vs Secondary Movement)           ║
-// ╚══════════════════════════════════════════════════════════════════════════════╝
 
 // Key Level Test Counter — how many times has price tested a level?
 function _countKeyLevelTests(kl, level, tolerancePct = 0.008) {
@@ -16917,7 +16556,6 @@ if (_origBuildLocalNarrative) {
   };
 }
 
-// ╔══════════════════════════════════════════════════════════════════════╗
 // ║  FINCH MODULE 5 — 易经卦象分析 (I-Ching Market Oracle)              ║
 // ║  算法原理：                                                           ║
 // ║  1. 六十四卦 × 六爻：每卦对应一种市场状态                            ║
@@ -16925,7 +16563,6 @@ if (_origBuildLocalNarrative) {
 // ║  3. 变卦/之卦：由RSI/MACD动量推导变爻 → 预测未来走向                 ║
 // ║  4. 彖辞与象辞：提供市场操作建议                                      ║
 // ║  5. 互卦：提取第2-5爻 → 揭示潜藏力量                                 ║
-// ╚══════════════════════════════════════════════════════════════════════╝
 
 const HEXAGRAMS = [
   // [index, 卦名, 英文, 上卦(trigram), 下卦, 属性, 市场含义, 建议, 彖辞]
@@ -17247,14 +16884,12 @@ renderGann = function(price) {
 };
 
 
-// ╔══════════════════════════════════════════════════════════════════════╗
 // ║  FINCH MODULE 6 — 江恩周期图表 (Gann Cycle Charts)                  ║
 // ║  图表类型：                                                           ║
 // ║  1. Sq9 螺旋：价格从1向外螺旋，标注当前价附近节点                    ║
 // ║  2. 时间周期图：横轴=时间，纵轴=价格，叠加所有时间节点竖线           ║
 // ║  3. 角度射线：K线图上叠加1×1/2×1/1×2/4×1角度线                     ║
 // ║  4. 时间之轮：360°圆形，过去/未来节点按角度分布                      ║
-// ╚══════════════════════════════════════════════════════════════════════╝
 
 function openGannCycleModal() {
   const modal = document.getElementById('gannCycleModal');
@@ -18092,10 +17727,8 @@ switchMobileModTab = function(tab, btn) {
 (function() {
 'use strict';
 
-// ════════════════════════════════════════════════════════════
 // MODULE 1: 贝叶斯信号聚合器 — 替代简单加权求和
 // BayesianSignalAggregator: replaces raw score summation
-// ════════════════════════════════════════════════════════════
 class BayesianSignalAggregator {
   constructor() {
     // 每个信号类型的历史似然比 (从学习数据初始化)
@@ -18203,10 +17836,8 @@ class BayesianSignalAggregator {
   }
 }
 
-// ════════════════════════════════════════════════════════════
 // MODULE 2: 市场状态分类器 — MarketRegimeClassifier
 // 精确分类：趋势多/趋势空/震荡/高波/低波
-// ════════════════════════════════════════════════════════════
 class MarketRegimeClassifier {
   constructor() {
     this.regimes = ['trending_bull', 'trending_bear', 'ranging', 'volatile', 'quiet'];
@@ -18363,10 +17994,8 @@ class MarketRegimeClassifier {
   }
 }
 
-// ════════════════════════════════════════════════════════════
 // MODULE 3: 信号质量评估体系 — SignalQualityAssessor
 // 输出 A/B/C/D 等级 + 推荐操作强度
-// ════════════════════════════════════════════════════════════
 class SignalQualityAssessor {
   assess(res, regime) {
     if (!res) return { grade: 'D', score: 0, action: 'skip', factors: {} };
@@ -18457,10 +18086,8 @@ class SignalQualityAssessor {
   }
 }
 
-// ════════════════════════════════════════════════════════════
 // MODULE 4: 动态仓位计算器 — DynamicPositionSizer
 // Kelly公式 + 市场状态乘数 + 波动率调整
-// ════════════════════════════════════════════════════════════
 class DynamicPositionSizer {
   calculate(res, regime, accountRiskPct = 2.0) {
     if (!res || !res.rr) return { kelly: 0, recommended: accountRiskPct * 0.5, label: '数据不足' };
@@ -18508,10 +18135,8 @@ class DynamicPositionSizer {
   }
 }
 
-// ════════════════════════════════════════════════════════════
 // MODULE 5: 策略绩效监控 — StrategyMonitor
 // 实时跟踪信号质量退化
-// ════════════════════════════════════════════════════════════
 class StrategyMonitor {
   constructor() {
     this.data = this._load();
@@ -18580,10 +18205,8 @@ class StrategyMonitor {
   }
 }
 
-// ════════════════════════════════════════════════════════════
 // MODULE 6: 数据异常检测器 — DataValidator
 // 过滤假突破/数据缺口/价格尖刺
-// ════════════════════════════════════════════════════════════
 class DataValidator {
   validate(klines) {
     if (!klines || klines.length < 5) return { valid: false, reason: 'insufficient_data', confidence: 0.3 };
@@ -18641,10 +18264,8 @@ class DataValidator {
   }
 }
 
-// ════════════════════════════════════════════════════════════
 // MODULE 7: 自适应权重优化器 — AdaptiveWeightOptimizer
 // 基于近期回测绩效，在线调整信号权重 (强化学习思路)
-// ════════════════════════════════════════════════════════════
 class AdaptiveWeightOptimizer {
   constructor() {
     this.weights = this._load();
@@ -18718,10 +18339,8 @@ class AdaptiveWeightOptimizer {
   }
 }
 
-// ════════════════════════════════════════════════════════════
 // MODULE 8: 信号可解释性层 — SignalExplainer
 // 生成自然语言分析摘要
-// ════════════════════════════════════════════════════════════
 class SignalExplainer {
   explain(res, quality, regime, posSize) {
     if (!res) return { summary: '暂无数据', bullets: [] };
@@ -18761,9 +18380,7 @@ class SignalExplainer {
   }
 }
 
-// ════════════════════════════════════════════════════════════
 // INSTANTIATE ALL MODULES
-// ════════════════════════════════════════════════════════════
 const FINCH_V43 = {
   bayesian:    new BayesianSignalAggregator(),
   regime:      new MarketRegimeClassifier(),
@@ -18778,10 +18395,8 @@ const FINCH_V43 = {
 };
 window.FINCH_V43 = FINCH_V43;
 
-// ════════════════════════════════════════════════════════════
 // INTEGRATION: 增强 _Φ9x 输出 — 注入贝叶斯+质量评估
 // 在每次策略引擎运行后自动执行，无侵入
-// ════════════════════════════════════════════════════════════
 const _orig_Phi9x = typeof _Φ9x === 'function' ? _Φ9x : null;
 if (_orig_Phi9x) {
   window._Φ9x = function(tf) {
@@ -18838,9 +18453,7 @@ if (_orig_Phi9x) {
   };
 }
 
-// ════════════════════════════════════════════════════════════
 // INTEGRATION: 增强 renderSummary — 在结果面板中注入v43信息卡
-// ════════════════════════════════════════════════════════════
 const _orig_renderSummary = typeof renderSummary === 'function' ? renderSummary : null;
 if (_orig_renderSummary) {
   window.renderSummary = function() {
@@ -18950,9 +18563,7 @@ if (_orig_renderSummary) {
   };
 }
 
-// ════════════════════════════════════════════════════════════
 // INTEGRATION: 增强回测引擎 — 每次回测后更新贝叶斯+自适应权重
-// ════════════════════════════════════════════════════════════
 const _orig_learnFromBacktest = typeof learnFromBacktest === 'function' ? learnFromBacktest : null;
 if (_orig_learnFromBacktest) {
   window.learnFromBacktest = function(btResult) {
@@ -18974,9 +18585,7 @@ if (_orig_learnFromBacktest) {
   };
 }
 
-// ════════════════════════════════════════════════════════════
 // UI: v43 状态指示器 (右上角小徽章)
-// ════════════════════════════════════════════════════════════
 function _injectV43Badge() {
   if (document.getElementById('finch_v43_badge')) return;
   const badge = document.createElement('div');
@@ -18993,26 +18602,9 @@ function _injectV43Badge() {
   document.body.appendChild(badge);
 }
 
-// ════════════════════════════════════════════════════════════
 // CONSOLE SUMMARY on load
-// ════════════════════════════════════════════════════════════
 function _v43Init() {
   _injectV43Badge();
-  console.log(
-    '%c[FINCH]%c 量化增强包已就绪\n' +
-    '  ✅ BayesianSignalAggregator  — 贝叶斯信号聚合\n' +
-    '  ✅ MarketRegimeClassifier    — 市场状态分类 (Hurst+ADX)\n' +
-    '  ✅ SignalQualityAssessor     — 信号质量评级 A/B/C/D\n' +
-    '  ✅ DynamicPositionSizer      — 动态仓位 (Kelly公式)\n' +
-    '  ✅ StrategyMonitor           — 策略退化检测\n' +
-    '  ✅ DataValidator             — 数据异常检测\n' +
-    '  ✅ AdaptiveWeightOptimizer   — 自适应权重学习\n' +
-    '  ✅ SignalExplainer           — 信号可解释性层\n' +
-    '  Access via: window.FINCH_V43',
-    'color:#8B6914;font-weight:bold',
-    'color:inherit'
-  );
-}
 
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', _v43Init);
@@ -19024,15 +18616,11 @@ if (document.readyState === 'loading') {
 </script>
 
 <script>
-// ╔══════════════════════════════════════════════════════════════════════╗
 // ║  FINCH v44 — 风险管理系统 · 入场有效期 · 动态止损 · 组合风险管理       ║
-// ╚══════════════════════════════════════════════════════════════════════╝
 (function() {
 'use strict';
 
-// ════════════════════════════════════════════════════════════
 // RISK PROFILES — 5档风险偏好配置
-// ════════════════════════════════════════════════════════════
 const RISK_PROFILES = {
   1: {
     name: '保守型', emoji: '🛡️', color: '#1A6B3A',
@@ -19081,9 +18669,7 @@ const RISK_PROFILES = {
   }
 };
 
-// ════════════════════════════════════════════════════════════
 // RISK STATE — persisted to localStorage
-// ════════════════════════════════════════════════════════════
 const V44_STATE = {
   riskLevel: 3,
   customOverrides: {},   // User-edited fields
@@ -19107,16 +18693,12 @@ const V44_STATE = {
 };
 V44_STATE._load();
 
-// ════════════════════════════════════════════════════════════
-// ═══════════════════════════════════════════════════════════════════════════
 // TP/SL CALCULATOR v59 — 华尔街级别风控 · 趋势对齐 · 结构锚定
-// ═══════════════════════════════════════════════════════════════════════════
 // 核心原则：
 // 1. TP/SL方向必须与交易方向一致（long→TP上/SL下，short→TP下/SL上）
 // 2. 基于真实市场结构（swing pivots）而非纯ATR距离
 // 3. 最小R:R保护（拒绝低赔率交易）
 // 4. 波动率自适应（高波动时加宽止损，避免噪音扫损）
-// ═══════════════════════════════════════════════════════════════════════════
 function v44CalcLevels(entry, atr, direction, profile, swingHighs, swingLows) {
   if (!entry || !atr || !direction) return null;
   profile = profile || V44_STATE.getProfile();
@@ -19266,15 +18848,12 @@ function _getHVRatio() {
   } catch(e) { return 1.0; }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
 // MODULE: EntryValidityMonitor v59 — 信号有效期追踪 · 华尔街级执行窗口
-// ═══════════════════════════════════════════════════════════════════════════
 // 核心机制:
 // 1. 基准有效期: 45分钟（1H交易）到720分钟（4H交易）
 // 2. 波动率调整: 高波动缩短30%，低波动延长20%
 // 3. 价格逆向监控: 超过0.4×SL距离即失效
 // 4. 结构突破监控: 关键支撑阻力突破即失效
-// ═══════════════════════════════════════════════════════════════════════════
 class EntryValidityMonitor {
   constructor() {
     this.activeSignals = new Map();
@@ -19467,9 +19046,7 @@ class EntryValidityMonitor {
   }
 }
 
-// ════════════════════════════════════════════════════════════
 // MODULE: DynamicStopManager — 动态止损管理
-// ════════════════════════════════════════════════════════════
 class DynamicStopManager {
   constructor(positionId, entry, initSL, direction, tf, riskProfile) {
     this.posId    = positionId;
@@ -19560,9 +19137,7 @@ class DynamicStopManager {
   }
 }
 
-// ════════════════════════════════════════════════════════════
 // MODULE: PortfolioRiskManager — 组合相关性风险管理
-// ════════════════════════════════════════════════════════════
 class PortfolioRiskManager {
   constructor() {
     // Static crypto correlation estimates (coarse but useful)
@@ -19641,9 +19216,7 @@ class PortfolioRiskManager {
   }
 }
 
-// ════════════════════════════════════════════════════════════
 // MODULE: PriceCalibrator — 多源价格验证与异常校准
-// ════════════════════════════════════════════════════════════
 class PriceCalibrator {
   constructor() {
     this.history = new Map(); // sym -> [{ts, price}]
@@ -19699,9 +19272,7 @@ class PriceCalibrator {
   }
 }
 
-// ════════════════════════════════════════════════════════════
 // INSTANTIATE v44 MODULES
-// ════════════════════════════════════════════════════════════
 const FINCH_V44 = {
   state:       V44_STATE,
   profiles:    RISK_PROFILES,
@@ -19729,9 +19300,7 @@ const FINCH_V44 = {
 };
 window.FINCH_V44 = FINCH_V44;
 
-// ════════════════════════════════════════════════════════════
 // UI FUNCTIONS — Risk Selector
-// ════════════════════════════════════════════════════════════
 window.v44SetRisk = function(level, btn) {
   V44_STATE.riskLevel = level;
   V44_STATE.customOverrides = {}; // Reset overrides on preset change
@@ -19804,9 +19373,7 @@ window.v44ApplyRiskConfig = function() {
   if (badge && profile) badge.textContent = `⚙️ ${profile.name} | R:R≥${profile.minRR} | TP×${profile.tpMultiplier}`;
 })();
 
-// ════════════════════════════════════════════════════════════
 // INTEGRATION: Patch _Φ9x to use risk-profile-adjusted TP/SL
-// ════════════════════════════════════════════════════════════
 const _prevPhi9x = typeof window._Φ9x === 'function' ? window._Φ9x : (typeof _Φ9x === 'function' ? _Φ9x : null);
 if (_prevPhi9x) {
   window._Φ9x = function(tf) {
@@ -19857,9 +19424,7 @@ if (_prevPhi9x) {
   };
 }
 
-// ════════════════════════════════════════════════════════════
 // INTEGRATION: Patch renderSummary to show v44 risk panel
-// ════════════════════════════════════════════════════════════
 const _prevRenderSummary = typeof window.renderSummary === 'function' ? window.renderSummary : null;
 if (_prevRenderSummary) {
   window.renderSummary = function() {
@@ -19953,10 +19518,8 @@ if (_prevRenderSummary) {
   };
 }
 
-// ════════════════════════════════════════════════════════════
 // INTEGRATION: Patch paper trading to enforce risk limits
 // and auto-apply risk-adjusted TP/SL
-// ════════════════════════════════════════════════════════════
 const _prevFillFromSignal = typeof window.fillFromSignal === 'function' ? window.fillFromSignal : null;
 if (_prevFillFromSignal) {
   window.fillFromSignal = function() {
@@ -19992,10 +19555,8 @@ if (_prevFillFromSignal) {
   };
 }
 
-// ════════════════════════════════════════════════════════════
 // INTEGRATION: Patch openPaperTrade to add stop manager
 // and update portfolio tracker
-// ════════════════════════════════════════════════════════════
 const _prevOpenPaperTrade = typeof window.openPaperTrade === 'function' ? window.openPaperTrade : null;
 if (_prevOpenPaperTrade) {
   window.openPaperTrade = function() {
@@ -20026,9 +19587,7 @@ if (_prevOpenPaperTrade) {
   };
 }
 
-// ════════════════════════════════════════════════════════════
 // INTEGRATION: Patch closePaperPosition to sync portfolio
-// ════════════════════════════════════════════════════════════
 const _prevClosePos = typeof window.closePaperPosition === 'function' ? window.closePaperPosition : null;
 if (_prevClosePos) {
   window.closePaperPosition = function(id, closePrice, reason) {
@@ -20040,49 +19599,28 @@ if (_prevClosePos) {
   };
 }
 
-// ════════════════════════════════════════════════════════════
 // TICKER: Update validity countdown badge every 30s
-// ════════════════════════════════════════════════════════════
 // v44 validity badge moved to unified refreshLoop (every 30s)
 // setInterval removed to eliminate duplicate timer
 
-// ════════════════════════════════════════════════════════════
 // CONSOLE SUMMARY
-// ════════════════════════════════════════════════════════════
 setTimeout(function() {
   const p = V44_STATE.getProfile();
-  console.log(
-    '%c[FINCH v44]%c 风险管理系统已就绪\n' +
-    `  当前风险偏好: ${p.emoji} ${p.name} (等级${V44_STATE.riskLevel})\n` +
-    '  ✅ RISK_PROFILES           — 5档风险配置\n' +
-    '  ✅ EntryValidityMonitor    — 信号有效期追踪\n' +
-    '  ✅ DynamicStopManager      — 动态止损(成本价/追踪/超时)\n' +
-    '  ✅ PortfolioRiskManager    — 组合相关性风险管理\n' +
-    '  ✅ PriceCalibrator         — 多源价格异常校准\n' +
-    '  ✅ Risk-Adjusted TP/SL     — 基于风险偏好重算止盈止损\n' +
-    '  Access via: window.FINCH_V44',
-    'color:#A07820;font-weight:bold', 'color:inherit'
-  );
-}, 1200);
 
 })(); // end FINCH v44 IIFE
 </script>
 
 <script>
-// ╔══════════════════════════════════════════════════════════════════════════╗
 // ║  FINCH v45 — 智能入场时机引擎 · Smart Entry Timing Engine                ║
 // ║  核心功能：                                                               ║
 // ║  1. 分析 limit order 的有效时间窗口（预测价格回归的概率和时间）               ║
 // ║  2. 警告：如果挂单方向与行情趋势相反，主动提示撤单                           ║
 // ║  3. 实时更新：每30秒重算，显示"今天 14:30 MYT 前有 68% 概率触及 65500"       ║
 // ║  4. 升级回测：Walk-Forward + 多因子信号质量学习                              ║
-// ╚══════════════════════════════════════════════════════════════════════════╝
 (function() {
 'use strict';
 
-// ════════════════════════════════════════════════════════════
 // SMART ENTRY TIMING ENGINE — 智能入场时机分析
-// ════════════════════════════════════════════════════════════
 window.FINCH_V45 = window.FINCH_V45 || {};
 
 // ── Price path probability engine ──
@@ -20435,10 +19973,8 @@ if (_origRenderStrategy) {
   };
 }
 
-// ════════════════════════════════════════════════════════════
 // ENHANCED BACKTEST ENGINE v45
 // Walk-Forward Optimization + signal decay detection
-// ════════════════════════════════════════════════════════════
 window.FINCH_V45.backtest = {
 
   // Walk-forward backtest: split data into train/test segments
@@ -20500,14 +20036,12 @@ window.FINCH_V45.backtest = {
   }
 };
 
-// ════════════════════════════════════════════════════════════
 // ENHANCED SELF-LEARNING v45
 // Learns from signal-to-outcome with MORE factors:
 // - Which TF had highest accuracy for each symbol
 // - ATR ratio at entry (was entry tight or loose?)
 // - Trend alignment at signal generation time
 // - Signal decay detection (monthly refresh)
-// ════════════════════════════════════════════════════════════
 window.FINCH_V45.learning = {
   STORAGE_KEY: 'finch_v45_signal_outcomes',
   MAX_RECORDS: 500,
@@ -20620,13 +20154,11 @@ window.FINCH_V45.learning = {
 // Auto-render learning insights every 5 minutes
 // FINCH_V45.learning.renderInsights moved to unified refreshLoop (every 5min)
 
-// ════════════════════════════════════════════════════════════
 // ENHANCED SIGNAL VALIDITY v45
 // Upgrades the existing v44 EntryValidityMonitor with:
 // - Smarter expiry: based on ATR-path probability dropping below 25%
 // - Live conflict detection: warns when limit price becomes adversarial
 // - MYT time display in human-readable format
-// ════════════════════════════════════════════════════════════
 window.FINCH_V45.enhanceValidity = function() {
   if (typeof FINCH_V44 === 'undefined') return;
   const origCreate = FINCH_V44.validity.createSignal.bind(FINCH_V44.validity);
@@ -20645,10 +20177,8 @@ window.FINCH_V45.enhanceValidity = function() {
   };
 };
 
-// ════════════════════════════════════════════════════════════
 // ENHANCED BACKTEST RENDERING
 // Adds walk-forward results to the existing backtest panel
-// ════════════════════════════════════════════════════════════
 const _origRunBacktest = typeof window.runFinchBacktest === 'function' ? window.runFinchBacktest : null;
 if (_origRunBacktest) {
   window.runFinchBacktest = function() {
@@ -20707,9 +20237,7 @@ if (_origRunBacktest) {
   };
 }
 
-// ════════════════════════════════════════════════════════════
 // INIT
-// ════════════════════════════════════════════════════════════
 setTimeout(function() {
   try { FINCH_V45.enhanceValidity(); } catch(e) {}
   try { FINCH_V45.learning.renderInsights(); } catch(e) {}
@@ -20721,23 +20249,10 @@ setTimeout(function() {
   // Update title
   document.title = 'FINCH v48 — 全维度市场分析 · 信号窗口追踪';
 
-  console.log(
-    '%c[FINCH v45]%c 智能入场时机引擎已就绪\n' +
-    '  ✅ SmartEntryTiming      — 预测 limit order 触价时间窗口\n' +
-    '  ✅ TrendConflictDetect   — 挂单方向 vs 趋势冲突预警\n' +
-    '  ✅ WalkForwardBacktest   — 样本外验证 (更真实)\n' +
-    '  ✅ EnhancedSelfLearning  — 多因子学习 (TF/趋势/ATR)\n' +
-    '  ✅ BinancePureData       — 无需 Alpha Vantage API Key\n' +
-    '  Access via: window.FINCH_V45',
-    'color:#8B6914;font-weight:bold', 'color:inherit'
-  );
-}, 1500);
 
 })(); // end FINCH v45 IIFE
 
-// ════════════════════════════════════════════════════════════════════
 // FINCH v46 — ENTRY PRICE TEMPORAL VALIDITY + DRUCKENMILLER FRAMEWORK
-// ════════════════════════════════════════════════════════════════════
 // Two pillars:
 //   1. EntryPriceShelfLife  — "Is my $70,550 BTC entry still actionable?"
 //      ATR-decay model: each candle that passes erodes the probability
@@ -20749,7 +20264,6 @@ setTimeout(function() {
 //      Liquidity 35% · Forward Earnings 25% · Market Breadth 25% · Price Signal 15%
 //      Fat Pitch threshold: score ≥ 80  → heavy position
 //      Five-tier position map identical to the original skill spec.
-// ════════════════════════════════════════════════════════════════════
 (function() {
 'use strict';
 
@@ -20774,7 +20288,6 @@ function _atrFromKlines(klines, period) {
   return trs.slice(-period).reduce((s,v)=>s+v,0) / period;
 }
 
-// ════════════════════════════════════════════════════════════════════
 // MODULE 1: ENTRY SIGNAL WINDOW
 // The core question: "How many more candles until my entry price
 // analysis goes stale and I need a fresh re-read?"
@@ -20787,7 +20300,6 @@ function _atrFromKlines(klines, period) {
 //   • If price stays within 0.5×ATR → fresh (green).
 //   • Hard cap: even with perfect proximity, signal expires after
 //     the canonical bars-per-timeframe window.
-// ════════════════════════════════════════════════════════════════════
 window.FINCH_V46 = window.FINCH_V46 || {};
 
 window.FINCH_V46.shelfLife = {
@@ -21051,7 +20563,6 @@ window.FINCH_V46.shelfLife = {
   }
 };
 
-// ════════════════════════════════════════════════════════════════════
 // MODULE 2: DRUCKENMILLER CONVICTION FRAMEWORK
 // "Liquidity drives markets, not earnings." — S. Druckenmiller
 //
@@ -21062,7 +20573,6 @@ window.FINCH_V46.shelfLife = {
 //   Price Signal    15%  — Tape reading, momentum, structure
 //
 // Score 0–100 → 5-tier position map (Fat Pitch / High / Neutral / Low / Capital Preservation)
-// ════════════════════════════════════════════════════════════════════
 window.FINCH_V46.druckenmiller = {
 
   WEIGHTS: { liquidity: 0.35, forwardEarnings: 0.25, breadth: 0.25, priceSignal: 0.15 },
@@ -21318,11 +20828,9 @@ window.FINCH_V46.druckenmiller = {
   }
 };
 
-// ════════════════════════════════════════════════════════════════════
 // INTEGRATION: Hook into the existing analysis render pipeline
 // We inject v46 cards into the strategy analysis area after each
 // analysis run, inserting them just below the Conviction Score block.
-// ════════════════════════════════════════════════════════════════════
 (function() {
   // CSS for v46 elements
   const style = document.createElement('style');
@@ -21449,7 +20957,6 @@ window.FINCH_V46.druckenmiller = {
     });
 
     observer.observe(stratScroll, { childList: true, subtree: true });
-    console.log('[FINCH v48] MutationObserver 已就绪 — 等待分析渲染');
   }
 
   // Also patch the _Φ9x function directly if it exists
@@ -21468,8 +20975,6 @@ window.FINCH_V46.druckenmiller = {
           }
           return result;
         };
-        console.log(`[FINCH v48] 已拦截 ${fn} (仅缓存结果)`);
-      }
     }
   }
 
@@ -21603,18 +21108,6 @@ window.FINCH_V46.druckenmiller = {
     // version label removed
     document.title = 'FINCH v52 — 全维度市场分析 · Regime-Adaptive Signal Engine';
 
-    console.log(
-      '%c[FINCH]%c 信号窗口引擎已就绪\n' +
-      '  ✅ SignalWindow (replaces "shelf life") — 10秒原地更新 (无DOM替换/无闪退)\n' +
-      '  ✅ In-place field update              — data-sw属性定向更新，不替换节点\n' +
-      '  ✅ Double-inject guard                — _injectInProgress锁 + 600ms debounce\n' +
-      '  ✅ Auto-reanalysis cooldown 180s      — 仅触发renderStrategy，不级联\n' +
-      '  ✅ Trend context block                — 市场结构/CHoCH/趋势一致性显示\n' +
-      '  ✅ DruckenmillerScore                 — 流动性35% · 前瞻盈利25% · 广度25% · 读盘15%\n' +
-      
-      'color:#8B6914;font-weight:bold','color:inherit'
-    );
-  }, 2000);
 })();
 
 })(); // end FINCH v46 IIFE
@@ -21632,10 +21125,8 @@ window.FINCH_V46.druckenmiller = {
 
 // === SIGNAL ENHANCEMENT PATCH ===
 
-// ═══════════════════════════════════════════════════════════════════════════
 // 模块1: SignalHistoryTracker — 信号历史胜率追踪
 // 每个信号附带历史胜率+样本数，实时更新，localStorage持久化
-// ═══════════════════════════════════════════════════════════════════════════
 class SignalHistoryTracker {
   constructor() {
     this._store = this._load();
@@ -21708,10 +21199,8 @@ class SignalHistoryTracker {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
 // 模块2: EntryWindowManager — 入场时间窗口系统
 // 每个入场建议附带「保质期」：过时/偏离则自动标记为「已过期」
-// ═══════════════════════════════════════════════════════════════════════════
 class EntryWindowManager {
   constructor() {
     this._windows = {};
@@ -21857,11 +21346,9 @@ class EntryWindowManager {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
 // 模块3: TF_SCALE — 多时间框架TP/SL缩放系数
 // 按 √(时间) 缩放，修正"4H和8H目标差不多"的问题
 // 原理：价格随机游走，方差∝时间，标准差∝√时间
-// ═══════════════════════════════════════════════════════════════════════════
 const TF_SCALE_V53 = {
   '15m': { scale: 1.00, maxHoldBars: 8  },
   '30m': { scale: 1.41, maxHoldBars: 12 },
@@ -21905,10 +21392,8 @@ function _v53_scaledTargets(res) {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
 // 模块4: ArgumentTree — 论据树 + 失效价系统
 // 每个论据有独立「失效价」，综合失效阈值触发「立即离场」
-// ═══════════════════════════════════════════════════════════════════════════
 class ArgumentTree {
   build(res, sigTracker) {
     if (!res) return null;
@@ -22098,10 +21583,8 @@ class ArgumentTree {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
 // 模块5: DynamicPositionSizer_V53 — 增强版动态仓位
 // Kelly + 波动率调整 + 最大回撤 + 分层建议（保守/标准/激进）
-// ═══════════════════════════════════════════════════════════════════════════
 class DynamicPositionSizer_V53 {
   calculate(res, sigTracker) {
     if (!res) return null;
@@ -22199,10 +21682,8 @@ class DynamicPositionSizer_V53 {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
 // 模块6: LiveSignalRecord — 实盘验证记录
 // 自动记录模拟盘信号，展示最近N笔胜率/盈亏因子
-// ═══════════════════════════════════════════════════════════════════════════
 class LiveSignalRecord {
   constructor() {
     this.data = this._load();
@@ -22361,9 +21842,7 @@ class LiveSignalRecord {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
 // FINCH_V53 命名空间 — 实例化所有新模块
-// ═══════════════════════════════════════════════════════════════════════════
 const FINCH_V53 = {
   sigTracker:   new SignalHistoryTracker(),
   entryWindow:  new EntryWindowManager(),
@@ -22376,10 +21855,8 @@ const FINCH_V53 = {
 };
 window.FINCH_V53 = FINCH_V53;
 
-// ═══════════════════════════════════════════════════════════════════════════
 // UI集成：Hook into renderStrategy / _doRenderStrategy
 // 注入v53增强模块到现有渲染流程（MutationObserver策略，无侵入）
-// ═══════════════════════════════════════════════════════════════════════════
 (function _v53_hookRender() {
   // 等待原始renderStrategy存在后再Hook
   let _hookedRS = false;
@@ -22520,18 +21997,6 @@ function _v53_injectPanels() {
 setTimeout(function() {
   // v69: brand-sub no longer shows version number
   document.title = 'FINCH — 全维度市场分析';
-  console.log(
-    '%c[FINCH v53]%c 六模块信号强化系统已就绪\n' +
-    '  ✅ 模块1 SignalHistoryTracker  — 信号历史胜率排行\n' +
-    '  ✅ 模块2 EntryWindowManager    — 入场时间窗口(保质期)\n' +
-    '  ✅ 模块3 TF_SCALE / √时间缩放  — 多周期TP/SL修正\n' +
-    '  ✅ 模块4 ArgumentTree          — 论据树+失效价系统\n' +
-    '  ✅ 模块5 DynamicPositionSizer  — Kelly+波动率+分层\n' +
-    '  ✅ 模块6 LiveSignalRecord       — 实盘验证记录\n' +
-    '  Access via: window.FINCH_V53',
-    'color:#8B6914;font-weight:bold','color:inherit'
-  );
-}, 2500);
 
 // === PATCH v53 END ===
 
@@ -22544,9 +22009,7 @@ setTimeout(function() {
      设计哲学: PTJ · Druckenmiller · Kovner · Livermore
      ═══════════════════════════════════════════════════════════════════ -->
 <script>
-// ═══════════════════════════════════════════════════════════════════════════
 // FINCH v75 — PRO TRADER DECISION ENGINE
-// ═══════════════════════════════════════════════════════════════════════════
 //
 // 顶级交易员思维框架:
 //   Paul Tudor Jones:   "最重要的规则是防守，不是进攻。但当机会出现时，要重仓。"
@@ -22568,7 +22031,6 @@ setTimeout(function() {
 //   层4 — 信号质量评级 (Signal Quality): A/B/C分级，不拦截
 //   层5 — 输出 (永远输出信号，只区分质量高低)
 //
-// ═══════════════════════════════════════════════════════════════════════════
 
 (function() {
 'use strict';
@@ -22580,9 +22042,7 @@ const _sp = v => (v > 0 && isFinite(v)) ? v : null;
 // ── 保留原始引擎引用 ──────────────────────────────────────────────────────
 const _baseEngine = window._Φ9x;
 
-// ═══════════════════════════════════════════════════════════════════════════
 // PRO TRADER ENGINE — 主引擎覆盖
-// ═══════════════════════════════════════════════════════════════════════════
 window._Φ9x = function(tf) {
 
   // ── Step 1: 调基础引擎获取所有技术数据 ──────────────────────────────
@@ -22619,12 +22079,10 @@ window._Φ9x = function(tf) {
   const atrC = _sp(atr) || price * 0.015;
   const fmtP = typeof window.fmtP === 'function' ? window.fmtP : p => p?.toFixed(2);
 
-  // ═══════════════════════════════════════════════════════════════════
   // LAYER 1 — 方向裁决器 (Direction Judge)
   // 顶级交易员方法: 把所有指标分成「告诉我方向」的投票
   // 设计: 每个维度最多1票，不同维度真正独立
   // 输出: bullScore, bearScore, direction, conviction (0-100)
-  // ═══════════════════════════════════════════════════════════════════
 
   const VOTES = [];
   // vote(name, direction, weight, reason)
@@ -22755,10 +22213,8 @@ window._Φ9x = function(tf) {
   // 只有真正中性(dominance<10%)才输出WAIT
   const DIRECTION_THRESHOLD = 0.10; // 10%优势就出信号
 
-  // ═══════════════════════════════════════════════════════════════════
   // LAYER 2 — 置信度计算 (不依赖历史记录)
   // 基于信号结构质量，而非胜率数据库
-  // ═══════════════════════════════════════════════════════════════════
 
   // 置信度由5个独立因素决定:
   // 1. 方向强度 (dominance)
@@ -22816,14 +22272,12 @@ window._Φ9x = function(tf) {
 
   conf = Math.min(90, Math.max(30, Math.round(conf)));
 
-  // ═══════════════════════════════════════════════════════════════════
   // LAYER 3 — 精准入场引擎 (Precise Entry)
   // 顶级交易员入场原则:
   //   - 在结构支撑/阻力入场，不在价格中部
   //   - 趋势市: 突破后回踩入场
   //   - 震荡市: 区间边缘入场
   //   - 永远不追涨杀跌超过0.5%
-  // ═══════════════════════════════════════════════════════════════════
 
   let entry = baseEntry || price;
   let entryNoteNew = entryNote || '';
@@ -22863,7 +22317,6 @@ window._Φ9x = function(tf) {
   // 最终确保有效
   entry = Math.max(0.001, Math.round(entry * 10000) / 10000);
 
-  // ═══════════════════════════════════════════════════════════════════
   // LAYER 4 — 专业TP/SL引擎
   // PTJ原则: "止损放在市场证明我错了的地方，不放在我害怕亏损的地方"
   //
@@ -22872,7 +22325,6 @@ window._Φ9x = function(tf) {
   //   1h/2h:   2.0-3.0:1 (日内·结构)
   //   4h/8h:   2.5-4.0:1 (波段·趋势)
   //   1d/1w:   3.0-5.0:1 (趋势·持仓)
-  // ═══════════════════════════════════════════════════════════════════
 
   // 时框参数
   const TF_PARAMS = {
@@ -23165,14 +22617,12 @@ window._Φ9x = function(tf) {
   const tpDist = Math.abs(tps[0].p - entry);
   const rr = slDist > 0 ? Math.round(tpDist / slDist * 100) / 100 : 2.0;
 
-  // ═══════════════════════════════════════════════════════════════════
   // LAYER 5 — 信号质量评级 + 输出决策
   // 顶级交易员原则: 永远输出信号，只区分质量
   // A级: 强信号(多因素共振) → 全仓  
   // B级: 中等信号         → 半仓
   // C级: 弱信号(方向但不强) → 1/4仓
   // WAIT: 仅在方向完全中性时(<10%优势)
-  // ═══════════════════════════════════════════════════════════════════
 
   // 信号质量评级
   let signalGrade = 'C', gradeReason = '', positionSizePct = 25;
@@ -23427,33 +22877,20 @@ window._GannAdvanced = function() {
   return { timeWindow: false, windowSummary: '', priceSquare: [], cycleStrength: 0, windows: [] };
 };
 
-console.log('%c[FINCH v75]%c 顶级交易员引擎已就绪\n' +
-  '  ✅ 方向裁决器 (7维度加权投票·永远输出信号)\n' +
-  '  ✅ 结构性TP/SL (PTJ原则·结构失效点止损)\n' +
-  '  ✅ 动态置信度 (基于信号质量·不依赖历史记录)\n' +
-  '  ✅ A/B/C信号分级 (替代二元WAIT/GO)\n' +
-  '  ✅ 仅方向完全中性(<10%优势)才WAIT\n' +
-  '  理念: "当条件满足时重仓，不追求完美共识" — Druckenmiller',
-  'color:#8B6914;font-weight:bold','color:inherit');
-
 })(); // END v75 Pro Trader Engine
 </script>
-
-
 
 
 <!-- ═══════════════════════════════════════════════════════════════════
      FINCH v54b — 5项核心逻辑修复
      ═══════════════════════════════════════════════════════════════════ -->
 <script>
-// ═══════════════════════════════════════════════════════════════════════════
 // FINCH v54b — 5项核心逻辑修复
 // Fix 1: _GannAdvanced null crash → 安全包装
 // Fix 2: _bTP/_bSL → ATR倍数 (TP 3/5/8×ATR, SL 1.5/2.5/3.5×ATR)
 // Fix 3: mock数据禁止产生信号
 // Fix 4: SignalHistoryTracker 删除假种子数据
 // Fix 5: 回测禁用 + 冷却期顶栏显示
-// ═══════════════════════════════════════════════════════════════════════════
 (function _FINCH_V54B() {
 'use strict';
 
@@ -23845,9 +23282,7 @@ const V70 = {
 };
 window._FINCH_V70 = V70;
 
-// ═══════════════════════════════════════════════════════════════════════════
 // SECTION 1 — ADDITIONAL INDICATORS
-// ═══════════════════════════════════════════════════════════════════════════
 
 function _calcCCI(kl, period=20) {
   if (!kl || kl.length < period) return { cci: 0, overbought: false, oversold: false, trend: 0 };
@@ -24057,9 +23492,7 @@ function _calcMomentum(prices) {
   };
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
 // SECTION 2 — PATTERN RECOGNITION (20+ patterns)
-// ═══════════════════════════════════════════════════════════════════════════
 
 function _detectPatterns(kl) {
   if (!kl || kl.length < 30) return [];
@@ -24282,9 +23715,7 @@ function _detectPatterns(kl) {
   return patterns.slice(0, 8); // max 8 patterns
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
 // SECTION 3 — FIBONACCI RESONANCE
-// ═══════════════════════════════════════════════════════════════════════════
 
 function _calcFibResonance(kl) {
   if (!kl || kl.length < 20) return null;
@@ -24343,9 +23774,7 @@ function _calcFibResonance(kl) {
   };
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
 // SECTION 4 — PRECISE CVD via WebSocket AggTrades
-// ═══════════════════════════════════════════════════════════════════════════
 
 function _startCVDWebSocket(sym) {
   if (!sym) return;
@@ -24432,9 +23861,7 @@ function _getCVDPrecise(sym) {
   };
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
 // SECTION 5 — OI + FUNDING RATE MATRIX (professional grade)
-// ═══════════════════════════════════════════════════════════════════════════
 
 async function _fetchOIFRMatrix(sym) {
   const binanceSym = sym.replace('/', '');
@@ -24486,9 +23913,7 @@ async function _fetchOIFRMatrix(sym) {
   return state;
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
 // SECTION 6 — MULTI-TIMEFRAME STATE MATRIX
-// ═══════════════════════════════════════════════════════════════════════════
 
 function _buildMTFMatrix(sym) {
   const tfs = ['15m', '1h', '4h', '1d'];
@@ -24607,9 +24032,7 @@ function _renderMTFMatrix(sym) {
   el.innerHTML = html;
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
 // SECTION 7 — 15-FACTOR VOTING SYSTEM
-// ═══════════════════════════════════════════════════════════════════════════
 
 function _compute15FactorVote(sym, tf) {
   const kl = _safe(() => window.S && S.klines[sym+tf]) || [];
@@ -24867,9 +24290,7 @@ function _renderVotePanel(sym, tf) {
   el.innerHTML = html;
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
 // SECTION 8 — ENHANCED INDICATORS PANEL
-// ═══════════════════════════════════════════════════════════════════════════
 
 function _renderEnhancedIndicators(sym, tf) {
   const el = document.getElementById('v70indPanel');
@@ -24995,9 +24416,7 @@ function _renderEnhancedIndicators(sym, tf) {
   el.innerHTML = html;
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
 // SECTION 9 — DOM INJECTION (right panel module cards)
-// ═══════════════════════════════════════════════════════════════════════════
 
 function _injectV70UI() {
   // Find the right panel body
@@ -25080,9 +24499,7 @@ function _injectV70UI() {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
 // SECTION 10 — CANVAS OVERLAY (BB + Vegas + Fib lines)
-// ═══════════════════════════════════════════════════════════════════════════
 
 function _hookCanvasOverlay() {
   // We hook into the existing Chart.js afterDraw plugin
@@ -25224,9 +24641,7 @@ function _hookCanvasOverlay() {
   Chart.register(plugin);
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
 // SECTION 11 — REFRESH & INTEGRATION
-// ═══════════════════════════════════════════════════════════════════════════
 
 V70.refresh = async function() {
   const sym = _safe(() => window.S?.sym);
@@ -25311,18 +24726,6 @@ function _v70Init() {
     }, 60000);
   }, 4000);
 
-  console.log('%c[FINCH v70]%c 机构级增强模块已就绪\n' +
-    '  ✅ 精确CVD (WebSocket AggTrades)\n' +
-    '  ✅ OI+FR联动矩阵 (4象限专业解读)\n' +
-    '  ✅ 15因子加权投票系统\n' +
-    '  ✅ 多周期状态矩阵 (15M/1H/4H/1D)\n' +
-    '  ✅ 多RSI/CCI/Williams %R/HV/MFI/VWAP/Keltner\n' +
-    '  ✅ Supertrend + Parabolic SAR + Momentum/ROC\n' +
-    '  ✅ 20+形态识别 (单根/双根/多根/图表形态)\n' +
-    '  ✅ 斐波那契多周期共振检测\n' +
-    '  ✅ Canvas叠加层 (BB填充/Vegas通道/Fib线)',
-    'color:#8B6914;font-weight:bold','color:inherit');
-}
 
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => setTimeout(_v70Init, 1200));
