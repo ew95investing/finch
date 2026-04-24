@@ -6,7 +6,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://fonts.googleapis.com https://fonts.gstatic.com https://api.binance.com https://api1.binance.com https://api2.binance.com https://api3.binance.com https://api4.binance.com https://data-api.binance.vision https://data-stream.binance.vision https://fapi.binance.com https://api.alternative.me https://api.coingecko.com https://api.llama.fi https://corsproxy.io https://api.allorigins.win https://thingproxy.freeboard.io https://api.blockchain.info https://www.alphavantage.co https://cdn.jsdelivr.net https://open.er-api.com wss://stream.binance.com wss://data-stream.binance.vision; connect-src 'self' https: wss: data: blob:; frame-ancestors 'none';">
 <meta http-equiv="X-Frame-Options" content="DENY">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>FINCH v85 — 全维度市场分析</title>
+<title>FINCH v86 — 全维度市场分析</title>
 
 <!-- ═══ PWA / iOS APP META ═══ -->
 <meta name="mobile-web-app-capable" content="yes">
@@ -5492,7 +5492,11 @@ function renderVegas(kl){
     }
     // Append conflict indicator if conflicting
     const _vegasConflict = _mainBull !== null && ((v.above && !_mainBull) || (v.below && _mainBull));
-    sig.textContent = posLabel + (_vegasConflict ? ' ⚠' : '');
+    // v86: show grade-down note on conflict
+    const _vegasConflictNote = _vegasConflict ? ' ⚠ [降级]' : '';
+    sig.textContent = posLabel + _vegasConflictNote;
+    sig.style.color = _vegasSigCol;
+    sig.title = _vegasConflict ? 'Vegas方向与主信号冲突·系统已将执行建议降一个等级并缩减仓位' : 'Vegas通道位置';
     sig.style.color = _vegasSigCol;
   }
   if(mini)mini.textContent='Vegas: '+(v.above?'▲上方':v.below?'▼下方':'⚡内');
@@ -10121,7 +10125,14 @@ function _doRenderStrategy(res){
   // ── v85 PROBABILITY DISTRIBUTION UI BLOCK ─────────────────────────────
   const _prob = res.probability || { up: isBull?0.55:0.45, down: isBull?0.45:0.55, confidence: conf/100, isBalanced: false };
   const _posRef = res.positionReference || { conservative: 0.05, balanced: 0.08, aggressive: 0.12, formula: '' };
-  const _uncSrc = res.uncertaintySources || [];
+  // v86: merge base engine + PRO engine uncertainty sources (deduplicated by factor)
+  const _uncSrcBase = res.uncertaintySources || [];
+  const _uncSrcPro  = res._proEngineUncertainty || [];
+  const _uncSrcMerged = [..._uncSrcBase];
+  _uncSrcPro.forEach(pu => { if (!_uncSrcMerged.some(u => u.factor === pu.factor)) _uncSrcMerged.push(pu); });
+  const _uncSrc = _uncSrcMerged;
+  // v86: executionAdvice from PRO engine
+  const _execAdv = res.executionAdvice || null;
   const _flipConds = res.flipConditions || [];
   const _upPct = Math.round(_prob.up * 100);
   const _downPct = Math.round(_prob.down * 100);
@@ -10154,6 +10165,20 @@ function _doRenderStrategy(res){
           </div>
         </div>
       </div>
+
+      ${_execAdv ? `
+      <!-- v86: 分级执行建议 -->
+      <div style="margin-bottom:10px;padding:10px 12px;background:${_execAdv.recommended ? 'rgba(26,107,58,0.05)' : 'rgba(160,20,32,0.05)'};border:1px solid ${_execAdv.recommended ? 'rgba(26,107,58,0.3)' : 'rgba(160,20,32,0.3)'};border-radius:6px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <span style="font-size:12px;font-weight:800;color:${_execAdv.recommended ? 'var(--green)' : 'var(--red)'}">${_execAdv.label}</span>
+          <span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:3px;background:${_execAdv.grade==='A'?'rgba(26,107,58,0.15)':_execAdv.grade==='B'?'rgba(0,120,180,0.12)':_execAdv.grade==='C'?'rgba(128,80,0,0.12)':'rgba(160,20,32,0.12)'};color:${_execAdv.grade==='A'?'var(--green)':_execAdv.grade==='B'?'var(--blue)':_execAdv.grade==='C'?'var(--amber)':'var(--red)'}">${_execAdv.grade}级</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:11px;color:var(--muted)">建议仓位</span>
+          <span style="font-size:15px;font-weight:800;color:${_execAdv.sizePercent >= 40 ? 'var(--green)' : _execAdv.sizePercent >= 20 ? 'var(--amber)' : 'var(--red)'}">${_execAdv.sizePercent}%</span>
+        </div>
+        ${_execAdv.vegasConflicts ? `<div style="margin-top:5px;font-size:10px;color:var(--amber)">⚡ Vegas通道逆结构 · 仓位已降级</div>` : ''}
+      </div>` : ''}
 
       <!-- 仓位参考 -->
       <div style="margin-bottom:10px;padding:8px 10px;background:var(--bg2);border-radius:6px">
@@ -22872,6 +22897,35 @@ window._Φ9x = function(tf) {
     gradeReason,
     positionSizePct,
     qualityScore,
+    // v86: 分级执行建议
+    executionAdvice: (function() {
+      const estimatedProb = 0.5 + (directionScore / 20);
+      let finalGrade = signalGrade;
+      let finalSizePct = positionSizePct;
+      let recommended = true;
+      if (vegasConflicts) {
+        if (signalGrade === 'A') { finalGrade = 'B'; finalSizePct = Math.min(finalSizePct, 40); }
+        else if (signalGrade === 'B') { finalGrade = 'C'; finalSizePct = Math.min(finalSizePct, 20); }
+        else { finalGrade = 'D'; finalSizePct = Math.min(finalSizePct, 10); recommended = false; }
+      }
+      return {
+        grade: finalGrade,
+        sizePercent: finalSizePct,
+        recommended,
+        label: `${finalGrade}级执行 · 建议${recommended ? '入场' : '等待'}`,
+        probability: { up: isBull ? estimatedProb : 1 - estimatedProb, down: isBull ? 1 - estimatedProb : estimatedProb },
+        vegasConflicts,
+      };
+    })(),
+    // v86: Vegas冲突不确定性来源注入
+    _proEngineUncertainty: (function() {
+      const src = [];
+      if (vegasConflicts)
+        src.push({ factor: `Vegas通道方向${isBull ? '空头' : '多头'}(逆结构)`, impact: -12, severity: 'high' });
+      if (!htfAligned)
+        src.push({ factor: '逆日线方向·高时框冲突', impact: -8, severity: 'medium' });
+      return src;
+    })(),
     // 方向数据
     bullScore,
     bearScore,
