@@ -6,7 +6,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://fonts.googleapis.com https://fonts.gstatic.com https://api.binance.com https://api1.binance.com https://api2.binance.com https://api3.binance.com https://api4.binance.com https://data-api.binance.vision https://data-stream.binance.vision https://fapi.binance.com https://api.alternative.me https://api.coingecko.com https://api.llama.fi https://corsproxy.io https://api.allorigins.win https://thingproxy.freeboard.io https://api.blockchain.info https://www.alphavantage.co https://cdn.jsdelivr.net https://open.er-api.com wss://stream.binance.com wss://data-stream.binance.vision; connect-src 'self' https: wss: data: blob:; frame-ancestors 'none';">
 <meta http-equiv="X-Frame-Options" content="DENY">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>FINCH v84 — 全维度市场分析</title>
+<title>FINCH v85 — 全维度市场分析</title>
 
 <!-- ═══ PWA / iOS APP META ═══ -->
 <meta name="mobile-web-app-capable" content="yes">
@@ -7350,24 +7350,12 @@ function _Φ9x(tf){
   if (conflict.label) sigs.push({ l: conflict.label, c: 'sig-neut' });
   score *= conflict.penalty;
 
-  // === PATCH 2a: WAIT gate — high conflict → refuse directional signal ===
-  // Returns a structured WAIT object so renderStrategy can display useful info.
+  // === PATCH 2a (v85 REWRITE): 高冲突 → 降低置信度 + 标记不确定性，不拒绝信号 ===
   if (conflict.verdict === 'WAIT') {
-    sigs.push({ l: '⛔ 系统输出: 等待', c: 'sig-neut' });
-    const _bullSigs = sigs.filter(s=>s.c==='sig-bull').map(s=>s.l);
-    const _bearSigs = sigs.filter(s=>s.c==='sig-bear').map(s=>s.l);
-    // v70 FIX: WAIT state must never carry a direction — isBull = null prevents
-    // biasBadge / _renderWaitPanel from showing contradictory "做多/做空" labels.
-    return {
-      _isWait: true,
-      isBull: null,   // NO direction on WAIT — score bias only visible in conviction bar
-      conf: null,     // no confidence on WAIT
-      score, sigs, rsi, macdD, price, tf,
-      conflictRatio: conflict.conflictRatio,
-      bullSigs: _bullSigs,
-      bearSigs: _bearSigs,
-      regime49,
-    };
+    // 不再拒绝，改为降低置信度并注入不确定性标签
+    sigs.push({ l: `⚠️ 信号分歧${Math.round(conflict.conflictRatio*100)}%·置信度已降级`, c: 'sig-neut' });
+    // conf已由penalty处理，此处额外保底限制
+    // (继续执行，不return)
   }
 
   // === PATCH 2b: Mock-data — v55 FIX: generate ATR-based TP/SL for mock data so UI renders ===
@@ -7796,20 +7784,12 @@ function _Φ9x(tf){
     // 震荡市入场价已由上方逻辑设置，保持不变
   }
 
-  // ── FIX-C v65 / v67: 入场价有效性验证 — 偏离>1.5%拒绝信号 ──────────────
-  // v67: 收紧阈值 2% → 1.5%，偏离过大说明分析时的价格已失效
-  // "如果市场已经移动太远，你的分析已经过时" — PTJ原则
+  // ── FIX-C v65 / v85: 入场价有效性验证 — 偏离>1.5%降级，不拒绝 ──────────────
   const _entryDeviation = Math.abs(entry - price) / price;
   if(_entryDeviation > 0.015){
-    const _devSigs = [
-      {l:`⛔ 入场价偏离现价 ${(_entryDeviation*100).toFixed(2)}% (限制 1.5%)`, c:'sig-neut'},
-      {l:'市场已移动·分析已过时·请重新分析', c:'sig-neut'},
-    ];
-    return {
-      _isWait: true, isBull: null, conf: null, score, sigs: _devSigs, rsi, macdD, price, tf,
-      conflictRatio: conflict.conflictRatio, bullSigs: [], bearSigs: [],
-      regime49, reason: `入场价偏离现价${(_entryDeviation*100).toFixed(2)}%，超过1.5%门槛，建议重新分析`,
-    };
+    sigs.push({l:`⚠️ 入场价偏离现价 ${(_entryDeviation*100).toFixed(2)}%·请注意时效性`, c:'sig-neut'});
+    // 降低置信度但不拒绝
+    conf = Math.min(conf, 55);
   }
   
   // Add volume-based POC magnet: if POC is between entry and first TP, 
@@ -8558,63 +8538,24 @@ function _Φ9x(tf){
   } // end v70/v81: skip hysteresis when isBull===null (WAIT state)
   // ── END v81 HYSTERESIS ENGINE ─────────────────────────────────────────
 
-  // v80 FIX-CORE-VEGAS: Vegas冲突硬门 — _Φ9x核心引擎级别拦截
-  // 根本问题: Vegas gate只存在于PRO TRADER包装层(v76/v79 FIX-F/FIX-10)，
-  //   _Φ9x核心引擎直接返回方向信号，导致主信号区(biasBadge/stratArea)
-  //   显示"做多70%"而下方面板同时显示"Vegas方向矛盾·等待"——双引擎矛盾
-  //   截图根因: BTC 2H isBull=true(做多70%)，但vegas.below=true，PRO TRADER
-  //   返回vegas_conflict WAIT，两个结果同时显示→用户看到矛盾信号
-  // 修复: 在_Φ9x最终return之前执行相同的Vegas冲突硬门拦截，统一单一决策点
-  //   条件: vegas已知 AND 方向与Vegas相反 AND (conf<70% OR grade<A)
-  //   阈值: 同PRO TRADER层保持一致 — conf<70% && grade!='A'
-  //   效果: _Φ9x也返回_isWait，整个系统统一显示等待状态，无矛盾
+  // v85: Vegas冲突 → 降低置信度+标记不确定性，不拒绝信号
   {
     const _phi9xVegasConflict = vegas
       ? (isBull ? vegas.below === true : vegas.above === true)
       : false;
     const _phi9xGrade = _entryGrade?.grade || 'C';
-    // v81: Vegas gate — HTF矛盾时允许B级+高conf通过(反向Vegas但顺HTF主线的回调交易)
-    // 原逻辑: conf<70% && grade<A → WAIT
-    // 新逻辑: conf<70% && grade<A → WAIT，但HTF矛盾时B级+conf≥60%可通过(有⚠️标记)
-    // v83 FIX: Vegas硬门阈值松动
-    // 原逻辑: conf<70% && grade!='A' → 全拒 (过于严苛，大量可交易信号被封锁)
-    // 新逻辑: conf<50% && grade<'B' → 拒绝 (只拒绝真正低质量逆Vegas信号)
-    //         conf 50-69% 或 B级: 通过但带⚠️警告 + 仓位×0.5
-    //         A级: 无条件通过
-    // 理由: Vegas通道内(Inside)时本来就没有明确方向，不应无差别拒绝
     const _vegasException = _htfConflict && _phi9xGrade === 'B' && conf >= 60;
-    const _vegasGradeOk = _phi9xGrade === 'A' || _phi9xGrade === 'B';
-    if (_phi9xVegasConflict && conf < 50 && !_vegasGradeOk && !_vegasException) {
-      // FIX: 只有conf极低且无B级以上时才真正拒绝
-      const _vegasSigsCore = [
-        { l: `⛔ Vegas通道${isBull ? '下方' : '上方'} · 置信度${conf}%过低(需≥50%或B级)`, c: 'sig-neut' },
-        { l: `当前: ${_phi9xGrade}级 · 逆Vegas信号质量不足`, c: 'sig-neut' },
-        { l: 'Vegas（EMA144/169）机构趋势过滤器 · 提升信号质量后可入场', c: 'sig-neut' },
-      ];
-      return {
-        _isWait: true,
-        isBull: null, conf: null,
-        score, sigs: _vegasSigsCore,
-        rsi, macdD, price, tf,
-        conflictRatio: Math.max(conflict.conflictRatio, 0.45),
-        bullSigs: sigs.filter(s => s.c === 'sig-bull').map(s => s.l),
-        bearSigs: sigs.filter(s => s.c === 'sig-bear').map(s => s.l),
-        regime49,
-        waitReason: 'vegas_conflict',
-        reason: `Vegas通道${isBull ? '空头' : '多头'}结构，置信度${conf}%不足(需≥50%)且非B级以上，拒绝输出信号`,
-        vegas,
-      };
-    }
-    // 例外/降级通过：Vegas逆向但conf≥50或B级以上 → 带警告通过，仓位×0.5
-    if (_phi9xVegasConflict && (_vegasGradeOk || conf >= 50)) {
-      sigs.push({l:`⚠️ Vegas逆向·${_phi9xGrade}级·减半仓位·设紧SL`, c:'sig-neut'});
-    }
-    // 例外通过时注入警告标签
-    if (_phi9xVegasConflict && _vegasException) {
-      sigs.push({l:`⚠️ Vegas逆向·HTF矛盾区·B级例外通过·严格控仓`, c:'sig-neut'});
+    if (_phi9xVegasConflict) {
+      if (conf < 50 && _phi9xGrade !== 'A' && _phi9xGrade !== 'B') {
+        conf = Math.min(conf, 45);
+        sigs.push({l:`⚠️ Vegas通道${isBull?'下方':'上方'}·逆结构·置信度限45%`, c:'sig-neut'});
+      } else {
+        sigs.push({l:`⚠️ Vegas逆向·${_phi9xGrade}级·已降低置信度·注意仓位`, c:'sig-neut'});
+      }
+      if (_vegasException) sigs.push({l:`⚠️ Vegas逆向·HTF矛盾区·严格控仓`, c:'sig-neut'});
     }
   }
-  // ══ End v80/v81 FIX-CORE-VEGAS ════════════════════════════════════════
+  // ══ End v85 Vegas (probability-based, no-reject) ═══════════════════════
 
   // ── v67 HARD GATE — 信号输出前的最终质量门控
   // 任一条件不满足 → 返回WAIT，不输出假信号
@@ -8644,72 +8585,36 @@ function _Φ9x(tf){
     });
   } catch(e) {}
 
+  // ── v85 QUALITY GATE: 不拒绝信号，改为标记不确定性 + 降低置信度 ──
   {
     const _hg_rrDist = sls[0] ? Math.abs(sls[0].p - entry) : atrClamped;
     const _hg_rr     = tps[0] ? Math.abs(tps[0].p - entry) / Math.max(_hg_rrDist, 0.001) : 0;
     const _hg_risk   = sls[0] ? Math.abs((sls[0].p - entry) / entry * 100) : 99;
 
-    // v81: R:R门槛降低 1.0→0.8，配合Hysteresis
-    // 原理: Hysteresis确保信号持续性，短期R:R偏低但方向正确的信号仍有价值
+    // R:R 警告 (不拒绝，降低置信度)
     if (_hg_rr < 0.8) {
-      const _hgSigs = [
-        {l:`⛔ R:R = ${_hg_rr.toFixed(2)} (需要 ≥ 0.8)`, c:'sig-neut'},
-        {l:'等待更优入场结构或等待更大TP目标', c:'sig-neut'},
-        {l:`当前TP1: ${fmtP(tps[0]?.p||0)} · SL1: ${fmtP(sls[0]?.p||0)}`, c:'sig-neut'},
-      ];
-      return {
-        _isWait: true, isBull: null, conf: null, score, sigs: _hgSigs, rsi, macdD, price, tf,
-        conflictRatio: conflict.conflictRatio, bullSigs: [], bearSigs: [],
-        regime49, reason: `R:R = ${_hg_rr.toFixed(2)} 不足0.8，拒绝信号`,
-        _rejectedRR: _hg_rr,
-      };
-    }
-    // R:R 0.8–1.5: warning pass
-    if (_hg_rr < 1.5) {
+      conf = Math.min(conf, 40);
+      sigs.unshift({l:`⚠️ R:R ${_hg_rr.toFixed(2)} 极低 · 置信度限40%`, c:'sig-neut'});
+    } else if (_hg_rr < 1.5) {
       sigs.unshift({l:`⚠️ R:R ${_hg_rr.toFixed(2)} 偏低 · 建议半仓入场`, c:'sig-neut'});
     }
 
-    // Gate 2: Risk % maximum 8% (v68: raised from 5%; 5–8% = warning pass)
+    // 风险% 警告 (不拒绝，降低置信度)
     if (_hg_risk > 8.0) {
-      const _hgSigs = [
-        {l:`⛔ 单笔风险 ${_hg_risk.toFixed(2)}% (上限 8%)`, c:'sig-neut'},
-        {l:'止损过宽·结构支撑太远·等待更近支撑位', c:'sig-neut'},
-        {l:`SL1距入场 ${_hg_risk.toFixed(2)}%，超出8%限制`, c:'sig-neut'},
-      ];
-      return {
-        _isWait: true, isBull: null, conf: null, score, sigs: _hgSigs, rsi, macdD, price, tf,
-        conflictRatio: conflict.conflictRatio, bullSigs: [], bearSigs: [],
-        regime49, reason: `风险 ${_hg_risk.toFixed(2)}% 超过8%上限，拒绝信号`,
-        _rejectedRisk: _hg_risk,
-      };
-    }
-    // Risk 5–8%: warning pass — inject strict position control advisory
-    if (_hg_risk > 5.0) {
+      conf = Math.min(conf, 45);
+      sigs.unshift({l:`⚠️ 单笔风险 ${_hg_risk.toFixed(2)}% 偏高(>8%) · 置信度限45%`, c:'sig-neut'});
+    } else if (_hg_risk > 5.0) {
       sigs.unshift({l:`⚠️ 风险 ${_hg_risk.toFixed(2)}% 偏高 · 严格控制仓位`, c:'sig-neut'});
     }
 
-    // v81: conf gate降低 35%→30%，与提升的Hysteresis阈值相配
-    // 理由: Hysteresis已经提供了稳定性保障，不需要conf gate做双重拦截
-    // 真正低质信号由score本身和冲突惩罚过滤，而非conf截止
+    // 置信度 警告 (不拒绝，仅提示)
     if (conf < 30) {
-      const _hgSigs = [
-        {l:`⛔ 置信度 ${conf}% (需要 ≥ 30%)`, c:'sig-neut'},
-        {l:'信号不够确定，等待更强确认因子', c:'sig-neut'},
-        {l:'提示：多框架共振+背驰+订单块可提升置信度', c:'sig-neut'},
-      ];
-      return {
-        _isWait: true, isBull: null, conf: null, score, sigs: _hgSigs, rsi, macdD, price, tf,
-        conflictRatio: conflict.conflictRatio, bullSigs: [], bearSigs: [],
-        regime49, reason: `置信度 ${conf}% 低于30%门槛，拒绝信号`,
-        _rejectedConf: conf,
-      };
-    }
-    // Conf 30–50: warning pass
-    if (conf < 50) {
-      sigs.unshift({l:`⚠️ 置信度 ${conf}% 偏低 · 建议减仓或等更强确认`, c:'sig-neut'});
+      sigs.unshift({l:`⚠️ 置信度 ${conf}% 偏低 · 参考意义为主，非高概率入场`, c:'sig-neut'});
+    } else if (conf < 50) {
+      sigs.unshift({l:`⚠️ 置信度 ${conf}% 偏低 · 建议等待更强确认`, c:'sig-neut'});
     }
 
-    // Gate 4: Direction sanity — LONG TP must be > entry > SL; SHORT TP < entry < SL
+    // Gate 4: 方向合理性检查 (保留，因为这是数据错误而非质量问题)
     if (isBull  && (tps[0]?.p <= entry || sls[0]?.p >= entry)) {
       const _hgSigs = [{l:'⛔ 做多方向错误：TP≤entry 或 SL≥entry', c:'sig-neut'}];
       return { _isWait:true, isBull:null, conf:null, score, sigs:_hgSigs, rsi, macdD, price, tf, conflictRatio:conflict.conflictRatio, bullSigs:[], bearSigs:[], regime49, reason:'方向计算错误·TP/SL位置异常' };
@@ -8719,7 +8624,160 @@ function _Φ9x(tf){
       return { _isWait:true, isBull:null, conf:null, score, sigs:_hgSigs, rsi, macdD, price, tf, conflictRatio:conflict.conflictRatio, bullSigs:[], bearSigs:[], regime49, reason:'方向计算错误·TP/SL位置异常' };
     }
   }
-  // ══ End v67 HARD GATE ══════════════════════════════════════════════════
+  // ══ End v85 QUALITY GATE ═══════════════════════════════════════════════
+
+  // ── v85 PROBABILITY DISTRIBUTION ENGINE ──────────────────────────────────
+  // 核心原则: 模型不预测方向，模型计算概率分布
+  // 每个因子贡献向上/向下的概率质量，归一化后得到概率分布
+  const _probFactors = (function() {
+    // 每个因子: { up: 0-0.20, down: 0-0.20, weight: 1-20 }
+    const f = {};
+
+    // 1. 趋势结构 (Vegas+MA+Supertrend)
+    {
+      const vegasUp = vegas?.above ? 0.15 : 0;
+      const vegasDn = vegas?.below ? 0.15 : 0;
+      const maUp = (ma20v && ma55v && ma20v > ma55v) ? 0.07 : 0;
+      const maDn = (ma20v && ma55v && ma20v < ma55v) ? 0.07 : 0;
+      f.trend = { up: Math.min(0.20, vegasUp+maUp), down: Math.min(0.20, vegasDn+maDn), weight: 20 };
+    }
+    // 2. MACD动能
+    {
+      const macdUp = macdD.bullDiv ? 0.18 : macdD.hist > 0 ? 0.08 : 0;
+      const macdDn = macdD.bearDiv ? 0.18 : macdD.hist < 0 ? 0.08 : 0;
+      f.macd = { up: macdUp, down: macdDn, weight: 18 };
+    }
+    // 3. RSI动量
+    {
+      const rsiUp = rsi < RSI_OS ? 0.15 : rsi < RSI_OS2 ? 0.05 : 0;
+      const rsiDn = rsi > RSI_OB ? 0.15 : rsi > RSI_OB2 ? 0.05 : 0;
+      f.rsi = { up: rsiUp, down: rsiDn, weight: 15 };
+    }
+    // 4. Vegas (单独列出通道内/外)
+    {
+      const vUp = vegas?.above ? 0.12 : 0;
+      const vDn = vegas?.below ? 0.12 : 0;
+      f.vegas = { up: vUp, down: vDn, weight: 15 };
+    }
+    // 5. 成交量 (OBV+CVD)
+    {
+      const volUp = (obv.obvTrend===1 ? 0.06:0) + (cvd.bullishDelta ? 0.04:0);
+      const volDn = (obv.obvTrend===-1 ? 0.06:0) + (!cvd.bullishDelta ? 0.04:0);
+      f.volume = { up: Math.min(0.12, volUp), down: Math.min(0.12, volDn), weight: 12 };
+    }
+    // 6. 缠论
+    {
+      const chanUp = chan?.bullDivStrong ? 0.15 : chan?.bullDiv ? 0.10 : 0;
+      const chanDn = chan?.bearDivStrong ? 0.15 : chan?.bearDiv ? 0.10 : 0;
+      f.chan = { up: chanUp, down: chanDn, weight: 12 };
+    }
+    // 7. Smart Money (机构)
+    {
+      const smUp = (sm?.hasBullOB ? 0.06:0) + (sm?.recentSweepBull ? 0.08:0);
+      const smDn = (sm?.hasBearOB ? 0.06:0) + (sm?.recentSweepBear ? 0.08:0);
+      f.sm = { up: Math.min(0.10, smUp), down: Math.min(0.10, smDn), weight: 8 };
+    }
+    // 8. 市场情绪/宏观
+    {
+      const mkUp = (htfBullish ? 0.04:0) + (htfWeekBull ? 0.02:0);
+      const mkDn = (htfBearish ? 0.04:0) + (htfWeekBear ? 0.02:0);
+      f.market = { up: Math.min(0.06, mkUp), down: Math.min(0.06, mkDn), weight: 5 };
+    }
+
+    return f;
+  })();
+
+  // 概率计算
+  const _probCalc = (function(factors) {
+    let upWeight = 0, downWeight = 0, totalWeight = 0;
+    for (const key of Object.keys(factors)) {
+      const fc = factors[key];
+      totalWeight += fc.weight;
+      upWeight   += fc.up   * fc.weight;
+      downWeight += fc.down * fc.weight;
+    }
+    const rawUp   = totalWeight > 0 ? upWeight   / totalWeight : 0.5;
+    const rawDown = totalWeight > 0 ? downWeight / totalWeight : 0.5;
+    const sum = rawUp + rawDown || 1;
+    const upProb   = rawUp   / sum;
+    const downProb = rawDown / sum;
+    // 概率差小于5% → 平衡市
+    const isBalanced = Math.abs(upProb - downProb) < 0.05;
+    return { up: upProb, down: downProb, isBalanced };
+  })(_probFactors);
+
+  // 对这个概率分布本身的置信度（受数据质量和不确定性影响）
+  const _probConfidence = (function() {
+    let base = conf / 100;
+    // 高冲突降低概率置信度
+    if (conflict.conflictRatio > 0.5) base -= 0.15;
+    else if (conflict.conflictRatio > 0.35) base -= 0.08;
+    // Vegas逆向降低概率置信度
+    if (vegas && ((isBull && vegas.below) || (!isBull && vegas.above))) base -= 0.10;
+    // HTF矛盾降低
+    if (_htfConflict) base -= 0.08;
+    return Math.max(0.20, Math.min(0.95, base));
+  })();
+
+  // 不确定性来源列表
+  const _uncertaintySources = (function() {
+    const src = [];
+    if (vegas && ((isBull && vegas.below) || (!isBull && vegas.above)))
+      src.push({ factor: `Vegas通道方向${isBull?'空头':'多头'}(逆结构)`, impact: -12, severity: 'high' });
+    if (conflict.conflictRatio > 0.5)
+      src.push({ factor: `信号分歧率${Math.round(conflict.conflictRatio*100)}%`, impact: -10, severity: 'high' });
+    else if (conflict.conflictRatio > 0.35)
+      src.push({ factor: `信号分歧率${Math.round(conflict.conflictRatio*100)}%`, impact: -5, severity: 'medium' });
+    if (obv.obvTrend === (isBull ? -1 : 1))
+      src.push({ factor: '量能与方向背离', impact: -5, severity: 'medium' });
+    if (_htfConflict)
+      src.push({ factor: '日线/4H时框矛盾', impact: -8, severity: 'medium' });
+    if (adx.ranging)
+      src.push({ factor: `ADX${adx.adx.toFixed(0)}震荡市·趋势信号偏弱`, impact: -4, severity: 'low' });
+    const volOk = volRatio && volRatio >= 1.0;
+    if (!volOk)
+      src.push({ factor: '成交量偏弱(量比<1.0)', impact: -3, severity: 'low' });
+    return src;
+  })();
+
+  // 仓位参考 (凯利简化版)
+  const _positionRef = (function(upP, downP) {
+    const edge = Math.abs(upP - downP);
+    const kelly = edge * 0.25; // 四分之一凯利
+    return {
+      conservative: Math.round(kelly * 0.6 * 100) / 100,
+      balanced:     Math.round(kelly * 0.8 * 100) / 100,
+      aggressive:   Math.round(kelly * 1.2 * 100) / 100,
+      formula: '仓位 = (向上概率 - 向下概率) × 风险乘数',
+    };
+  })(_probCalc.up, _probCalc.down);
+
+  // 失效条件
+  const _flipConditions = (function() {
+    const fl = [];
+    const sl1 = sls[0]?.p;
+    if (sl1) {
+      const newUp = isBull ? 0.40 : 0.60;
+      fl.push({ condition: `价格${isBull?'跌破':'突破'} ${fmtP(sl1)}`, newUpProb: newUp, description: `止损位失守，向上概率变为${Math.round(newUp*100)}%` });
+    }
+    if (!macdD.hist || (isBull && macdD.hist > 0)) {
+      fl.push({ condition: 'MACD转为负值', newUpProb: isBull ? 0.44 : 0.56, description: '动能转负，向上概率降至44%' });
+    }
+    if (vegas) {
+      const vegasCross = isBull ? vegas.above : vegas.below;
+      if (!vegasCross) {
+        fl.push({ condition: `价格${isBull?'跌破':'突破'}Vegas通道`, newUpProb: isBull ? 0.38 : 0.62, description: `Vegas方向翻转，向上概率变为${isBull?38:62}%` });
+      }
+    }
+    return fl.slice(0, 3);
+  })();
+
+  const _probability = {
+    up: Math.round(_probCalc.up * 100) / 100,
+    down: Math.round(_probCalc.down * 100) / 100,
+    confidence: Math.round(_probConfidence * 100) / 100,
+    isBalanced: _probCalc.isBalanced,
+  };
 
   return{isBull,score,conf,entry,entryMin,entryMax,entryZone,entryType,entryNote,tps,sls,rr,sigs,
     leverage,
@@ -8738,7 +8796,14 @@ function _Φ9x(tf){
     obv,adx,supertrend,hv,cvd,mktStr,mtf,candles,fundingRate,
     conflictRatio:conflict.conflictRatio,trendMult,
     nearestSupport,nearestResist,vwapLevel:vwap,
-    sm,volProf,mtfResonance:_mtfRes}; // v51: Smart Money + Volume Profile | v82: MTF Resonance
+    sm,volProf,mtfResonance:_mtfRes,
+    // v85: 概率分布输出
+    probability: _probability,
+    factorContributions: _probFactors,
+    uncertaintySources: _uncertaintySources,
+    positionReference: _positionRef,
+    flipConditions: _flipConditions,
+  }; // v51: Smart Money + Volume Profile | v82: MTF Resonance | v85: Probability
 }
 
 
@@ -9593,35 +9658,8 @@ function _doRenderStrategy(res){
     return;
   }
 
-  // ── v67 FINAL GUARD: last-resort quality check before rendering ─────────
-  // Catches any path that bypasses the hard gate in _Φ9x (8-factor overlay, fallbacks, etc.)
-  if (res && !res._isWait && res.tps && res.sls && res.entry) {
-    try {
-      const _fg_slDist = Math.abs((res.sls[0]?.p || res.entry) - res.entry);
-      const _fg_tpDist = Math.abs((res.tps[0]?.p || res.entry) - res.entry);
-      const _fg_rr     = _fg_slDist > 0 ? _fg_tpDist / _fg_slDist : 0;
-      const _fg_risk   = res.entry > 0 ? _fg_slDist / res.entry * 100 : 99;
-      const _fg_conf   = res.conf || 0;
-
-      let _fgRejectReason = null;
-      if (_fg_rr < 1.5)   _fgRejectReason = `⛔ R:R = ${_fg_rr.toFixed(2)} (需要 ≥ 1.5)\n原因: TP1过近或SL1过宽\n建议: 等待更优入场结构`;
-      else if (_fg_risk > 5.0) _fgRejectReason = `⛔ 风险 ${_fg_risk.toFixed(2)}% (上限 5%)\n原因: 止损位距入场价过远\n建议: 等待价格回踩更近支撑`;
-      else if (_fg_conf < 45)  _fgRejectReason = `⛔ 置信度 ${_fg_conf}% (需要 ≥ 45%)\n原因: 信号确认因子不足\n建议: 等待多框架共振或背驰信号`;
-
-      if (_fgRejectReason) {
-        $html('stratArea', `<div style="padding:20px;background:rgba(160,20,32,0.06);border:1px solid rgba(160,20,32,0.20);border-radius:8px;margin:8px 0;">
-          <div style="font-size:13px;font-weight:700;color:var(--red);margin-bottom:10px;letter-spacing:0.5px">⛔ 信号被拒绝</div>
-          <pre style="font-family:inherit;font-size:12px;color:var(--text);white-space:pre-wrap;margin:0 0 12px">${_fgRejectReason}</pre>
-          <div style="font-size:11px;color:var(--dim);border-top:1px solid var(--line2);padding-top:8px">
-            当前: ${res.isBull?'▲ 做多':'▼ 做空'} · R:R ${_fg_rr.toFixed(2)}:1 · 风险 ${_fg_risk.toFixed(2)}% · 置信 ${_fg_conf}%
-          </div>
-          <button onclick="renderStrategy()" style="margin-top:10px;padding:5px 14px;border:1px solid var(--line2);border-radius:4px;background:var(--bg2);color:var(--muted);font-family:inherit;font-size:11px;cursor:pointer;">↺ 重新分析</button>
-        </div>`);
-        return;
-      }
-    } catch(e) { /* guard failed — proceed to render normally */ }
-  }
-  // ── End v67 Final Guard ─────────────────────────────────────────────────
+  // ── v85: 信号质量由概率分布表达，不再在此处拒绝 ─────────────────────────
+  // (拒绝逻辑已删除 — RR/conf/risk 问题均反映在 probability.confidence 和 uncertaintySources 中)
   // Fix 1c: sanitize conf to integer here too — catches any path that bypasses renderStrategy
   try { if (res.conf !== undefined) res.conf = Math.round(res.conf); } catch(e) {}
   // FIX 4: sync S.lastSignal immediately so faiUpdateBar reads the correct v54 direction+conf
@@ -10080,8 +10118,93 @@ function _doRenderStrategy(res){
   const mysticBorderCol=mysticAlignOk?'var(--violet)':'var(--amber)';
   const mysticBgCol=mysticAlignOk?'rgba(88,24,144,0.05)':'rgba(128,80,0,0.05)';
 
+  // ── v85 PROBABILITY DISTRIBUTION UI BLOCK ─────────────────────────────
+  const _prob = res.probability || { up: isBull?0.55:0.45, down: isBull?0.45:0.55, confidence: conf/100, isBalanced: false };
+  const _posRef = res.positionReference || { conservative: 0.05, balanced: 0.08, aggressive: 0.12, formula: '' };
+  const _uncSrc = res.uncertaintySources || [];
+  const _flipConds = res.flipConditions || [];
+  const _upPct = Math.round(_prob.up * 100);
+  const _downPct = Math.round(_prob.down * 100);
+  const _confPct = Math.round(_prob.confidence * 100);
+  const _isBalanced = _prob.isBalanced;
+
+  const _probHTML = `
+  <div style="background:var(--card);border:1px solid var(--card-bd);border-radius:8px;margin-bottom:10px;overflow:hidden;box-shadow:var(--shadow)">
+    <!-- 标题 -->
+    <div style="padding:9px 14px 7px;background:linear-gradient(90deg,var(--bg2),var(--bg1));border-bottom:1px solid var(--line2);display:flex;align-items:center;justify-content:space-between">
+      <span style="font-size:10px;font-weight:700;letter-spacing:2px;color:var(--gold);text-transform:uppercase">📊 概率分布</span>
+      <span style="font-size:10px;color:var(--muted)">数据置信 <strong style="color:${_confPct>=70?'var(--green)':_confPct>=50?'var(--amber)':'var(--red)'}">${_confPct}%</strong></span>
+    </div>
+
+    <div style="padding:12px 14px">
+      <!-- 概率条 -->
+      <div style="margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+          <span style="font-size:13px;font-weight:800;color:var(--green)">▲ ${_upPct}%</span>
+          ${_isBalanced ? '<span style="font-size:11px;font-weight:700;color:var(--amber)">⚖️ 平衡市</span>' : ''}
+          <span style="font-size:13px;font-weight:800;color:var(--red)">▼ ${_downPct}%</span>
+        </div>
+        <div style="height:16px;border-radius:8px;overflow:hidden;display:flex;background:var(--bg3)">
+          <div style="width:${_upPct}%;background:linear-gradient(90deg,rgba(26,107,58,0.7),rgba(26,107,58,0.9));border-radius:8px 0 0 8px;transition:width .5s;display:flex;align-items:center;justify-content:center">
+            ${_upPct > 20 ? `<span style="font-size:9px;font-weight:700;color:white">${_upPct}%</span>` : ''}
+          </div>
+          <div style="width:${_isBalanced?'4px':'2px'};background:${_isBalanced?'var(--amber)':'var(--muted)'};flex-shrink:0"></div>
+          <div style="flex:1;background:linear-gradient(90deg,rgba(160,20,32,0.9),rgba(160,20,32,0.7));border-radius:0 8px 8px 0;display:flex;align-items:center;justify-content:center">
+            ${_downPct > 20 ? `<span style="font-size:9px;font-weight:700;color:white">${_downPct}%</span>` : ''}
+          </div>
+        </div>
+      </div>
+
+      <!-- 仓位参考 -->
+      <div style="margin-bottom:10px;padding:8px 10px;background:var(--bg2);border-radius:6px">
+        <div style="font-size:9px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:6px">仓位参考 (凯利简化)</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+          ${[['保守',_posRef.conservative,'var(--teal)'],['平衡',_posRef.balanced,'var(--green)'],['进取',_posRef.aggressive,'var(--blue)']].map(([lbl,val,col])=>`
+          <div style="text-align:center">
+            <div style="font-size:9px;color:var(--muted);margin-bottom:3px">${lbl}</div>
+            <div style="font-size:14px;font-weight:800;color:${col}">${Math.round(val*100)}%</div>
+            <div style="height:3px;background:var(--bg3);border-radius:2px;overflow:hidden;margin-top:3px">
+              <div style="width:${Math.min(100,val*500)}%;height:100%;background:${col};border-radius:2px"></div>
+            </div>
+          </div>`).join('')}
+        </div>
+      </div>
+
+      ${_uncSrc.length ? `
+      <!-- 不确定性来源 -->
+      <div style="margin-bottom:10px">
+        <div style="font-size:9px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:5px">⚡ 不确定性来源</div>
+        ${_uncSrc.map(u=>`
+        <div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--line)">
+          <span style="font-size:9px;padding:2px 6px;border-radius:3px;font-weight:700;flex-shrink:0;
+            ${u.severity==='high'?'background:rgba(160,20,32,0.12);color:var(--red);border:1px solid rgba(160,20,32,0.2)':
+              u.severity==='medium'?'background:rgba(128,80,0,0.12);color:var(--amber);border:1px solid rgba(128,80,0,0.2)':
+              'background:var(--bg3);color:var(--muted);border:1px solid var(--line2)'}">${u.severity==='high'?'高':'medium'===u.severity?'中':'低'}</span>
+          <span style="font-size:11px;color:var(--text);flex:1">${u.factor}</span>
+          <span style="font-size:11px;font-weight:700;color:var(--red)">${u.impact}%</span>
+        </div>`).join('')}
+      </div>` : ''}
+
+      ${_flipConds.length ? `
+      <!-- 失效条件 -->
+      <div>
+        <div style="font-size:9px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:5px">🔄 失效条件</div>
+        ${_flipConds.map(fc=>`
+        <div style="padding:6px 8px;background:rgba(160,20,32,0.04);border:1px solid rgba(160,20,32,0.12);border-radius:5px;margin-bottom:5px">
+          <div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:2px">📍 ${fc.condition}</div>
+          <div style="font-size:10px;color:var(--muted)">${fc.description}</div>
+          <div style="display:flex;align-items:center;gap:4px;margin-top:3px">
+            <span style="font-size:9px;color:var(--muted)">届时向上概率→</span>
+            <span style="font-size:10px;font-weight:700;color:${fc.newUpProb>=0.5?'var(--green)':'var(--red)'}">${Math.round(fc.newUpProb*100)}%</span>
+          </div>
+        </div>`).join('')}
+      </div>` : ''}
+    </div>
+  </div>`;
+
   $html('stratArea',`
   ${mockBanner}
+  ${_probHTML}
 
   <!-- ═══════════════════════════════════════════════════════════════════ -->
   <!-- LAYER 0 · COMMAND CARD — 方向 · 入场 · SL1 · TP1/2/3 一眼看懂    -->
@@ -22674,54 +22797,21 @@ window._Φ9x = function(tf) {
     positionSizePct = 15;
   }
 
-  // v76 FIX-F / v79 FIX-10: Vegas hard conflict gate
-  // v79: 阈值从65%提升至70% — 原因: Pillar A共线性导致conf系统性高估
-  // 实际胜率65%的信号其真实conf可能只有55%，需要更高的门槛才能逆Vegas
-  // Only A-grade signals (strong backing) may proceed against Vegas direction
+  // v85: Vegas冲突 → 降低置信度，不拒绝
   if (vegasConflicts && conf < 70 && signalGrade !== 'A') {
-    const _vegasSigs = [
-      { l: `⛔ Vegas通道${isBull ? '下方' : '上方'} · 方向与趋势结构矛盾`, c: 'sig-neut' },
-      { l: `置信度 ${conf}% · Vegas反向 · 合并质量不足(${signalGrade}级) · 需≥70%或A级`, c: 'sig-neut' },
-      { l: '等Vegas通道方向一致后入场 · 避免逆结构做单', c: 'sig-neut' },
+    base.sigs = [...(base.sigs||[]),
+      { l: `⚠️ Vegas通道${isBull ? '下方' : '上方'} · 逆结构·置信度降级`, c: 'sig-neut' },
     ];
-    return {
-      ...base,
-      _isWait: true,
-      isBull: null, conf: null,
-      score: directionScore,
-      sigs: _vegasSigs,
-      conflictRatio: 0.45,
-      regime49: regime49 || base.regime49,
-      waitReason: 'vegas_conflict',
-      reason: `Vegas通道${isBull?'空头':'多头'}结构与信号方向矛盾，置信度${conf}%不足以逆结构操作`,
-    };
+    conf = Math.min(conf, 50);
   }
 
-  // ── 方向中性检测 — 唯一触发WAIT的条件 ──────────────────────────────
-  // 只有当方向完全不明确时才WAIT，不因为其他原因等待
+  // v85: 方向中性 → 降低置信度，标记平衡市，但仍输出概率分布信号
   if (dominance < DIRECTION_THRESHOLD) {
-    const waitSigs = [
-      { l: `⏸ 方向中性 · 多空均势(优势差${(dominance*100).toFixed(0)}%)`, c: 'sig-neut' },
+    base.sigs = [...(base.sigs||[]),
+      { l: `⚖️ 平衡市 · 多空均势(差${(dominance*100).toFixed(0)}%)·仅参考方向`, c: 'sig-neut' },
       { l: `多头因素 ${bullScore.toFixed(0)}分 vs 空头因素 ${bearScore.toFixed(0)}分`, c: 'sig-neut' },
-      { l: '等待方向明确后自动产生信号', c: 'sig-neut' },
     ];
-    return {
-      ...base,
-      _isWait: true,
-      isBull: null,
-      conf: null,
-      score: directionScore,
-      sigs: waitSigs,
-      conflictRatio: dominance < 0.05 ? 0.5 : 0.4,
-      regime49: regime49 || base.regime49,
-      waitReason: 'sig_conflict',
-      reason: `方向中性: 多${bullScore.toFixed(0)}分 vs 空${bearScore.toFixed(0)}分, 优势差仅${(dominance*100).toFixed(0)}%`,
-      _v54_bullVotes: bullVotes.length,
-      _v54_bearVotes: bearVotes.length,
-      _v54_netVotes: 0,
-      _v54_activeFactors: VOTES.filter(v => v.dir !== 0).length,
-      _v54_threshold: Math.round(totalWeight * DIRECTION_THRESHOLD),
-    };
+    conf = Math.min(conf || 35, 40); // 低置信度但不拒绝
   }
 
   // ── 构建信号描述 ─────────────────────────────────────────────────────
@@ -22962,32 +23052,21 @@ window._Φ9x = function(tf) {
           {p: Math.round(entry*1.020*10000)/10000, pct:2.0, note:'中止损', riskPct:'2.00'},
           {p: Math.round(entry*1.035*10000)/10000, pct:3.5, note:'宽止损', riskPct:'3.50'},
         ];
-        // v78 FIX-8: Apply Vegas gate check even in fallback path
+        // v85: 保底引擎Vegas冲突 → 降低置信度，不拒绝
         const _fbVegas = (typeof S !== 'undefined') ? S.modData?.vegas : null;
         const _fbVegasConflicts = _fbVegas
           ? (isBull ? _fbVegas.below === true : _fbVegas.above === true)
           : false;
-        // If Vegas clearly conflicts, flip to WAIT rather than emit a wrong directional
-        if (_fbVegasConflicts) {
-          res = {
-            _isWait: true, isBull: null, conf: null, score: 0,
-            sigs: [
-              {l: '⚙️ 保底引擎 · Vegas冲突门槛已触发', c: 'sig-neut'},
-              {l: `Vegas通道${isBull ? '下方·不适合做多' : '上方·不适合做空'} · 等方向对齐`, c: 'sig-neut'},
-            ],
-            tf, price, isMock: !!(kl && kl._isMock),
-            regime49: 'ranging', conflictRatio: 0.45,
-            waitReason: 'vegas_conflict',
-            reason: '保底引擎Vegas冲突',
-            tps: [], sls: [],
-          };
-        } else {
+        const _fbVegasSigs = _fbVegasConflicts ? [
+          {l: '⚙️ 保底引擎 · Vegas逆向·置信度限35%', c: 'sig-neut'},
+          {l: `Vegas通道${isBull ? '下方·逆结构做多' : '上方·逆结构做空'} · 注意风险`, c: 'sig-neut'},
+        ] : [];
         res = {
-          isBull, score: isBull?2:-2, conf: 45,
+          isBull, score: isBull?2:-2, conf: _fbVegasConflicts ? 35 : 45,
           entry, entryMin: entry*0.998, entryMax: entry*1.002,
-          entryType: 'market', entryNote: '保底信号 · 数据加载中', entryZone: '现价附近',
+          entryType: 'market', entryNote: _fbVegasConflicts ? '保底信号·Vegas逆向·低置信度' : '保底信号 · 数据加载中', entryZone: '现价附近',
           tps, sls, rr: 1.5,
-          sigs: [{l:'⚙️ 简化动量引擎', c:'sig-neut'},{l: isBull?'MA5>MA20多头':'MA5<MA20空头', c: isBull?'sig-bull':'sig-bear'}],
+          sigs: [..._fbVegasSigs, {l:'⚙️ 简化动量引擎', c:'sig-neut'},{l: isBull?'MA5>MA20多头':'MA5<MA20空头', c: isBull?'sig-bull':'sig-bear'}],
           rsi: 50, macdD: {hist:0,bullDiv:false,bearDiv:false,histArr:[]},
           atr: atrEst, atrRaw: atrEst, atrPct: 0.015,
           tf, price, isMock: !!(kl && kl._isMock),
@@ -23014,7 +23093,6 @@ window._Φ9x = function(tf) {
           volProf: {nearPoc:false,aboveVAH:false,belowVAL:false},
           _isFallback: true,
         };
-        } // end else (no Vegas conflict)
       }
     } catch(fe) { console.warn('[FINCH v55] Fallback signal error:', fe); }
     if (!res) return null;
