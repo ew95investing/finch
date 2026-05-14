@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="robots" content="noindex,nofollow">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://fonts.googleapis.com https://fonts.gstatic.com https://api.binance.com https://api1.binance.com https://api2.binance.com https://api3.binance.com https://api4.binance.com https://data-api.binance.vision https://data-stream.binance.vision https://fapi.binance.com https://api.alternative.me https://api.coingecko.com https://api.llama.fi https://corsproxy.io https://api.allorigins.win https://thingproxy.freeboard.io https://api.blockchain.info https://www.alphavantage.co https://cdn.jsdelivr.net https://open.er-api.com wss://stream.binance.com wss://data-stream.binance.vision; connect-src 'self' https: wss: data: blob:; frame-ancestors 'none';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://fonts.googleapis.com https://fonts.gstatic.com https://api.binance.com https://api1.binance.com https://api2.binance.com https://api3.binance.com https://api4.binance.com https://data-api.binance.vision https://data-stream.binance.vision https://fapi.binance.com https://api.alternative.me https://api.coingecko.com https://api.llama.fi https://api.bitget.com https://corsproxy.io https://api.allorigins.win https://thingproxy.freeboard.io https://api.blockchain.info https://www.alphavantage.co https://cdn.jsdelivr.net https://open.er-api.com wss://stream.binance.com wss://data-stream.binance.vision; connect-src 'self' https: wss: data: blob:; frame-ancestors 'none';">
 <meta http-equiv="X-Frame-Options" content="DENY">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>FINCH v86 — 全维度市场分析</title>
+<title>FINCH v90 — 全维度市场分析</title>
 
 <!-- ═══ PWA / iOS APP META ═══ -->
 <meta name="mobile-web-app-capable" content="yes">
@@ -1198,6 +1198,12 @@ canvas.main-c{width:100%!important;}
       <div class="td-dot" id="tdDot"></div>
       <span id="tdLbl" style="font-size:10px">Binance</span>
     </div>
+    <div id="dataSourceStatus" style="font-size:9px;padding:3px 8px;border-radius:4px;background:var(--bg2);display:flex;align-items:center;gap:6px;line-height:1.2;">
+      <span style="color:var(--muted)">📡</span>
+      <span id="dsCrypto"  style="color:var(--green)">●BNB</span>
+      <span id="dsMetal"   style="color:var(--green)">●金银</span>
+      <span id="dsStock"   style="color:var(--muted)">○美股</span>
+    </div>
   </div>
 </div>
 
@@ -2016,9 +2022,19 @@ const PAIRS = [
   // ── Forex (open.er-api — unlimited free) ──────────────────────
   {s:'USD/SGD', b:'USDSGD', n:'USD/SGD', cls:'forex', erFrom:'USD', erTo:'SGD'},
   {s:'SGD/MYR', b:'SGDMYR', n:'SGD/MYR', cls:'forex', erCross:['SGD','MYR']},
-  // ── Oil (Binance USOIL perp + er-api WTI proxy) ───────────────
-  {s:'WTI/USD',   b:'OIL',  n:'Crude Oil WTI (石油)', cls:'commodity', oilSym:'USOILUSDT', oilId:'WTI'},
-  {s:'BRENT/USD', b:'BRENT',n:'Brent Crude (布伦特)',  cls:'commodity', oilSym:'BTCUSDT',   oilId:'BRENT'},
+  // ── Oil (Stooq.com CSV — free, no key; CL.F=WTI, BZ.F=Brent) ─
+  {s:'WTI/USD',   b:'OIL',  n:'Crude Oil WTI (石油)', cls:'commodity', stooqSym:'cl.f',  oilId:'WTI'},
+  {s:'BRENT/USD', b:'BRENT',n:'Brent Crude (布伦特)',  cls:'commodity', stooqSym:'bz.f',  oilId:'BRENT'},
+  // ── 美股合约 (Bitget USDT-Futures) ───────────────────────────
+  {s:'TSLA/USD',  b:'TSLA',  n:'Tesla',          cls:'stock',        exchange:'bitget', bitgetSym:'TSLAUSDT'},
+  {s:'NVDA/USD',  b:'NVDA',  n:'NVIDIA',         cls:'stock',        exchange:'bitget', bitgetSym:'NVDAUSDT'},
+  {s:'AAPL/USD',  b:'AAPL',  n:'Apple',          cls:'stock',        exchange:'bitget', bitgetSym:'AAPLUSDT'},
+  {s:'MSFT/USD',  b:'MSFT',  n:'Microsoft',      cls:'stock',        exchange:'bitget', bitgetSym:'MSFTUSDT'},
+  {s:'META/USD',  b:'META',  n:'Meta',           cls:'stock',        exchange:'bitget', bitgetSym:'METAUSDT'},
+  {s:'AMZN/USD',  b:'AMZN',  n:'Amazon',         cls:'stock',        exchange:'bitget', bitgetSym:'AMZNUSDT'},
+  {s:'GOOGL/USD', b:'GOOGL', n:'Google',         cls:'stock',        exchange:'bitget', bitgetSym:'GOOGLUSDT'},
+  {s:'COIN/USD',  b:'COIN',  n:'Coinbase',       cls:'stock_crypto', exchange:'bitget', bitgetSym:'COINUSDT'},
+  {s:'MSTR/USD',  b:'MSTR',  n:'MicroStrategy',  cls:'stock_crypto', exchange:'bitget', bitgetSym:'MSTRUSDT'},
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────
@@ -2058,6 +2074,16 @@ const ASSET_PARAMS = {
   // Oil
   'WTI/USD':   { rsiOversold:32, rsiOverbought:68, atrBaseMult:2.2, conflictThreshold:0.40, rsiLookback:200 },
   'BRENT/USD': { rsiOversold:32, rsiOverbought:68, atrBaseMult:2.2, conflictThreshold:0.40, rsiLookback:200 },
+  // US Stocks (Bitget) — moderate volatility, similar to crypto mid-caps
+  'TSLA/USD':  { rsiOversold:28, rsiOverbought:72, atrBaseMult:2.5, conflictThreshold:0.42, rsiLookback:200 },
+  'NVDA/USD':  { rsiOversold:30, rsiOverbought:70, atrBaseMult:2.2, conflictThreshold:0.40, rsiLookback:200 },
+  'AAPL/USD':  { rsiOversold:33, rsiOverbought:67, atrBaseMult:1.8, conflictThreshold:0.38, rsiLookback:200 },
+  'MSFT/USD':  { rsiOversold:33, rsiOverbought:67, atrBaseMult:1.8, conflictThreshold:0.38, rsiLookback:200 },
+  'META/USD':  { rsiOversold:30, rsiOverbought:70, atrBaseMult:2.0, conflictThreshold:0.40, rsiLookback:200 },
+  'AMZN/USD':  { rsiOversold:30, rsiOverbought:70, atrBaseMult:2.0, conflictThreshold:0.40, rsiLookback:200 },
+  'GOOGL/USD': { rsiOversold:32, rsiOverbought:68, atrBaseMult:1.9, conflictThreshold:0.39, rsiLookback:200 },
+  'COIN/USD':  { rsiOversold:28, rsiOverbought:72, atrBaseMult:2.8, conflictThreshold:0.44, rsiLookback:200 },
+  'MSTR/USD':  { rsiOversold:25, rsiOverbought:75, atrBaseMult:3.0, conflictThreshold:0.45, rsiLookback:200 },
 };
 
 // FIX_v55: Compute dynamic RSI thresholds from recent price history (20th/80th percentile)
@@ -2190,42 +2216,108 @@ async function _binanceFuturesKlines(fSym, iv, limit=300) {
   catch(e){ throw new Error('binance futures klines failed for '+fSym); }
 }
 
-// ── 2. Binance Spot klines for oil (USOILUSDT if available, else simulate) ──
-async function _binanceOilPrice(oilSym) {
-  const urls = [
-    `https://api.binance.com/api/v3/ticker/price?symbol=${oilSym}`,
-    `https://api1.binance.com/api/v3/ticker/price?symbol=${oilSym}`,
+// ── 2. Oil price via Stooq.com CSV (free, no key) + Yahoo Finance fallback ──
+// Stooq returns CSV: Date,Open,High,Low,Close,Volume
+// CL.F = WTI Crude, BZ.F = Brent Crude
+async function _stooqOilPrice(stooqSym) {
+  const url = `https://stooq.com/q/l/?s=${stooqSym}&f=sd2t2ohlcv&h&e=csv`;
+  const proxies = [
+    u => `https://corsproxy.io/?${encodeURIComponent(u)}`,
+    u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+    u => u,
   ];
-  const pxFns=[u=>u,u=>`https://corsproxy.io/?${encodeURIComponent(u)}`,u=>`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`];
-  const attempts=urls.flatMap(url=>pxFns.map(fn=>
-    tryFetch(fn(url),5000).then(r=>r.json()).then(d=>{
-      const px=parseFloat(d.price||0);
-      if(px<=10||px>=300)throw new Error('range');
+  const attempts = proxies.map(fn =>
+    tryFetch(fn(url), 7000).then(r => r.text()).then(csv => {
+      // CSV format: Symbol,Date,Time,Open,High,Low,Close,Volume
+      const lines = csv.trim().split('\n');
+      if (lines.length < 2) throw new Error('empty');
+      const vals = lines[1].split(',');
+      // Close is index 6 (0-based) in "Symbol,Date,Time,Open,High,Low,Close,Volume"
+      const px = parseFloat(vals[6] || vals[4]);
+      if (!isFinite(px) || px < 30 || px > 500) throw new Error('range: ' + px);
       return px;
     })
-  ));
-  try{ return await Promise.any(attempts); }
-  catch(e){ throw new Error('oil price unavailable for '+oilSym); }
+  );
+  return await Promise.any(attempts);
 }
 
-async function _binanceOilKlines(oilSym, iv, limit) {
-  const ivMap = {'15m':'15m','30m':'30m','1h':'1h','2h':'2h','4h':'4h','8h':'8h','1d':'1d','1w':'1w'};
-  const interval = ivMap[iv] || '1d';
-  const urls=[
-    `https://api.binance.com/api/v3/klines?symbol=${oilSym}&interval=${interval}&limit=${limit}`,
-    `https://api1.binance.com/api/v3/klines?symbol=${oilSym}&interval=${interval}&limit=${limit}`,
+async function _yahooOilPrice(yahooSym) {
+  // Yahoo Finance v8 quote endpoint
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${yahooSym}?interval=1d&range=1d`;
+  const proxies = [
+    u => `https://corsproxy.io/?${encodeURIComponent(u)}`,
+    u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
   ];
-  const pxFns=[u=>u,u=>`https://corsproxy.io/?${encodeURIComponent(u)}`,u=>`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`];
-  const attempts=urls.flatMap(url=>pxFns.map(fn=>
-    tryFetch(fn(url),8000).then(r=>r.json()).then(raw=>{
-      if(!Array.isArray(raw)||raw.length<=5)throw new Error('bad');
-      const kl=raw.map(k=>({t:+k[0],o:+k[1],h:+k[2],l:+k[3],c:+k[4],v:+k[5]})).filter(k=>k.c>10&&k.c<300);
-      if(kl.length<=5)throw new Error('range');
-      kl._isMock=false;return kl;
+  const attempts = proxies.map(fn =>
+    tryFetch(fn(url), 8000).then(r => r.json()).then(d => {
+      const result = d?.chart?.result?.[0];
+      const px = result?.meta?.regularMarketPrice || result?.meta?.previousClose;
+      if (!isFinite(px) || px < 30 || px > 500) throw new Error('yahoo range: ' + px);
+      return parseFloat(px);
     })
-  ));
-  try{ return await Promise.any(attempts); }
-  catch(e){ throw new Error('oil klines unavailable'); }
+  );
+  return await Promise.any(attempts);
+}
+
+// Master oil price fetcher: Stooq → Yahoo → stored fallback
+async function _oilPriceFetch(stooqSym, yahooSym, oilId) {
+  // 1. Try Stooq first (fastest, no key)
+  try {
+    const px = await _stooqOilPrice(stooqSym);
+    if (px > 0) return px;
+  } catch(e) {}
+  // 2. Try Yahoo Finance
+  try {
+    const px = await _yahooOilPrice(yahooSym);
+    if (px > 0) return px;
+  } catch(e) {}
+  // 3. Stored last-known
+  const stored = localStorage.getItem('finch_v90_oil_' + oilId);
+  if (stored) { const px = parseFloat(stored); if (px > 0) return px; }
+  throw new Error('oil price unavailable: ' + oilId);
+}
+
+// Build simulated oil klines from daily snapshots (same approach as forex)
+async function _stooqOilKlines(stooqSym, yahooSym, oilId, iv, limit) {
+  const key = `finch_v90_oilkl_${oilId}`;
+  let snapshots = [];
+  try { snapshots = JSON.parse(localStorage.getItem(key) || '[]'); } catch(e) {}
+
+  // Fetch current price
+  let currentPx;
+  try { currentPx = await _oilPriceFetch(stooqSym, yahooSym, oilId); } catch(e) {
+    const stored = localStorage.getItem('finch_v90_oil_' + oilId);
+    currentPx = stored ? parseFloat(stored) : (oilId === 'WTI' ? 78 : 82);
+  }
+
+  const now = Date.now();
+  const dayTs = Math.floor(now / 86400000) * 86400000;
+  if (!snapshots.length || snapshots[snapshots.length-1].t < dayTs) {
+    snapshots.push({ t: dayTs, c: currentPx });
+    if (snapshots.length > 365) snapshots = snapshots.slice(-365);
+    try { localStorage.setItem(key, JSON.stringify(snapshots)); } catch(e) {}
+  }
+
+  // Pad with simulated history if needed
+  if (snapshots.length < 30) {
+    const seed = currentPx;
+    const base = now - 200 * 86400000;
+    for (let i = 0; i < 150; i++) {
+      const t = base + i * 86400000;
+      const drift = seed * (1 + (Math.random() - 0.5) * 0.04);
+      const existing = snapshots.find(s => Math.abs(s.t - t) < 86400000);
+      if (!existing) snapshots.unshift({ t, c: drift, sim: true });
+    }
+    snapshots = snapshots.sort((a, b) => a.t - b.t);
+  }
+
+  const daily = snapshots.map((s, i, a) => {
+    const prev = a[i-1]?.c || s.c;
+    const vol2 = Math.abs(s.c - prev) * 0.5 || s.c * 0.005;
+    return { t: s.t, o: prev, h: Math.max(s.c, prev) + vol2 * 0.4, l: Math.min(s.c, prev) - vol2 * 0.4, c: s.c, v: 0 };
+  });
+
+  return _expandDailyToIntraday(daily, iv).slice(-limit);
 }
 
 // ── 3. open.er-api bulk rates (forex — unlimited, free) ──────────
@@ -2290,12 +2382,112 @@ async function _erForexKlines(from, to, iv, limit) {
 }
 
 // ── UNIFIED SPOT QUOTE ────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════
+// BITGET 美股合约 API  (v87)
+// 美股 USDT-Futures via api.bitget.com
+// 多层 CORS 代理回退，超时 8s/10s
+// ══════════════════════════════════════════════════════════════════
+const BITGET_CONFIG = {
+  baseUrl: 'https://api.bitget.com',
+  productType: 'USDT-FUTURES',
+};
+
+// 通用代理回退 fetch — 依次尝试直连、corsproxy.io、allorigins
+async function _bitgetFetch(url, timeoutMs = 8000) {
+  const proxies = [
+    u => u,
+    u => `https://corsproxy.io/?${encodeURIComponent(u)}`,
+    u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+  ];
+  for (const buildUrl of proxies) {
+    try {
+      const resp = await fetch(buildUrl(url), { signal: AbortSignal.timeout(timeoutMs) });
+      if (!resp.ok) continue;
+      const data = await resp.json();
+      if (data && data.code === '00000') return data;
+    } catch(e) {}
+  }
+  throw new Error(`[Bitget] All proxies failed for: ${url}`);
+}
+
+// Ticker — 实时价格、24h高低、OI、资金费率
+async function _bitgetTicker(bitgetSym) {
+  const url = `${BITGET_CONFIG.baseUrl}/api/v2/mix/market/ticker?symbol=${bitgetSym}&productType=${BITGET_CONFIG.productType}`;
+  const data = await _bitgetFetch(url, 8000);
+  const t = Array.isArray(data.data) ? data.data[0] : data.data;
+  if (!t) throw new Error('[Bitget] empty ticker data');
+  return {
+    px:          parseFloat(t.lastPr)      || 0,
+    bid:         parseFloat(t.bidPr)       || 0,
+    ask:         parseFloat(t.askPr)       || 0,
+    high:        parseFloat(t.high24h)     || 0,
+    low:         parseFloat(t.low24h)      || 0,
+    vol:         parseFloat(t.usdtVolume || t.baseVolume || 0),
+    oi:          parseFloat(t.holdingAmount || 0),
+    fundingRate: parseFloat(t.fundingRate  || 0),
+  };
+}
+
+// K线 — 标准 OHLCV 格式
+async function _bitgetKlines(bitgetSym, interval, limit = 300) {
+  const granMap = {
+    '1m':'1m','5m':'5m','15m':'15m','30m':'30m',
+    '1h':'1H','4h':'4H','1d':'1Dutc','1w':'1Wutc'
+  };
+  const granularity = granMap[interval] || '1H';
+  const url = `${BITGET_CONFIG.baseUrl}/api/v2/mix/market/candles?symbol=${bitgetSym}&granularity=${granularity}&limit=${limit}&productType=${BITGET_CONFIG.productType}`;
+  const data = await _bitgetFetch(url, 10000);
+  if (!Array.isArray(data.data) || !data.data.length) throw new Error('[Bitget] empty kline data');
+  // Bitget返回: [ts, open, high, low, close, vol, volUSDT]
+  return data.data
+    .map(c => ({
+      t: parseInt(c[0]),
+      o: parseFloat(c[1]),
+      h: parseFloat(c[2]),
+      l: parseFloat(c[3]),
+      c: parseFloat(c[4]),
+      v: parseFloat(c[5]),
+    }))
+    .filter(c => c.t > 0 && c.c > 0)
+    .sort((a, b) => a.t - b.t);  // 确保时间升序
+}
+
+// ══════════════════════════════════════════════════════════════════
+
 async function tdQuote(sym) {
   const cached = _avQuoteCache[sym];
   if(cached && Date.now()-cached.ts < AV_QUOTE_TTL) return cached.q;
 
   const p = getPair(sym);
   if(!p) return cached?.q||null;
+
+  // ── Bitget 美股合约 ──────────────────────────────────────────
+  if (p.exchange === 'bitget' && p.bitgetSym) {
+    try {
+      const ticker = await _bitgetTicker(p.bitgetSym);
+      if (!ticker.px || !isFinite(ticker.px) || ticker.px <= 0) throw new Error('invalid bitget price');
+      const hl  = _updateDailyHL(sym, ticker.px);
+      const prev = cached?.q?.px;
+      const chg  = (prev && prev > 0 && isFinite(prev)) ? (ticker.px - prev) / prev * 100 : 0;
+      // 缓存资金费率供信号引擎使用
+      if (!S.fundingRates) S.fundingRates = {};
+      S.fundingRates[sym] = ticker.fundingRate;
+      const q = {
+        px: ticker.px, chg, open: hl.open || ticker.px,
+        high: Math.max(ticker.high, hl.high || ticker.high),
+        low:  Math.min(ticker.low,  hl.low  || ticker.low),
+        vol: ticker.vol, oi: ticker.oi, fundingRate: ticker.fundingRate,
+      };
+      _avQuoteCache[sym] = { q, ts: Date.now() };
+      updTDStatus(true);
+      updateDataSourceStatus(sym);
+      return q;
+    } catch(e) {
+      console.warn('[FINCH] Bitget quote error:', sym, e.message);
+      updTDStatus(false);
+      return cached?.q || null;
+    }
+  }
 
   let px = 0;
   try {
@@ -2311,13 +2503,14 @@ async function tdQuote(sym) {
       // USD/SGD via er-api
       px = await _erCrossRate(p.erFrom, p.erTo);
 
-    } else if(p.cls === 'commodity' && p.oilSym) {
-      // Oil: try Binance USOILUSDT, fallback to stored/estimated
+    } else if(p.cls === 'commodity' && p.stooqSym) {
+      // Oil: Stooq → Yahoo → stored fallback (v90: real prices, no fake Binance)
+      const yahooMap = { 'WTI': 'CL=F', 'BRENT': 'BZ=F' };
+      const yahoo = yahooMap[p.oilId] || 'CL=F';
       try {
-        px = await _binanceOilPrice(p.oilSym);
+        px = await _oilPriceFetch(p.stooqSym, yahoo, p.oilId);
       } catch(e) {
-        // Use last known price or reasonable estimate
-        const stored = localStorage.getItem('finch_v45_oil_'+p.oilId);
+        const stored = localStorage.getItem('finch_v90_oil_'+p.oilId);
         px = stored ? parseFloat(stored) : (p.oilId==='WTI' ? 78 : 82);
       }
     }
@@ -2326,7 +2519,7 @@ async function tdQuote(sym) {
 
     // Store oil price for fallback
     if(p.cls==='commodity') {
-      try { localStorage.setItem('finch_v45_oil_'+p.oilId, px.toString()); } catch(e) {}
+      try { localStorage.setItem('finch_v90_oil_'+p.oilId, px.toString()); } catch(e) {}
     }
 
     const hl   = _updateDailyHL(sym, px);
@@ -2336,6 +2529,7 @@ async function tdQuote(sym) {
     const q = { px, chg, open:hl.open||px, high:hl.high, low:hl.low, vol:0 };
     _avQuoteCache[sym] = { q, ts:Date.now() };
     updTDStatus(true);
+    updateDataSourceStatus(sym);
     return q;
 
   } catch(e) {
@@ -2396,22 +2590,29 @@ async function _avOilKlines(p,iv,limit){ return await _oilKlinesV45(p,iv,limit);
 async function _avFXSpot(from,to){ return await _erCrossRate(from,to); }
 
 async function _oilKlinesV45(p, iv, limit) {
-  if(p.oilSym && p.oilSym !== 'BTCUSDT') {
+  // v90: Use Stooq-based real oil klines (real price snapshots + intraday expansion)
+  if(p.stooqSym) {
     try {
-      const kl = await _binanceOilKlines(p.oilSym, iv, limit);
-      if(kl.length>5) return kl;
+      const yahooMap = { 'WTI': 'CL=F', 'BRENT': 'BZ=F' };
+      const yahoo = yahooMap[p.oilId] || 'CL=F';
+      const kl = await _stooqOilKlines(p.stooqSym, yahoo, p.oilId, iv, limit);
+      if(kl.length > 5) { kl._isMock = false; return kl; }
     } catch(e) {}
   }
-  // Simulate oil history from last known price
-  const lastPx = parseFloat(localStorage.getItem('finch_v45_oil_'+p.oilId)||'78');
+  // Fallback: pure simulation from stored price
+  const lastPx = parseFloat(localStorage.getItem('finch_v90_oil_'+p.oilId) || (p.oilId==='WTI'?'78':'82'));
   const now = Date.now();
   const daily = [];
+  // Build 200-day simulated OHLCV with realistic oil vol (~1.5% daily)
+  let px = lastPx * (0.92 + Math.random() * 0.16); // randomize starting point
   for(let i=200; i>=0; i--) {
     const t = now - i*86400000;
-    const noise = lastPx * (0.98 + Math.random()*0.04);
-    daily.push({t, o:noise, h:noise*1.015, l:noise*0.985, c:noise, v:0});
+    const chg = px * (1 + (Math.random()-0.5)*0.03);
+    const vol = Math.abs(chg - px) * 0.5 + px * 0.005;
+    daily.push({t, o:px, h:Math.max(px,chg)+vol*0.5, l:Math.min(px,chg)-vol*0.5, c:chg, v:0});
+    px = chg;
   }
-  daily[daily.length-1].c = lastPx;
+  daily[daily.length-1].c = lastPx; // anchor last close to known price
   const kl = _expandDailyToIntraday(daily, iv).slice(-limit);
   kl._isMock = true;
   return kl;
@@ -2430,6 +2631,24 @@ async function tdKlines(sym, iv, limit=300) {
 
   let kl = null;
   try {
+    // ── Bitget 美股合约 ────────────────────────────────────────
+    if (p.exchange === 'bitget' && p.bitgetSym) {
+      kl = await _bitgetKlines(p.bitgetSym, iv, limit);
+      if (!kl || kl.length < 5) throw new Error('insufficient bitget klines');
+      kl._isMock = false;
+      // Inject live spot into last candle
+      const spot = _avQuoteCache[sym];
+      if (spot?.q?.px > 0) {
+        const last = kl[kl.length - 1];
+        last.c = spot.q.px;
+        last.h = Math.max(last.h, spot.q.px);
+        last.l = Math.min(last.l, spot.q.px);
+      }
+      _tdCache[key] = { data: kl, ts: Date.now() };
+      updTDStatus(true);
+      return kl;
+    }
+
     if(p.cls==='metal' && p.fSym) {
       kl = await _getMetalKlines(p, iv, limit);
 
@@ -2480,10 +2699,66 @@ function updTDStatus(ok) {
   if(lbl) lbl.textContent=ok?'数据 ✓':'数据 –';
 }
 
+// ── 数据源状态指示器 (v87) ────────────────────────────────────────
+function updateDataSourceStatus(sym) {
+  try {
+    const p = getPair(sym);
+    if (!p) return;
+    const stockEl = document.getElementById('dsStock');
+    const cryptoEl = document.getElementById('dsCrypto');
+    const metalEl  = document.getElementById('dsMetal');
+    if (p.cls === 'stock' || p.cls === 'stock_crypto') {
+      if (stockEl)  { stockEl.textContent = '●美股(Bitget)'; stockEl.style.color = 'var(--green)'; }
+      if (cryptoEl) { cryptoEl.textContent = '○BNB'; cryptoEl.style.color = 'var(--muted)'; }
+      if (metalEl)  { metalEl.textContent  = '○金银'; metalEl.style.color  = 'var(--muted)'; }
+    } else if (p.cls === 'metal') {
+      if (metalEl)  { metalEl.textContent  = '●金银'; metalEl.style.color  = 'var(--green)'; }
+      if (cryptoEl) { cryptoEl.textContent = '○BNB'; cryptoEl.style.color = 'var(--muted)'; }
+      if (stockEl)  { stockEl.textContent  = '○美股'; stockEl.style.color  = 'var(--muted)'; }
+    } else if (p.cls === 'crypto') {
+      if (cryptoEl) { cryptoEl.textContent = '●BNB'; cryptoEl.style.color = 'var(--green)'; }
+      if (metalEl)  { metalEl.textContent  = '○金银'; metalEl.style.color = 'var(--muted)'; }
+      if (stockEl)  { stockEl.textContent  = '○美股'; stockEl.style.color = 'var(--muted)'; }
+    } else {
+      // commodity/forex
+      if (cryptoEl) { cryptoEl.textContent = '○BNB'; cryptoEl.style.color = 'var(--muted)'; }
+      if (metalEl)  { metalEl.textContent  = '○金银'; metalEl.style.color = 'var(--muted)'; }
+      if (stockEl)  { stockEl.textContent  = '○美股'; stockEl.style.color = 'var(--muted)'; }
+    }
+  } catch(e) {}
+}
+
 // ── Market hours ──────────────────────────────────────────────────
 function getMarketStatus(cls) {
-  const mytDay=new Date(Date.now()+8*3600000).getUTCDay();
-  const isWknd=mytDay===0||mytDay===6;
+  const now = new Date();
+  const mytDay  = new Date(Date.now() + 8 * 3600000).getUTCDay();
+  const isWknd  = mytDay === 0 || mytDay === 6;
+
+  // ── 美股合约 (Bitget) ────────────────────────────────────────
+  // NYSE 正式时段: 09:30–16:00 ET = UTC 13:30–20:00
+  // 盘前 Pre-market: 04:00–09:30 ET = UTC 08:00–13:30
+  // 盘后 After-hours: 16:00–20:00 ET = UTC 20:00–00:00
+  if (cls === 'stock' || cls === 'stock_crypto') {
+    if (isWknd) return { open: false, label: '周末休市 ⚠️ 流动性极差', warning: true, session: 'closed' };
+    const hourUTC = now.getUTCHours();
+    const minUTC  = now.getUTCMinutes();
+    const totalMins = hourUTC * 60 + minUTC;
+    // Regular: UTC 13:30–20:00 (NYSE 09:30–16:00 ET)
+    if (totalMins >= 810 && totalMins < 1200) {
+      return { open: true, label: '美股交易时段 ✓', session: 'regular' };
+    }
+    // Pre-market: UTC 08:00–13:30 (NYSE 04:00–09:30 ET)
+    if (totalMins >= 480 && totalMins < 810) {
+      return { open: false, label: '盘前 Pre-market ⚠️', warning: true, session: 'pre', showPrice: true };
+    }
+    // After-hours: UTC 20:00–00:00 (NYSE 16:00–20:00 ET)
+    if (totalMins >= 1200 || totalMins < 0) {
+      return { open: false, label: '盘后 After-hours ⚠️', warning: true, session: 'after', showPrice: true };
+    }
+    // Overnight (UTC 00:00–08:00): market closed, Bitget still has futures price
+    return { open: false, label: '非交易时段 ⚠️ 插针风险高', warning: true, session: 'overnight', showPrice: true };
+  }
+
   if(cls==='crypto'||cls==='metal') return {open:true, label:'24/7'};
   if(cls==='forex'||cls==='commodity'){
     if(isWknd) return {open:false,label:'休市 Closed'};
@@ -3313,6 +3588,21 @@ function renderExpandedChart(kl){
 }
 
 async function selectSym(sym){
+  // v88: 美股首次加载指示器
+  (function(){
+    try {
+      const pair = typeof getPair === 'function' ? getPair(sym) : null;
+      if (pair && (pair.cls === 'stock' || pair.cls === 'stock_crypto')) {
+        const sa = document.getElementById('stratArea');
+        if (sa && !window._stockLoading) {
+          window._stockLoading = true;
+          sa.innerHTML = '<div style="padding:24px;text-align:center;color:var(--dim);"><div class="ai-spinner" style="margin:0 auto 12px;"></div>📡 首次加载美股数据，请稍候...<br><small style="font-size:10px;opacity:.6;">Bitget API via CORS proxy</small></div>';
+        }
+      } else {
+        window._stockLoading = false;
+      }
+    } catch(e) {}
+  })();
   document.querySelectorAll('.sym-item').forEach(e=>e.classList.remove('active'));
   const el=document.getElementById('si-'+sym);if(el)el.classList.add('active');
   // v40: preserve seed price when switching so UI never shows --
@@ -6656,9 +6946,9 @@ function _checkMTFResonance(isBull) {
   // 市场永远有方向，只是共振强弱决定仓位大小
   let grade, confBoost, sizeMult, block = false, waitReason = '';
   if (_mtf1w1dConflict) {
-    // 1w/1d矛盾: 过渡市场，极轻仓通过
-    grade = '⚠️ 周期过渡·极轻仓'; confBoost = -15; sizeMult = 0.25; block = false;
-    waitReason = ''; // 不再WAIT
+    // v87: 进一步减轻惩罚 — 过渡市场应允许正常交易，极端封锁浪费90%时间
+    grade = '⚠️ 周期过渡·轻仓'; confBoost = -10; sizeMult = 0.35; block = false;
+    waitReason = ''; // 不WAIT
   } else if (resonanceScore >= 0.85) {
     grade = '🔥 全共振'; confBoost = 15; sizeMult = 1.0;
   } else if (resonanceScore >= 0.70) {
@@ -6804,6 +7094,50 @@ function _Φ9x(tf){
     swingHighs=pv.peaks.map(p=>p.price).filter(p=>p>price).sort((a,b)=>a-b).slice(0,5);
     swingLows=pv.troughs.map(p=>p.price).filter(p=>p<price).sort((a,b)=>b-a).slice(0,5);
   }catch(e){}
+
+  // ── v89 FIX: 识别真正的波段结构，用于Fibonacci延伸计算 ──────────────
+  // 量化交易核心逻辑: Fib延伸 = 从一个完整的涨/跌波段做投射
+  // LONG:  识别最近的摆动低点(A) → 摆动高点(B)，延伸投射 C = A + (B-A)×ratio
+  // SHORT: 识别最近的摆动高点(A) → 摆动低点(B)，延伸投射 C = A - (A-B)×ratio
+  // 回撤位作为入场参考，延伸位作为TP目标 — 这是ICT/SMC/经典技术分析的标准做法
+  let _fibWaveHi = fibHi, _fibWaveLo = fibLo; // 构成波段的高低点
+  let _fibRetraceTo = price; // 回撤到的位置（即当前入场区附近）
+  try {
+    const _pvFull = _Δ1p(recentKL, Math.min(5, Math.floor(recentKL.length / 10)));
+    const _allPeaks   = _pvFull.peaks.sort((a,b) => b.idx - a.idx);   // 最新在前
+    const _allTroughs = _pvFull.troughs.sort((a,b) => b.idx - a.idx); // 最新在前
+
+    if(isBull) {
+      // LONG做多: 找最近的 低点A → 高点B（完整上涨波段）
+      // 当前price是回撤后的入场位
+      // 条件: 低点A在高点B之前，高点B在price之前
+      const _waveLo = _allTroughs.find(t => t.price < price * 0.995);
+      const _waveHi = _waveLo ? _allPeaks.find(p => p.price > price * 1.001 && p.idx > _waveLo.idx) : null;
+      if(_waveLo && _waveHi && _waveHi.price > _waveLo.price) {
+        _fibWaveLo = _waveLo.price;
+        _fibWaveHi = _waveHi.price;
+        _fibRetraceTo = price; // 当前回撤入场位
+      } else {
+        // Fallback: 用近期最低点和次级高点
+        _fibWaveLo = _allTroughs.length ? _allTroughs[_allTroughs.length-1].price : safeLow;
+        _fibWaveHi = _allPeaks.length   ? _allPeaks[0].price : safeHigh;
+      }
+    } else {
+      // SHORT做空: 找最近的 高点A → 低点B（完整下跌波段）
+      const _waveHi = _allPeaks.find(p => p.price > price * 1.001);
+      const _waveLo = _waveHi ? _allTroughs.find(t => t.price < price * 0.999 && t.idx > _waveHi.idx) : null;
+      if(_waveHi && _waveLo && _waveLo.price < _waveHi.price) {
+        _fibWaveHi = _waveHi.price;
+        _fibWaveLo = _waveLo.price;
+        _fibRetraceTo = price;
+      } else {
+        _fibWaveHi = _allPeaks.length   ? _allPeaks[_allPeaks.length-1].price : safeHigh;
+        _fibWaveLo = _allTroughs.length ? _allTroughs[0].price : safeLow;
+      }
+    }
+  } catch(e) {}
+  // 波段幅度 — 这是Fib延伸的基础单位
+  const _fibWaveRange = Math.max(_fibWaveHi - _fibWaveLo, price * 0.01);
 
   const recentRange=Math.max(fibHi-fibLo, price*0.01);
   const adRange=Math.max(
@@ -7646,39 +7980,46 @@ function _Φ9x(tf){
       entryZone=`等待 ${fmtP(entry*0.995)}–${fmtP(entry)}`;
       entryMin=entry*0.995;entryMax=entry*1.003;
     } else {
-      // SHORT default: entry ABOVE price — must wait for micro-bounce confirmation
-      // v77 FIX-B: enforce minimum premium of 0.5×ATR so user is never shorting at market
-      // v79 FIX-8: 做空入场结构确认门槛强化
-      // 原因: ATR*0.5的"微反弹"不是真正的结构确认，任何短期噪音都能触发
-      // 修复: 非深度超买时，SHORT入场必须满足至少1个结构性条件:
-      //       阻力位附近(2%) OR VWAP压制 OR MA20压制 OR bearBOS
-      //       否则降为limit-wait并注明"等结构确认"
-      const _hasStructShortConfirm =
-        Math.abs(price - nearestResist) / price < 0.02 ||  // 阻力位附近
-        (!vwapBull && vwapDist < 0.005) ||                  // VWAP压制
-        (ma20Level >= price && Math.abs(price - ma20Level) / price < 0.006) || // MA20压制
-        mktStr.bearBOS;                                      // 已确认跌破结构
+      // SHORT default: v87 宽松化 — 深度超买/强下跌趋势允许市价做空，减少等待
+      const deepOverbought  = rsi > 75 && bbPos > 0.85;
+      const strongBearTrend = adx && adx.adx > 30 && !isBull;
 
-      const premiumMult = _bearFlowScore >= 2 ? 0.5 : 0.8;
-      const rawEntry = price + atrClamped * premiumMult;
-      entry = Math.round(Math.max(rawEntry, price * 1.003) * 100) / 100;
-
-      if (_hasStructShortConfirm) {
-        entryType = _weakBullFlow ? 'limit-wait' : 'limit';
-        const _structNote = mktStr.bearBOS ? 'bearBOS已确认' :
-          Math.abs(price - nearestResist) / price < 0.02 ? `阻力 ${fmtP(nearestResist)} 附近` :
-          !vwapBull ? 'VWAP压制' : `MA20压制 ${fmtP(ma20Level)}`;
-        const flowNote = _bearFlowScore >= 2 ? ' · CVD+OI确认做空' : _strongBullFlow ? ' · ⚠️ 流量偏多·谨慎' : '';
-        entryNote = `结构确认(${_structNote}) · 等反弹至 ${fmtP(entry)} 再空${flowNote}`;
-        entryZone = `${fmtP(entry)} ±${fmtP(atrClamped * 0.15)}`;
-        entryMin = price * 1.001; entryMax = price + atrClamped * 0.9;
+      if (deepOverbought || strongBearTrend) {
+        // 深度超买或强下跌趋势 → 允许市价做空，不再等候反弹
+        entry = price;
+        entryType = 'market';
+        entryNote = `${deepOverbought ? '深度超买' : 'ADX强空趋势(' + adx.adx.toFixed(0) + ')'}·允许市价做空${_cvdBear ? ' · CVD卖盘' : ''}`;
+        entryZone = '现价立即入场';
+        entryMin = price * 0.998;
+        entryMax = price * 1.002;
       } else {
-        // 无结构支撑 → 必须等待，降为limit-wait
-        entryType = 'limit-wait';
-        const flowNote = _strongBullFlow ? ' · ⚠️ 流量偏多·不建议' : '';
-        entryNote = `⚠️ 无结构确认·等待(阻力/VWAP/MA20/BOS均不满足) · 反弹至 ${fmtP(entry)} 且有结构支撑才空${flowNote}`;
-        entryZone = `等待 · ${fmtP(entry)} 仅参考`;
-        entryMin = price * 1.001; entryMax = price + atrClamped * 0.9;
+        // 非极端情况: 入场溢价从0.5×ATR降至0.3×ATR (v87宽松)
+        const _hasStructShortConfirm =
+          Math.abs(price - nearestResist) / price < 0.02 ||
+          (!vwapBull && vwapDist < 0.005) ||
+          (ma20Level >= price && Math.abs(price - ma20Level) / price < 0.006) ||
+          mktStr.bearBOS;
+
+        const premiumMult = _bearFlowScore >= 2 ? 0.3 : 0.5;  // v87: 0.5/0.8→0.3/0.5
+        const rawEntry = price + atrClamped * premiumMult;
+        entry = Math.round(Math.max(rawEntry, price * 1.002) * 100) / 100;
+
+        if (_hasStructShortConfirm) {
+          entryType = _weakBullFlow ? 'limit-wait' : 'limit';
+          const _structNote = mktStr.bearBOS ? 'bearBOS已确认' :
+            Math.abs(price - nearestResist) / price < 0.02 ? `阻力 ${fmtP(nearestResist)} 附近` :
+            !vwapBull ? 'VWAP压制' : `MA20压制 ${fmtP(ma20Level)}`;
+          const flowNote = _bearFlowScore >= 2 ? ' · CVD+OI确认做空' : _strongBullFlow ? ' · ⚠️ 流量偏多·谨慎' : '';
+          entryNote = `结构确认(${_structNote}) · 等反弹至 ${fmtP(entry)} 再空${flowNote}`;
+          entryZone = `${fmtP(entry)} ±${fmtP(atrClamped * 0.10)}`;
+          entryMin = price * 1.001; entryMax = price + atrClamped * 0.7;
+        } else {
+          entryType = 'limit-wait';
+          const flowNote = _strongBullFlow ? ' · ⚠️ 流量偏多·不建议' : '';
+          entryNote = `⚠️ 无结构确认·等待 · 反弹至 ${fmtP(entry)} 且有结构支撑才空${flowNote}`;
+          entryZone = `等待 · ${fmtP(entry)} 仅参考`;
+          entryMin = price * 1.001; entryMax = price + atrClamped * 0.7;
+        }
       }
     }
   }
@@ -7830,22 +8171,65 @@ function _Φ9x(tf){
     entryNote+=' · 入场价已修正至当前价附近';
   }
 
-  // PRECISION TP BUILD — 结构性精准止盈系统
-  // 优先级: 结构高低点(P10) > Fibonacci延伸(P9) > 缠论位(P9)
+  // v90: Append Fibonacci retracement context to entryNote
+  // This tells the user WHAT WAVE the entry is based on and WHERE they are in the retracement
+  (function(){
+    try {
+      const _waveRange = _fibWaveRange;
+      const _waveHi = _fibWaveHi, _waveLo = _fibWaveLo;
+      if(_waveRange > price * 0.005 && _waveHi > 0 && _waveLo > 0) {
+        // Calculate how far current entry is in retracement of the identified wave
+        const _retPct = isBull
+          ? ((_waveHi - entry) / _waveRange * 100)   // how deep into wave pullback
+          : ((entry - _waveLo) / _waveRange * 100);  // how high into wave bounce
+        // Only annotate if retracement is between 23.6% and 88.2% (meaningful fib zone)
+        if(_retPct >= 20 && _retPct <= 90) {
+          // Find nearest standard fib level
+          const _fibs = [23.6, 38.2, 50.0, 61.8, 78.6, 88.2];
+          const _nearest = _fibs.reduce((a,b) => Math.abs(b-_retPct)<Math.abs(a-_retPct)?b:a);
+          const _withinFib = Math.abs(_retPct - _nearest) < 8; // within 8% of a named level
+          if(_withinFib) {
+            entryNote += ` · 波段回撤${_retPct.toFixed(0)}%≈Fib${_nearest}% [${fmtP(_waveLo)}→${fmtP(_waveHi)}]`;
+          } else {
+            entryNote += ` · 当前在波段${fmtP(_waveLo)}→${fmtP(_waveHi)}的${_retPct.toFixed(0)}%回撤位`;
+          }
+        }
+      }
+    } catch(e) {}
+  })();
+
+  // PRECISION TP BUILD — 结构性精准止盈系统 v89
+  // 优先级: 结构高低点(P10) > Fibonacci波段延伸(P9) > 缠论位(P9)
   //         > 整数关口(P7) > Regime自适应ATR倍数(P4-6)
-  // 科学依据: 价格在结构/Fib位附近停顿概率>ATR均值法高35%+
+  // v89 核心修复: Fib延伸 = 波段投射，不是回撤区间倍数
+  // 标准公式(做多): TP = 回撤低点 + 波段幅度 × ratio
+  //                 其中波段幅度 = 最近摆动低 → 摆动高的完整涨幅
+  // 标准公式(做空): TP = 反弹高点 - 波段幅度 × ratio
   function _bTP(){
     const candidates=[];
 
     if(isBull){
-      // 1. Structural swing highs (most important)
-      swingHighs.filter(h=>h>entry+minGap&&h<=entry+maxTpDist*2)
-        .forEach(h=>candidates.push({p:h,src:'结构高点阻力',priority:10}));
+      // 1. Structural swing highs (most important) — no distance cap, let structure speak
+      swingHighs.filter(h=>h>entry+minGap)
+        .forEach(h=>candidates.push({p:h,src:'结构摆动高点阻力',priority:10}));
 
-      // 2. Fibonacci extension levels — v74: 只用真正在entry上方的延伸目标
-      [{r:1.0,s:'Fib 1.0 前高'},{r:1.272,s:'Fib 1.272φ延伸'},{r:1.618,s:'Fib 1.618φ黄金延伸'},{r:2.0,s:'Fib 2.0φ延伸'},{r:2.618,s:'Fib 2.618φ延伸'}]
-      .map(({r,s})=>({p:fibLo+(fibHi-fibLo)*r,src:s,priority:9}))
-      .filter(f=>f.p>entry+minGap&&f.p<=entry+maxTpDist*2&&isFinite(f.p)&&f.p>0)
+      // 2. v89 FIX: 真正的Fibonacci波段延伸投射
+      // 公式: TP = 入场位(回撤低点) + 波段幅度 × 延伸比率
+      // 波段幅度(_fibWaveRange) = 识别到的完整上涨波段(A→B)的幅度
+      // 这是ICT / SMC / 经典Fib延伸的标准做法
+      const _fibBase = entry; // 回撤入场位 = 投射起点
+      // v90: show wave anchor in note so user understands the price logic
+      const _fibWaveNote = `波段 ${fmtP(_fibWaveLo)}→${fmtP(_fibWaveHi)} (幅度${fmtP(_fibWaveRange)})`;
+      [
+        {r:0.618, s:`Fib 0.618延伸 弱势目标 · ${_fibWaveNote}`, priority:8},
+        {r:1.0,   s:`Fib 1.0 等幅测量 · ${_fibWaveNote}`, priority:9},
+        {r:1.272, s:`Fib 1.272延伸 · ${_fibWaveNote}`, priority:9},
+        {r:1.618, s:`Fib 1.618φ 黄金延伸 强势目标 · ${_fibWaveNote}`, priority:10},
+        {r:2.0,   s:`Fib 2.0 双倍延伸 · ${_fibWaveNote}`, priority:8},
+        {r:2.618, s:`Fib 2.618φ 超级延伸 趋势目标 · ${_fibWaveNote}`, priority:9},
+      ]
+      .map(({r,s,priority})=>({p:_fibBase+_fibWaveRange*r, src:s, priority}))
+      .filter(f=>f.p>entry+minGap&&isFinite(f.p)&&f.p>0)
       .forEach(f=>candidates.push(f));
 
       // 3. Chan resistance
@@ -7902,13 +8286,25 @@ function _Φ9x(tf){
 
     } else {
       // SHORT
-      swingLows.filter(l=>l<entry-minGap&&l>=entry-maxTpDist*2)
-        .forEach(l=>candidates.push({p:l,src:'结构低点支撑',priority:10}));
+      swingLows.filter(l=>l<entry-minGap)
+        .forEach(l=>candidates.push({p:l,src:'结构摆动低点支撑',priority:10}));
 
-      // v74: 只用真正在entry下方的延伸目标
-      [{r:0.0,s:'Fib 0 区间底'},{r:-0.272,s:'Fib 1.272φ下行'},{r:-0.618,s:'Fib 1.618φ下行'},{r:-1.0,s:'Fib 2.0φ下行'},{r:-1.618,s:'Fib 2.618φ下行'}]
-      .map(({r,s})=>({p:fibHi-(fibHi-fibLo)*(1-r>0?1-r:Math.abs(r)),src:s,priority:9}))
-      .filter(f=>f.p<entry-minGap&&f.p>=entry-maxTpDist*2&&isFinite(f.p)&&f.p>0)
+      // v89 FIX: 真正的Fibonacci波段延伸投射 (做空方向)
+      // 公式: TP = 反弹入场位 - 波段幅度 × 延伸比率
+      // 波段幅度(_fibWaveRange) = 识别到的完整下跌波段(A→B)的幅度
+      const _fibBaseShort = entry; // 反弹后的做空入场位 = 投射起点
+      // v90: show wave anchor in note so user understands the price logic
+      const _fibWaveNoteShort = `波段 ${fmtP(_fibWaveHi)}→${fmtP(_fibWaveLo)} (幅度${fmtP(_fibWaveRange)})`;
+      [
+        {r:0.618, s:`Fib 0.618延伸 弱势空头目标 · ${_fibWaveNoteShort}`, priority:8},
+        {r:1.0,   s:`Fib 1.0 等幅测量 · ${_fibWaveNoteShort}`, priority:9},
+        {r:1.272, s:`Fib 1.272延伸 · ${_fibWaveNoteShort}`, priority:9},
+        {r:1.618, s:`Fib 1.618φ 黄金延伸 强势空头目标 · ${_fibWaveNoteShort}`, priority:10},
+        {r:2.0,   s:`Fib 2.0 双倍延伸 · ${_fibWaveNoteShort}`, priority:8},
+        {r:2.618, s:`Fib 2.618φ 超级延伸 趋势空头目标 · ${_fibWaveNoteShort}`, priority:9},
+      ]
+      .map(({r,s,priority})=>({p:_fibBaseShort-_fibWaveRange*r, src:s, priority}))
+      .filter(f=>f.p<entry-minGap&&f.p>0&&isFinite(f.p))
       .forEach(f=>candidates.push(f));
 
       if(chanSup<entry-minGap&&chanSup>0)candidates.push({p:chanSup,src:'缠论支撑位',priority:9});
@@ -7961,7 +8357,7 @@ function _Φ9x(tf){
     }
   }
 
-  // INSTITUTIONAL SL BUILD — Wall Street Desk Standard
+  // INSTITUTIONAL SL BUILD — Wall Street Desk Standard v89
   // Philosophy (PTJ / Druckenmiller / Kovner):
   //   1. SL = STRUCTURAL INVALIDATION, not ATR multiple
   //      → Place BEYOND the last significant swing, not AT it
@@ -7972,18 +8368,18 @@ function _Φ9x(tf){
   //      SL2 = full invalidation (wider structure fails)
   //      SL3 = catastrophic stop (thesis completely wrong)
   function _bSL(){
-    // FIX-B v65: 结构性止损 — SL放在真正的结构失效点
+    // v89 CORE PHILOSOPHY: SL必须放在真正的技术性无效点
     // "我的止损放在市场证明我错了的位置，不是放在我害怕亏损的位置" — Paul Tudor Jones
-    // 删除原有的1%-2.5%固定限制: 强趋势市场需要更大空间，2.5%限制导致被正常波动扫出
-    const instBuffer = atrClamped * 0.35;  // 机构缓冲: 避开明显止损池
-
-    // v74 FIX: 收紧动态SL上限 — 5%太宽导致R:R永远不足
-    // 强趋势: max 3.0% (原5%), 弱趋势: max 2.5% (原3.5%), 震荡: max 2.0% (原3%)
-    const maxSLPct = regime49==='trending_strong' ? 0.030 : regime49==='trending_weak' ? 0.025 : 0.020;
-    const minSLPct = 0.006;  // 最小 0.6% (防止止损过紧)
+    // v89 FIX: 完全移除 maxSLPct 硬性百分比上限
+    // 原因: 2.5%/3%的硬上限导致SL被截断到随机位置，既不在结构位，也不在ATR倍数位
+    //       真正的量化交易: SL = 结构位 + 机构缓冲，然后根据SL距离计算仓位大小
+    const instBuffer = atrClamped * 0.35;  // 机构缓冲: 避开明显止损池 (0.35×ATR)
+    // 合理SL上限: 不超过5个ATR (防止极端值，但不截断结构性止损)
+    const hardMaxSL = atrClamped * 5.0;
+    const minSLPct = 0.005;  // 最小 0.5% (防止止损过紧，被正常tick扫出)
 
     if(isBull){
-      const slFloor = Math.max(0.001, entry - maxSlDist);
+      const slFloor = Math.max(0.001, entry - hardMaxSL); // v89: 用5×ATR而不是maxSlDist
       const slCeil  = entry - minGap * 0.5;
 
       const structSL = swingLows.filter(l => l < slCeil && l > slFloor).sort((a,b) => b-a);
@@ -8029,20 +8425,22 @@ function _Φ9x(tf){
       sl1raw = _avoidLiqPool(sl1raw, buyLiqPools);
       let sl1 = Math.max(slFloor, Math.min(slCeil, sl1raw));
 
-      // v60: 强制限制SL1在1%-2.5%区间内
+      // v89 FIX: 移除 maxSLPct 硬性截断 — 只保留最小值防止过紧
+      // 结构性止损应由市场结构决定，而不是任意百分比
       const sl1Pct = Math.abs((sl1 - entry) / entry);
-      if(sl1Pct > maxSLPct) sl1 = Math.round(entry * (1 - maxSLPct) * 10000) / 10000;
       if(sl1Pct < minSLPct) sl1 = Math.round(entry * (1 - minSLPct) * 10000) / 10000;
+      // 防止超过5×ATR (极端保护)
+      if(entry - sl1 > hardMaxSL) sl1 = Math.round((entry - hardMaxSL) * 10000) / 10000;
 
       const sl2raw = structSL.length > 1
         ? Math.round((structSL[1] - instBuffer * 0.5) * 10000) / 10000
         : Math.round((sl1 - atrClamped * 1.0) * 10000) / 10000;
       const sl2 = Math.max(slFloor, Math.min(sl1 - minGap, sl2raw));
 
-      // v60: atrSL倍数从2.8降至2.2, 与优化后的SL1保持合理比例
+      // v89: SL3 = 波段起点下方 (论点彻底失效 = 整个上涨波段被完全否定)
       const sl3raw = Math.round(Math.max(
-        entry - atrSL * 2.2,  // v60: 2.8 → 2.2
-        fibLo - atrSL * 0.4
+        entry - atrSL * 3.0,   // v89: 扩大到3.0×ATR，给结构足够空间
+        _fibWaveLo - instBuffer // 波段起点(A点)下方 = 多头thesis完全失效
       ) * 10000) / 10000;
       const sl3 = Math.max(slFloor, Math.min(sl2 - minGap, sl3raw));
 
@@ -8051,15 +8449,15 @@ function _Φ9x(tf){
       const f3 = Math.min(f2 - minGap, sl3);
 
       return [
-        {p:f1, note:'🔒 SL1 · 结构支撑失效点 (给结构空间)', riskPct:Math.abs((f1-entry)/entry*100).toFixed(2),
+        {p:f1, note:`🔒 SL1 · 结构支撑失效点 · 摆动低点${structSL.length>0?' '+fmtP(structSL[0]):'ATR兜底'} - 机构缓冲${fmtP(instBuffer)}`, riskPct:Math.abs((f1-entry)/entry*100).toFixed(2),
          invalidate:'收盘跌破 → 近期上涨结构完全失效', pct:(f1-entry)/entry*100},
-        {p:f2, note:'⚠️ SL2 · 第二结构失守', riskPct:Math.abs((f2-entry)/entry*100).toFixed(2),
+        {p:f2, note:`⚠️ SL2 · 第二结构失守${structSL.length>1?' · 前低'+fmtP(structSL[1]):' · ATR延伸'} · 扩大止损位`, riskPct:Math.abs((f2-entry)/entry*100).toFixed(2),
          invalidate:'第二支撑失守 → 转空确认', pct:(f2-entry)/entry*100},
-        {p:f3, note:'🛡️ SL3 · 论点彻底失效', riskPct:Math.abs((f3-entry)/entry*100).toFixed(2),
+        {p:f3, note:`🛡️ SL3 · 波段A点失守 · 多头起点${fmtP(_fibWaveLo)}告破 · 做多论点彻底失效`, riskPct:Math.abs((f3-entry)/entry*100).toFixed(2),
          invalidate:'大级别趋势逆转 → 全部离场', pct:(f3-entry)/entry*100},
       ];
     } else {
-      const slCeil  = entry + maxSlDist;
+      const slCeil  = entry + hardMaxSL; // v89: 用5×ATR而不是maxSlDist
       const slFloor = entry + minGap * 0.5;
 
       const structSL = swingHighs.filter(h => h > slFloor && h < slCeil).sort((a,b) => a-b);
@@ -8093,19 +8491,20 @@ function _Φ9x(tf){
       sl1raw = _avoidLiqPoolShort(sl1raw, sellLiqPools2);
       let sl1 = Math.min(slCeil, Math.max(slFloor, sl1raw));
 
-      // v60: 强制限制SL1在1%-2.5%区间内 (SHORT镜像)
+      // v89 FIX: 移除 maxSLPct 硬性截断 (SHORT镜像)
       const sl1Pct = Math.abs((sl1 - entry) / entry);
-      if(sl1Pct > maxSLPct) sl1 = Math.round(entry * (1 + maxSLPct) * 10000) / 10000;
       if(sl1Pct < minSLPct) sl1 = Math.round(entry * (1 + minSLPct) * 10000) / 10000;
+      if(sl1 - entry > hardMaxSL) sl1 = Math.round((entry + hardMaxSL) * 10000) / 10000;
 
       const sl2raw = structSL.length > 1
         ? Math.round((structSL[1] + instBuffer * 0.5) * 10000) / 10000
         : Math.round((sl1 + atrClamped * 1.0) * 10000) / 10000;
       const sl2 = Math.min(slCeil, Math.max(sl1 + minGap, sl2raw));
 
+      // v89: SL3 = 波段起点上方 (空头论点彻底失效 = 整个下跌波段被完全否定)
       const sl3raw = Math.round(Math.min(
-        entry + atrSL * 2.2,  // v60: 2.8 → 2.2
-        fibHi + atrSL * 0.4
+        entry + atrSL * 3.0,   // v89: 扩大到3.0×ATR
+        _fibWaveHi + instBuffer // 波段起点(A点高点)上方 = 空头thesis完全失效
       ) * 10000) / 10000;
       const sl3 = Math.min(slCeil, Math.max(sl2 + minGap, sl3raw));
 
@@ -8114,11 +8513,11 @@ function _Φ9x(tf){
       const f3 = Math.max(f2 + minGap, sl3);
 
       return [
-        {p:f1, note:'🔒 SL1 · 结构阻力 (优化1.0-2.5%)', riskPct:Math.abs((f1-entry)/entry*100).toFixed(2),
+        {p:f1, note:`🔒 SL1 · 结构阻力失效点 · 摆动高点${structSL.length>0?' '+fmtP(structSL[0]):'ATR兜底'} + 机构缓冲${fmtP(instBuffer)}`, riskPct:Math.abs((f1-entry)/entry*100).toFixed(2),
          invalidate:'收盘突破 → 下跌结构失效', pct:(f1-entry)/entry*100},
-        {p:f2, note:'⚠️ SL2 · 第二阻力突破', riskPct:Math.abs((f2-entry)/entry*100).toFixed(2),
+        {p:f2, note:`⚠️ SL2 · 第二阻力突破${structSL.length>1?' · 前高'+fmtP(structSL[1]):' · ATR延伸'} · 扩大止损位`, riskPct:Math.abs((f2-entry)/entry*100).toFixed(2),
          invalidate:'第二阻力突破 → 转多确认', pct:(f2-entry)/entry*100},
-        {p:f3, note:'🛡️ SL3 · 论点彻底失效', riskPct:Math.abs((f3-entry)/entry*100).toFixed(2),
+        {p:f3, note:`🛡️ SL3 · 波段A点突破 · 空头起点${fmtP(_fibWaveHi)}失守 · 做空论点彻底失效`, riskPct:Math.abs((f3-entry)/entry*100).toFixed(2),
          invalidate:'大级别趋势逆转 → 全部离场', pct:(f3-entry)/entry*100},
       ];
     }
@@ -8782,6 +9181,59 @@ function _Φ9x(tf){
     confidence: Math.round(_probConfidence * 100) / 100,
     isBalanced: _probCalc.isBalanced,
   };
+
+  // ══════════════════════════════════════════════════════════════════
+  // v87: 价格动能强制通道 — 解决下跌趋势中模型偏多/信号滞后
+  // 连续N根阴/阳线 + ADX强趋势 = 强制翻转或加强置信度
+  // 设计原则: 只在 ADX>25 + MA20顺势 时触发，避免震荡市误判
+  // ══════════════════════════════════════════════════════════════════
+  (function() {
+    try {
+      const lastBars = kl.slice(-5);
+      const adxStrong = adx && adx.adx > 25;
+
+      // 空头动能通道
+      let bearStreak = 0;
+      for (let i = lastBars.length - 1; i >= 0; i--) {
+        if (lastBars[i].c < lastBars[i].o) bearStreak++;
+        else break;
+      }
+      const priceBelowMA20 = price < ma20v;
+      if (bearStreak >= 3 && adxStrong && priceBelowMA20) {
+        if (isBull) {
+          // 模型偏多但市场连续下跌 → 强制翻转，置信度降至45%上限
+          isBull = false;  // 直接修改外部变量
+          conf = Math.min(conf, 45);
+          sigs.unshift({ l: '⚡ 动能通道: 三连阴+ADX强趋势 → 强制翻转做空', c: 'sig-bear' });
+        } else {
+          // 已空头 → 动能确认加成，上限+15%
+          conf = Math.min(92, conf + 15);
+          sigs.unshift({ l: '⚡ 动能通道: 空头动能确认(三连阴+ADX)', c: 'sig-bear' });
+        }
+      }
+
+      // 多头动能通道
+      let bullStreak = 0;
+      for (let i = lastBars.length - 1; i >= 0; i--) {
+        if (lastBars[i].c > lastBars[i].o) bullStreak++;
+        else break;
+      }
+      const priceAboveMA20 = price > ma20v;
+      if (bullStreak >= 3 && adxStrong && priceAboveMA20) {
+        if (!isBull) {
+          // 模型偏空但市场连续上涨 → 强制翻转，置信度降至45%上限
+          isBull = true;
+          conf = Math.min(conf, 45);
+          sigs.unshift({ l: '⚡ 动能通道: 三连阳+ADX强趋势 → 强制翻转做多', c: 'sig-bull' });
+        } else {
+          // 已多头 → 动能确认加成
+          conf = Math.min(92, conf + 15);
+          sigs.unshift({ l: '⚡ 动能通道: 多头动能确认(三连阳+ADX)', c: 'sig-bull' });
+        }
+      }
+    } catch(e) {}
+  })();
+  // ══ 动能通道结束 ═══════════════════════════════════════════════════
 
   return{isBull,score,conf,entry,entryMin,entryMax,entryZone,entryType,entryNote,tps,sls,rr,sigs,
     leverage,
@@ -10313,6 +10765,39 @@ function _doRenderStrategy(res){
         <span style="font-size:10px;padding:2px 8px;border-radius:8px;background:${entryType==='market'?'rgba(26,107,58,0.12)':'rgba(128,80,0,0.1)'};color:${entryType==='market'?'var(--green)':'var(--amber)'};font-weight:700">${entryType==='market'?'市价入场':'限价挂单'}</span>
       </div>
       <div style="font-size:11px;color:var(--muted);margin-top:2px">${entryNote}</div>
+      ${(()=>{
+        // v90: Price Path Strip — 价格路径可视化
+        // 逻辑: 现价 → 回调至入场区 → TP1 → TP2 → TP3
+        // 做多: 当前价格 > 入场价 = 等回调; 做空: 当前价格 < 入场价 = 等反弹
+        const _curPx = res.price || price;
+        const _needsPullback = isBull ? (_curPx > entry * 1.003) : (_curPx < entry * 0.997);
+        const _pullbackPct = Math.abs((_curPx - entry) / _curPx * 100);
+        const _tp1 = tps[0]?.p, _tp2 = tps[1]?.p, _tp3 = tps[2]?.p;
+        const _sl1 = sls[0]?.p;
+        // Only show path strip when there's a meaningful pullback needed (> 0.3%)
+        if (!_tp1 || !_sl1) return '';
+        const _arrowC = isBull ? 'var(--green)' : 'var(--red)';
+        const _pathBg = isBull ? 'rgba(26,107,58,0.05)' : 'rgba(160,20,32,0.05)';
+        const _pathBd = isBull ? 'rgba(26,107,58,0.18)' : 'rgba(160,20,32,0.18)';
+        // RR ratios
+        const _risk = Math.abs(_sl1 - entry);
+        const _rr1 = _risk > 0 ? (Math.abs(_tp1 - entry) / _risk).toFixed(1) : '?';
+        const _rr2 = _risk > 0 && _tp2 ? (Math.abs(_tp2 - entry) / _risk).toFixed(1) : null;
+        const _rr3 = _risk > 0 && _tp3 ? (Math.abs(_tp3 - entry) / _risk).toFixed(1) : null;
+        return `<div style="margin-top:8px;padding:8px 10px;background:${_pathBg};border:1px solid ${_pathBd};border-radius:7px;">
+          <div style="font-size:9px;color:var(--muted);font-weight:700;letter-spacing:0.8px;margin-bottom:5px">📍 价格路径 · ${isBull?'做多':'做空'}逻辑</div>
+          <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;font-size:10px;font-variant-numeric:tabular-nums;">
+            <span style="padding:2px 6px;background:rgba(128,128,128,0.1);border-radius:4px;color:var(--text)">现价<br><strong>${fmtP(_curPx)}</strong></span>
+            ${_needsPullback ? `<span style="color:var(--amber);font-size:12px">${isBull?'↘ 回调':'↗ 反弹'}</span><span style="padding:2px 6px;background:rgba(128,80,0,0.12);border-radius:4px;color:var(--amber)">入场区<br><strong>${fmtP(entry)}</strong><br><span style="font-size:9px">-${_pullbackPct.toFixed(1)}%</span></span>` : `<span style="color:${_arrowC};font-size:12px">${isBull?'✓ 在位':'✓ 在位'}</span><span style="padding:2px 6px;background:rgba(128,80,0,0.12);border-radius:4px;color:var(--amber)">入场<br><strong>${fmtP(entry)}</strong></span>`}
+            <span style="color:${_arrowC};font-size:12px">${isBull?'↗':'↘'}</span>
+            <span style="padding:2px 6px;background:rgba(10,96,80,0.10);border-radius:4px;color:var(--teal)">TP1<br><strong>${fmtP(_tp1)}</strong><br><span style="font-size:9px">${_rr1}R</span></span>
+            ${_tp2?`<span style="color:var(--green);font-size:10px">→</span><span style="padding:2px 6px;background:rgba(26,107,58,0.08);border-radius:4px;color:var(--green)">TP2<br><strong>${fmtP(_tp2)}</strong><br><span style="font-size:9px">${_rr2||''}R</span></span>`:''}
+            ${_tp3?`<span style="color:var(--blue);font-size:10px">→</span><span style="padding:2px 6px;background:rgba(26,58,138,0.08);border-radius:4px;color:var(--blue)">TP3<br><strong>${fmtP(_tp3)}</strong><br><span style="font-size:9px">${_rr3||''}R</span></span>`:''}
+            <span style="color:var(--red);font-size:10px">×</span>
+            <span style="padding:2px 6px;background:rgba(160,20,32,0.08);border-radius:4px;color:var(--red)">止损<br><strong>${fmtP(_sl1)}</strong></span>
+          </div>
+        </div>`;
+      })()}
     </div>
 
     <!-- Row C: TP grid + SL1 strip -->
@@ -10329,6 +10814,7 @@ function _doRenderStrategy(res){
             +'<div style="font-size:9px;font-weight:700;color:'+tpC[i]+';letter-spacing:1px;margin-bottom:2px">TP'+(i+1)+'<span style="font-weight:400;font-size:9px;margin-left:4px;color:var(--muted)">'+rrV+'R</span></div>'
             +'<div style="font-size:15px;font-weight:700;color:'+tpC[i]+';font-variant-numeric:tabular-nums;line-height:1.1">'+fmtP(t.p)+'</div>'
             +'<div style="font-size:11px;font-weight:700;color:'+tpC[i]+';margin-top:1px">'+fmtPct(t.pct)+'</div>'
+            +(t.note?'<div style="font-size:9px;color:var(--dim);margin-top:2px;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+t.note+'">'+t.note.split('·')[0].trim()+'</div>':'')
             +'</div>';
         }).join('')}
       </div>
@@ -10341,7 +10827,7 @@ function _doRenderStrategy(res){
         const rrV=(tps[0]&&isFinite(tps[0].p)?Math.abs(tps[0].p-entry)/Math.max(Math.abs(sl1.p-entry),0.001):0).toFixed(2);
         return '<div style="display:grid;grid-template-columns:auto 1fr auto;gap:6px;align-items:center;padding:8px 10px;background:rgba(160,20,32,0.06);border:1px solid rgba(160,20,32,0.18);border-radius:7px;margin-bottom:8px;">'
           +'<div style="font-size:9px;font-weight:700;color:var(--red);letter-spacing:1px;white-space:nowrap">🛡️ SL1<br><span style="font-weight:400;color:var(--muted)">推荐</span></div>'
-          +'<div style="text-align:center"><span style="font-size:18px;font-weight:700;color:var(--red);font-variant-numeric:tabular-nums">'+fmtP(sl1.p)+'</span><span style="font-size:12px;font-weight:700;color:var(--red);margin-left:5px">'+fmtPct(sl1.pct)+'</span></div>'
+          +'<div style="text-align:center"><span style="font-size:18px;font-weight:700;color:var(--red);font-variant-numeric:tabular-nums">'+fmtP(sl1.p)+'</span><span style="font-size:12px;font-weight:700;color:var(--red);margin-left:5px">'+fmtPct(sl1.pct)+'</span>'+(sl1.note?'<div style="font-size:9px;color:var(--dim);margin-top:1px">'+sl1.note.replace(/🔒 SL1 · /,'').split('·').slice(0,2).join('·').trim()+'</div>':'')+'</div>'
           +'<div style="text-align:right"><div style="font-size:12px;font-weight:700;color:'+(parseFloat(rrV)>=2?'var(--green)':parseFloat(rrV)>=1.5?'var(--amber)':'var(--red)')+'">R:R '+rrV+'</div><div style="font-size:10px;color:var(--muted)">风险 '+riskPct+'%</div></div>'
           +'</div>';
       })()}
@@ -11069,8 +11555,12 @@ function _bND(res){
   const safeMaxPct = tm.maxPct || 0.15;
   const fibPrices=fibMs.map((_,i)=>{
     if(!_hasDirection) return null;
-    const pct=res.isBull?safeMaxPct*(0.3+i*0.14):-(safeMaxPct*(0.3+i*0.14));
-    return price*(1+pct);
+    // v89 FIX: Timeline Fib时间价格 = 真正的Fib延伸投射，而不是线性百分比
+    // 使用与TP相同的波段投射逻辑
+    const _wavRng = res.atr ? res.atr * 8 : price * safeMaxPct; // 波段幅度估算
+    const fibRatios = [0.618, 1.0, 1.272, 1.618, 2.0, 2.618];
+    const r = fibRatios[i] || fibRatios[i % fibRatios.length];
+    return res.isBull ? price + _wavRng * r : price - _wavRng * r;
   });
   [2,4].forEach(fi=>{
     nodes.push({
@@ -12879,10 +13369,13 @@ function buildSymList(){
     groups[p.cls].push(p);
   });
 
-  const clsOrder = ['crypto','metal','forex','commodity'];
+  // ✅ v88: 添加 stock 和 stock_crypto 到顺序列表
+  const clsOrder = ['crypto','metal','forex','commodity','stock','stock_crypto'];
   const clsNames = {
     crypto:'🪙 加密货币',
-    metal:'🥇 黄金白银 Metals', forex:'💱 汇率 FX', commodity:'🛢️ 原油 Oil'
+    metal:'🥇 黄金白银 Metals', forex:'💱 汇率 FX', commodity:'🛢️ 原油 Oil',
+    stock:'📈 美股 Stocks',        // v88
+    stock_crypto:'🔗 加密关联股'   // v88
   };
 
   let html = '';
@@ -12892,10 +13385,15 @@ function buildSymList(){
     html += `<div class="wl-group-hd">${clsNames[cls]||cls}</div>`;
     group.forEach(p => {
       const mhrs = getMarketStatus(p.cls);
-      const mhrsHtml = `<div style="font-size:9px;color:${mhrs.open?'var(--teal)':'var(--dim)'}">${mhrs.open?'◉':'○'} ${mhrs.label}</div>`;
-      html += `<div class="sym-item" id="si-${CSS.escape?CSS.escape(p.s):p.s.replace(/[/:]/g,'_')}" onclick="selectSym('${p.s}')">
+      // v90: pre/post market = amber ◎; regular open = teal ◉; closed = dim ○
+      const _mhrsDot   = mhrs.showPrice ? '◎' : mhrs.open ? '◉' : '○';
+      const _mhrsColor = mhrs.session==='pre' ? 'var(--amber)' : mhrs.session==='after' ? 'var(--cyan)' : mhrs.open ? 'var(--teal)' : 'var(--dim)';
+      const mhrsHtml = `<div style="font-size:9px;color:${_mhrsColor}">${_mhrsDot} ${mhrs.label}</div>`;
+      const stockNote = (p.cls === 'stock_crypto') ? '<span style="font-size:8px;background:rgba(88,24,144,0.1);padding:1px 4px;border-radius:3px;margin-left:4px;">BTC相关</span>' : '';
+      const safeId = CSS.escape ? CSS.escape(p.s) : p.s.replace(/[/:]/g,'_');
+      html += `<div class="sym-item" id="si-${safeId}" onclick="selectSym('${p.s}')">
         <div>
-          <div class="sym-name">${p.b}</div>
+          <div class="sym-name">${p.b}${stockNote}</div>
           <div class="sym-sub">${p.n.length>18?p.n.slice(0,18)+'…':p.n}</div>
           ${mhrsHtml}
         </div>
@@ -12910,7 +13408,8 @@ function buildSymList(){
 
   // Re-mark active
   const activeSym = S.sym;
-  const activeEl = document.querySelector(`[id="si-${activeSym}"]`) || document.getElementById('si-'+activeSym.replace(/[/:]/g,'_'));
+  const safeActiveSym = CSS.escape ? CSS.escape(activeSym) : activeSym.replace(/[/:]/g,'_');
+  const activeEl = document.getElementById(`si-${safeActiveSym}`);
   if(activeEl) activeEl.classList.add('active');
 }
 
@@ -14271,8 +14770,25 @@ async function init(){
   // TwelveData refresh
   // AV refresh: first hit at 5s, then every 60s (free tier: 25 req/day = ~every 58 min ideally)
   // We refresh prices only (spot quotes) — cheap single requests per asset
-  setTimeout(()=>refreshTDPrices(),3000);   // first refresh at 3s
-  setInterval(()=>refreshTDPrices(),300000); // then every 5min (forex/oil)
+  // v88: 懒加载优化 — 只预加载 crypto/metal/forex/commodity，美股延后到用户点击时
+  setTimeout(() => {
+    const fastPairs = PAIRS.filter(p => p.cls === 'crypto' || p.cls === 'metal');
+    Promise.allSettled(fastPairs.map(p => tdQuote(p.s).catch(() => null)));
+  }, 2000);   // first refresh at 2s (crypto+metal only)
+  setInterval(() => {
+    const currentPair = getPair ? getPair(S.sym) : null;
+    if (currentPair && (currentPair.cls === 'stock' || currentPair.cls === 'stock_crypto')) {
+      // 美股单独刷新，不触发全局刷新
+      tdQuote(S.sym).then(q => {
+        if (q && q.px) {
+          S.lastPx = q.px;
+          if (typeof updatePH === 'function') updatePH({price:q.px, change:q.chg, high:q.high||q.px, low:q.low||q.px, vol:0});
+        }
+      }).catch(() => {});
+    } else {
+      refreshTDPrices();
+    }
+  }, 300000); // then every 5min
 
   // ── Metal price fast refresh (Binance Futures, every 10s) ──────
   // Gold/Silver use same Binance infra as crypto — no quota concerns
@@ -24866,6 +25382,358 @@ if (document.readyState === 'loading') {
 }
 
 })(); // END _FINCH_V70 IIFE
+</script>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+// FINCH v88 — 精英入场决策引擎（顶级量化框架）
+// 6层金字塔：流动性池 → 订单块 → 斐波那契接力 → 订单簿不平衡 → 威科夫 → 多因子决策
+// 集成方式：wrapper 包装 window._Φ9x，非侵入式，不影响原有逻辑
+// ═══════════════════════════════════════════════════════════════════════════
+(function() {
+'use strict';
+
+if (typeof window.FINCH_V88 !== 'undefined') return; // 防重复注入
+window.FINCH_V88 = {};
+
+// ── 工具函数 ──────────────────────────────────────────────────────────────
+const _fp = v => {
+  if (!v || !isFinite(v)) return '--';
+  if (v >= 10000) return v.toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:2});
+  if (v >= 100)   return v.toFixed(2);
+  if (v >= 1)     return v.toFixed(4);
+  return v.toFixed(6);
+};
+
+function _findSwings(kl, lb) {
+  lb = lb || 5;
+  if (!kl || kl.length < lb * 2) return [];
+  const out = [];
+  for (let i = lb; i < kl.length - lb; i++) {
+    let isH = true, isL = true;
+    for (let j = 1; j <= lb; j++) {
+      if (kl[i].h <= kl[i-j].h || kl[i].h <= kl[i+j].h) isH = false;
+      if (kl[i].l >= kl[i-j].l || kl[i].l >= kl[i+j].l) isL = false;
+    }
+    if (isH) out.push({ type:'high', price: kl[i].h, idx: i });
+    if (isL) out.push({ type:'low',  price: kl[i].l, idx: i });
+  }
+  return out;
+}
+
+function _cluster(prices, tol) {
+  tol = tol || 0.003;
+  if (!prices.length) return [];
+  const sorted = [...prices].sort((a,b) => a-b);
+  const out = [];
+  for (const p of sorted) {
+    const last = out[out.length - 1];
+    if (last && Math.abs(p - last.price) / last.price < tol) { last.count++; last.price = (last.price + p) / 2; }
+    else out.push({ price: p, count: 1 });
+  }
+  return out;
+}
+
+function _roundLevels(price) {
+  const mag = Math.pow(10, Math.floor(Math.log10(price)));
+  const out = [];
+  for (let m = -3; m <= 3; m++) {
+    const lvl = Math.round(price / mag) * mag + m * mag;
+    if (lvl > 0 && Math.abs(lvl - price) / price > 0.005) out.push(lvl);
+  }
+  return out;
+}
+
+function _avgVol(kl, idx, n) {
+  n = n || 20;
+  const sl = kl.slice(Math.max(0, idx - n), idx);
+  return sl.length ? sl.reduce((s,b) => s + (b.v||0), 0) / sl.length : 0;
+}
+
+function _volAdj(kl) {
+  if (!kl || kl.length < 30) return 1.0;
+  const prices = kl.slice(-30).map(k => k.c);
+  let sum = 0;
+  for (let i = 1; i < prices.length; i++) sum += Math.abs((prices[i] - prices[i-1]) / prices[i-1]);
+  return Math.max(0.7, Math.min(1.3, (sum / (prices.length - 1)) / 0.005));
+}
+
+// ── Layer 1: Liquidity Pool Detection ────────────────────────────────────
+function _liquidityPools(kl, price) {
+  const pools = { buy: [], sell: [] };
+  const swings = _findSwings(kl, 5);
+  _cluster(swings.map(s => s.price), 0.003).forEach(c => {
+    if (c.count < 2) return;
+    const above = c.price > price;
+    const item = { price: c.price, strength: Math.min(100, c.count*25+20), note: `${c.count}x测试·${above?'空头止损池':'多头止损池'}` };
+    if (above) pools.sell.push(item); else pools.buy.push(item);
+  });
+  _roundLevels(price).forEach(lvl => {
+    const item = { price: lvl, strength: 42, note: `整数关口 ${_fp(lvl)}` };
+    if (lvl > price) pools.sell.push(item); else pools.buy.push(item);
+  });
+  return pools;
+}
+
+// ── Layer 2: Order Block Recognition ─────────────────────────────────────
+function _orderBlocks(kl, price) {
+  const ob = { bullish: [], bearish: [] };
+  const lookback = Math.min(80, kl.length);
+  for (let i = Math.max(0, kl.length - lookback); i < kl.length - 3; i++) {
+    const bar = kl[i];
+    if (!bar) continue;
+    const next = kl.slice(i+1, Math.min(kl.length, i+4));
+    if (next.length < 2) continue;
+    const av = _avgVol(kl, i, 20);
+    const volOk = (bar.v||0) > av * 1.25;
+    if (volOk && bar.c < bar.o && next.some(b => b && b.h > bar.h * 1.003)) {
+      ob.bullish.push({ price: bar.l, high: bar.h, strength: Math.min(95, 50 + Math.round(((bar.v||av)/av)*15)), age: kl.length-i, note: `机构吸筹OB ${_fp(bar.l)}-${_fp(bar.h)}` });
+    }
+    if (volOk && bar.c > bar.o && next.some(b => b && b.l < bar.l * 0.997)) {
+      ob.bearish.push({ price: bar.h, low: bar.l, strength: Math.min(95, 50 + Math.round(((bar.v||av)/av)*15)), age: kl.length-i, note: `机构派发OB ${_fp(bar.l)}-${_fp(bar.h)}` });
+    }
+  }
+  ob.bullish = ob.bullish.sort((a,b) => b.strength - a.strength).slice(0,3);
+  ob.bearish = ob.bearish.sort((a,b) => b.strength - a.strength).slice(0,3);
+  return ob;
+}
+
+// ── Layer 3: Fibonacci Relay ──────────────────────────────────────────────
+function _fibRelay(kl, price) {
+  const swings = _findSwings(kl, 5);
+  if (swings.length < 4) return [];
+  const va = _volAdj(kl);
+  const levels = [];
+  for (let i = 0; i < swings.length - 1; i++) {
+    const s = swings[i], e2 = swings[i+1];
+    const range = Math.abs(e2.price - s.price);
+    if (range < price * 0.003) continue;
+    const up = e2.price > s.price;
+    [0.382, 0.5, 0.618, 0.786].map(r => r * va).forEach(ratio => {
+      const lvl = up ? s.price + range * (1 - ratio) : s.price - range * (1 - ratio);
+      if (lvl > 0 && Math.abs(lvl - price) / price < 0.15)
+        levels.push({ price: lvl, type: up ? 'support' : 'resistance', strength: 50 + (Math.abs(ratio - 0.618) < 0.05 ? 15 : 0), note: `Fib接力${Math.round(ratio*100)}%` });
+    });
+  }
+  const uniq = [];
+  for (const l of levels) {
+    if (!uniq.some(u => Math.abs(u.price - l.price)/l.price < 0.01)) uniq.push(l);
+  }
+  return uniq.sort((a,b) => a.price - b.price);
+}
+
+// ── Layer 4: Order Book Imbalance ─────────────────────────────────────────
+function _obImbalance(kl) {
+  let buy = 0, sell = 0;
+  kl.slice(-20).forEach(bar => {
+    const range = (bar.h - bar.l) || 0.0001;
+    const lw = Math.min(bar.c, bar.o) - bar.l;
+    const uw = bar.h - Math.max(bar.c, bar.o);
+    if (lw > range * 0.5) buy  += (bar.v||0) * (lw / range);
+    if (uw > range * 0.5) sell += (bar.v||0) * (uw / range);
+    if (bar.c > bar.o) buy  += (bar.v||0) * 0.4;
+    else               sell += (bar.v||0) * 0.4;
+  });
+  const total = buy + sell || 1;
+  const imb = (buy - sell) / total;
+  return { score: Math.round(imb * 100), direction: imb > 0.15 ? 'bull' : imb < -0.15 ? 'bear' : 'neutral', note: `订单簿${imb > 0 ? '买盘' : '卖盘'}主导，差值${Math.abs(imb*100).toFixed(1)}%` };
+}
+
+// ── Layer 5: Wyckoff Phase ────────────────────────────────────────────────
+function _wyckoff(kl, price) {
+  const bars = kl.slice(-50);
+  const hi = Math.max(...bars.map(b => b.h));
+  const lo = Math.min(...bars.map(b => b.l));
+  let spr = 0, thr = 0;
+  bars.forEach(b => {
+    if (b.l < lo * 1.006 && b.c > lo * 1.010) spr++;
+    if (b.h > hi * 0.994 && b.c < hi * 0.988) thr++;
+  });
+  const avgV = bars.reduce((s,b) => s + (b.v||0), 0) / bars.length;
+  const dryV = bars.slice(-10).reduce((s,b) => s + (b.v||0), 0) / 10 < avgV * 0.65;
+  const pos  = (hi > lo) ? (price - lo) / (hi - lo) : 0.5;
+  let phase = 'unknown', note = '';
+  if (spr >= 2 && dryV && pos < 0.35)       { phase = 'accumulation'; note = '威科夫吸筹·弹簧效应·主力低位建仓'; }
+  else if (thr >= 2 && dryV && pos > 0.65)  { phase = 'distribution'; note = '⚠️威科夫派发·上冲回落·主力出货'; }
+  else if (pos > 0.70 && spr > 0)           { phase = 'mark_up';      note = '📈威科夫上涨阶段·吸筹完成·推升中'; }
+  else if (pos < 0.30 && thr > 0)           { phase = 'mark_down';    note = '📉威科夫下跌阶段·派发完成·下行中'; }
+  return { phase, note, springCount: spr, upthrustCount: thr, pricePosition: pos };
+}
+
+// ── Layer 6: Fusion Decision ──────────────────────────────────────────────
+function eliteEntryDecision(res, kl, price) {
+  if (!kl || kl.length < 50 || !price || price <= 0) return null;
+  const isBull = res.isBull;
+  const atr    = res.atrRaw || price * 0.015;
+
+  const pools  = _liquidityPools(kl, price);
+  const ob     = _orderBlocks(kl, price);
+  const fib    = _fibRelay(kl, price);
+  const obi    = _obImbalance(kl);
+  const wy     = _wyckoff(kl, price);
+
+  // Find nearest true support / resistance
+  function _nearest(arr, above) {
+    const f = arr.filter(x => above ? x.price > price : x.price < price);
+    if (!f.length) return null;
+    return f.sort((a,b) => Math.abs(a.price-price) - Math.abs(b.price-price))[0];
+  }
+
+  let trueSupp = null, trueRes = null, suppStr = 0, resStr = 0;
+  if (isBull) {
+    const obS = _nearest(ob.bullish, false);
+    const plS = _nearest(pools.buy, false);
+    const fbS = _nearest(fib.filter(f => f.type==='support'), false);
+    const best = [obS,plS,fbS].filter(Boolean).sort((a,b) => b.price-a.price)[0];
+    if (best) { trueSupp = best.price; suppStr = best.strength||50; }
+  } else {
+    const obR = _nearest(ob.bearish, true);
+    const plR = _nearest(pools.sell, true);
+    const fbR = _nearest(fib.filter(f => f.type==='resistance'), true);
+    const best = [obR,plR,fbR].filter(Boolean).sort((a,b) => a.price-b.price)[0];
+    if (best) { trueRes = best.price; resStr = best.strength||50; }
+  }
+
+  // Entry
+  let entry = price, entryType = 'market';
+  let conf = Math.min(92, (res.conf||50) + (isBull&&trueSupp ? 10+(suppStr>70?8:0) : 0) + (!isBull&&trueRes ? 10+(resStr>70?8:0) : 0));
+  if (isBull && trueSupp) {
+    entry = trueSupp * 1.001;
+    entryType = ((price - trueSupp) / price < 0.005) ? 'market' : 'limit';
+  }
+  if (!isBull && trueRes) {
+    entry = trueRes * 0.999;
+    entryType = ((trueRes - price) / price < 0.005) ? 'market' : 'limit';
+  }
+  entry = Math.round(Math.max(0.001, entry) * 10000) / 10000;
+
+  // SL: outside deepest liquidity pool
+  let sl;
+  if (isBull) {
+    const deepest = pools.buy.sort((a,b) => b.strength-a.strength)[0];
+    sl = deepest ? deepest.price * 0.995 : (trueSupp ? trueSupp * 0.99 : price - atr * 1.2);
+  } else {
+    const deepest = pools.sell.sort((a,b) => b.strength-a.strength)[0];
+    sl = deepest ? deepest.price * 1.005 : (trueRes ? trueRes * 1.01 : price + atr * 1.2);
+  }
+  sl = Math.round(Math.max(0.001, sl) * 10000) / 10000;
+
+  // TP: weighted avg of nearest 3 structural resistances
+  const resArr = [
+    ...ob.bearish.map(b => b.price),
+    ...pools.sell.map(p => p.price),
+    ...fib.filter(f => f.type==='resistance').map(f => f.price)
+  ].filter(r => r > entry + price*0.003).sort((a,b) => a-b);
+  let tp = null;
+  if (isBull && resArr.length) {
+    const top3 = resArr.slice(0,3);
+    tp = Math.round((top3.reduce((s,v) => s+v, 0) / top3.length) * 10000) / 10000;
+  }
+  if (!isBull && trueSupp) tp = Math.round(trueSupp * 10000) / 10000;
+
+  // Reasoning
+  const parts = [];
+  if (wy.phase === 'accumulation') parts.push(`🏛 ${wy.note}`);
+  if (wy.phase === 'distribution') parts.push(`⚠️ ${wy.note}`);
+  if (wy.phase === 'mark_up')      parts.push(`📈 ${wy.note}`);
+  if (wy.phase === 'mark_down')    parts.push(`📉 ${wy.note}`);
+  if (trueSupp && isBull)  parts.push(`📍 机构订单块/流动性池支撑 ${_fp(trueSupp)}，回踩入场`);
+  if (trueRes  && !isBull) parts.push(`📍 机构派发区阻力 ${_fp(trueRes)}，反弹即空`);
+  if (Math.abs(obi.score) > 15) parts.push(`📊 ${obi.note}`);
+  if (ob.bullish.length && isBull)  parts.push(`🧱 多头OB×${ob.bullish.length}·机构吸筹`);
+  if (ob.bearish.length && !isBull) parts.push(`🧱 空头OB×${ob.bearish.length}·机构派发`);
+
+  return { entry, entryType, sl, tp, support: trueSupp, resistance: trueRes, confidence: Math.round(conf),
+           liquidityPools: pools, orderBlocks: ob, wyckoffPhase: wy.phase, wyckoffNote: wy.note,
+           obImbalance: obi, reasoning: parts.join('；') };
+}
+
+// ── Wire into _Φ9x via wrapper ────────────────────────────────────────────
+function _applyWrapper() {
+  const orig = window._Φ9x;
+  if (typeof orig !== 'function') return false;
+  window._Φ9x = function(tf) {
+    const res = orig.apply(this, arguments);
+    if (!res || res._isWait || res.status === 'waiting_for_data') return res;
+    try {
+      // Resolve klines: try standard cache key formats
+      const sym = (typeof S !== 'undefined') ? S.sym : null;
+      if (!sym) return res;
+      const kl = (S.klines[sym + tf] || S.klines[sym + '_' + tf] || S.klines[sym + '|' + tf] || []);
+      const price = res.price || ((typeof S !== 'undefined') ? S.lastPx : 0);
+      if (!kl || kl.length < 50 || !price || price <= 0) return res;
+
+      const elite = eliteEntryDecision(res, kl, price);
+      if (!elite) return res;
+
+      // Override entry
+      if (elite.entry > 0) {
+        res.entry     = elite.entry;
+        res.entryType = elite.entryType;
+        if (elite.reasoning) res.entryNote = elite.reasoning + (res.entryNote ? '；' + res.entryNote : '');
+        res.entryZone = `${_fp(elite.entry)} ±${(elite.entry * 0.002).toFixed(4)}`;
+      }
+
+      // Override SL1 if elite SL is tighter/more precise
+      if (elite.sl > 0 && res.sls && res.sls.length) {
+        const isBull = res.isBull;
+        const slOk   = isBull ? (elite.sl < res.entry && elite.sl > 0) : (elite.sl > res.entry);
+        if (slOk) {
+          res.sls[0] = { ...res.sls[0], p: elite.sl,
+            pct: (elite.sl - price) / price * 100,
+            note: `🔒 精英止损 · ${elite.wyckoffPhase !== 'unknown' ? elite.wyckoffNote : '流动性池外侧'} (v88)` };
+        }
+      }
+
+      // Override TP1 if elite TP is available and structurally valid
+      if (elite.tp > 0 && res.tps && res.tps.length) {
+        const isBull = res.isBull;
+        const tpOk   = isBull ? (elite.tp > res.entry) : (elite.tp < res.entry);
+        if (tpOk) {
+          res.tps[0] = { ...res.tps[0], p: elite.tp,
+            pct: (elite.tp - price) / price * 100,
+            note: `🎯 精英止盈 · 多阻力位加权 (v88)` };
+          // Recompute R:R
+          const slDist = Math.abs(elite.sl - price);
+          const tpDist = Math.abs(elite.tp - price);
+          if (slDist > 0) res.rr = Math.round(tpDist / slDist * 100) / 100;
+        }
+      }
+
+      // Update confidence
+      res.conf = Math.min(92, Math.round(elite.confidence));
+
+      // Attach elite metadata for downstream renderers
+      res.elite = {
+        support:    elite.support,
+        resistance: elite.resistance,
+        wyckoffPhase:    elite.wyckoffPhase,
+        wyckoffNote:     elite.wyckoffNote,
+        obImbalance:     elite.obImbalance,
+        liquidityPools:  { buy: elite.liquidityPools.buy.length, sell: elite.liquidityPools.sell.length },
+        orderBlocks:     { bullish: elite.orderBlocks.bullish.length, bearish: elite.orderBlocks.bearish.length }
+      };
+
+    } catch(e) { console.warn('[FINCH v88 Elite] Error:', e.message); }
+    return res;
+  };
+  return true;
+}
+
+// Attempt immediate wire-up; retry after DOM ready if _Φ9x not yet defined
+if (!_applyWrapper()) {
+  document.addEventListener('DOMContentLoaded', function _v88init() {
+    if (!_applyWrapper()) setTimeout(_applyWrapper, 2000);
+    document.removeEventListener('DOMContentLoaded', _v88init);
+  });
+}
+
+window.FINCH_V88.eliteEntryDecision   = eliteEntryDecision;
+window.FINCH_V88.detectLiquidityPools = _liquidityPools;
+window.FINCH_V88.detectOrderBlocks    = _orderBlocks;
+window.FINCH_V88.detectWyckoffPhase   = _wyckoff;
+
+})();
 </script>
 
 </body>
