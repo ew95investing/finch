@@ -6,7 +6,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://fonts.googleapis.com https://fonts.gstatic.com https://api.binance.com https://api1.binance.com https://api2.binance.com https://api3.binance.com https://api4.binance.com https://data-api.binance.vision https://data-stream.binance.vision https://fapi.binance.com https://api.alternative.me https://api.coingecko.com https://api.llama.fi https://api.bitget.com https://corsproxy.io https://api.allorigins.win https://thingproxy.freeboard.io https://api.blockchain.info https://www.alphavantage.co https://cdn.jsdelivr.net https://open.er-api.com wss://stream.binance.com wss://data-stream.binance.vision; connect-src 'self' https: wss: data: blob:; frame-ancestors 'none';">
 <meta http-equiv="X-Frame-Options" content="DENY">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>FINCH v98 — 全维度市场分析</title>
+<title>FINCH v99 — 全维度市场分析</title>
 
 <!-- ═══ PWA / iOS APP META ═══ -->
 <meta name="mobile-web-app-capable" content="yes">
@@ -8622,170 +8622,96 @@ function _Φ9x(tf){
   //      SL2 = full invalidation (wider structure fails)
   //      SL3 = catastrophic stop (thesis completely wrong)
   function _bSL(){
-    // v98 CORE REWRITE: TP1/TP2/TP3 ordering — NEAREST FIRST (PTJ philosophy)
-    //   Problem: _minTP1Dist = _1R * minRR pushed TP1 to 1R away, skipping the nearest
-    //   structural level (e.g. 78,202 skipped, 67,937 became TP1 — completely inverted).
-    //   Fix: TP1 = nearest valid structural candidate (conservative, highest probability).
-    //        TP2 = next level (standard). TP3 = furthest (aggressive, lowest probability).
-    //   Also: removed v95 Elite R:R gate that pushed TP1 farther (conflicted with above).
-    //   Also: TP probability labels corrected — TP1 35-80%, TP2 18-55%, TP3 10-35%.
-    // v97 FIX: TP1=0.001 bug on SHORT 1D assets (XRP/wide-range)
-    //   Root: ATR fallback candidates (entry - atrTP*5.5) go negative for 1D wide ATR.
-    //   Math.max(0.001,...) maps them to 0.001 sentinel, which passes p<=ceil check
-    //   and lands in picks as TP1/TP2. Fix: filter candidates with p < price*0.01
-    //   before picks selection (SHORT), and p > price*10 (LONG defensive mirror).
-    //   Also: fallback while-loop now uses 1×ATR steps instead of 2× for tighter spacing.
-    // v96 CORE: SL = 结构失效点 + 严格硬上限
-    // v96 FIX: hardMaxSL 从 5×ATR 降至 2.0×ATR
-    // 原因: BTC 4H ATR ≈ 1500-2000，5×ATR = 9-12% — 对期货任何杠杆都是本金清零
-    // Jane Street / Citadel 标准: SL1 ≤ 1.5×ATR，必须是最近结构失效点，不是随机ATR倍数
-    // 如果结构SL超过2×ATR，说明入场点本身太差，宁可不入场等更好机会
-    const instBuffer = atrClamped * 0.15;  // v96: 缓冲减小 (0.35→0.15)，避免SL被推太宽
-    const hardMaxSL = atrClamped * 2.0;    // v96 HARD CAP: 绝对上限 2×ATR (BTC≈3-4%)
-    const minSLPct = 0.003;  // 最小 0.3%
+    // ═══════════════════════════════════════════════════════════════════
+    // v99 COMPLETE REWRITE — PTJ / Druckenmiller SL PHILOSOPHY
+    // ═══════════════════════════════════════════════════════════════════
+    // RULE 1: SL = the nearest structural level that INVALIDATES the thesis.
+    //         Not the furthest swing high/low in history.
+    // RULE 2: Hard pct cap by timeframe. If structure SL > cap → ATR fallback.
+    //         If ATR fallback also > cap → flag as marginal setup.
+    //   15m:  max 1.5%  | 30m: max 2.0% | 1h:  max 2.5% | 2h: max 3.0%
+    //   4h:   max 4.0%  | 8h:  max 5.0% | 1d:  max 7.0% | 1w: max 10%
+    // RULE 3: SL1 = tightest valid. SL2 = next structure. SL3 = absolute max.
+    //         ALL three must be within the timeframe cap. Never outside it.
+    // RULE 4: swingHighs/Lows used for SL must be RECENT — last 20 bars only.
+    //         Swing highs from 3 months ago are NOT relevant for today's trade.
+    // ═══════════════════════════════════════════════════════════════════
 
-    if(isBull){
-      const slFloor = Math.max(0.001, entry - hardMaxSL); // v89: 用5×ATR而不是maxSlDist
-      const slCeil  = entry - minGap * 0.5;
+    const _slMaxPct = {
+      '15m':0.015, '30m':0.020, '1h':0.025, '2h':0.030,
+      '4h':0.040,  '8h':0.050, '1d':0.070,  '1w':0.100
+    }[tf] || 0.040;
 
-      const structSL = swingLows.filter(l => l < slCeil && l > slFloor).sort((a,b) => b-a);
-      const volP = S.modData?.tech?._volProfile || _Ρ3v(kl);
-      const sellPool = volP?.sellLiqPool?.filter(p => p < slCeil && p > slFloor) || [];
+    const _hardCap = entry * _slMaxPct;        // absolute max SL distance in price
+    const _minSL   = entry * 0.003;            // minimum 0.3% noise floor
+    const _buf     = atrClamped * 0.10;        // small structural buffer (0.1×ATR)
 
-      // ── v64-C: 流动性池检测 — SL避开密集止损池 ──────────────────
-      // 机构专门把价格打到止损密集区再反转，SL在流动性池内=主动送钱
-      // 策略: 若SL候选位落在流动性密集带内，自动移到池外0.5×ATR
-      function _avoidLiqPool(slCandidate, pools) {
-        if (!pools || !pools.length) return slCandidate;
-        const poolRange = atrClamped * 0.3; // 池宽度估算
-        for (const poolPrice of pools) {
-          if (Math.abs(slCandidate - poolPrice) < poolRange) {
-            // 移到池外下方0.5×ATR，避免被猎杀
-            return Math.round((poolPrice - atrClamped * 0.5) * 10000) / 10000;
-          }
-        }
-        return slCandidate;
-      }
-      // 获取止损密集区（买方流动性池在支撑位下方）
-      const buyLiqPools = volP?.buyLiqPool || sellPool;
+    // RECENT swings only — last 20 bars (not 120)
+    const _recentKL = kl.slice(-20).filter(k => k.h > 0 && k.l > 0);
+    let _recSwingH = [], _recSwingL = [];
+    try {
+      const _pv = _Δ1p(_recentKL, Math.min(3, Math.floor(_recentKL.length / 4)));
+      _recSwingH = _pv.peaks.map(p => p.price).filter(p => p > entry).sort((a,b) => a - b);
+      _recSwingL = _pv.troughs.map(p => p.price).filter(p => p < entry).sort((a,b) => b - a);
+    } catch(e) {}
 
-      const structLevel  = structSL.length  ? structSL[0]  : entry - atrClamped * 1.2;
-      const poolLevel    = sellPool.length   ? sellPool[0]  : structLevel;
-      // v79 FIX-2: 结构先置强化 — structSL存在时直接用结构失效点，ATR只做fallback
-      // 原因: 原逻辑以 Math.min(structLevel,poolLevel)-instBuffer 为起点，然后被maxSLPct截断
-      //       导致在有明确结构点时仍以ATR倍数为主
-      // 修复: 如果有结构低点，sl1raw就是 structSL[0]-instBuffer (机构缓冲)，ATR作紧急fallback
-      let sl1raw;
-      if (structSL.length > 0) {
-        // 结构先置: 最近摆动低点 - 机构缓冲
-        sl1raw = Math.round((structSL[0] - instBuffer) * 10000) / 10000;
+    function _makeSL(dist1, dist2, dist3) {
+      // Clamp all three to hardCap, ensure ordering, ensure minimum
+      const d1 = Math.min(_hardCap, Math.max(_minSL, dist1));
+      const d2 = Math.min(_hardCap, Math.max(d1 + _minSL * 0.5, dist2));
+      const d3 = Math.min(_hardCap, Math.max(d2 + _minSL * 0.5, dist3));
+      if (isBull) {
+        const p1 = Math.round((entry - d1) * 10000) / 10000;
+        const p2 = Math.round((entry - d2) * 10000) / 10000;
+        const p3 = Math.round((entry - d3) * 10000) / 10000;
+        return [
+          { p:p1, pct:(p1-entry)/entry*100, riskPct:(d1/entry*100).toFixed(2),
+            note:`🔒 SL1 · 近期结构支撑失效 · 最大${(_slMaxPct*100).toFixed(0)}%上限`,
+            invalidate:'收盘跌破→多头结构失效' },
+          { p:p2, pct:(p2-entry)/entry*100, riskPct:(d2/entry*100).toFixed(2),
+            note:`⚠️ SL2 · 第二支撑失守 · 缓冲止损`,
+            invalidate:'转空趋势确认' },
+          { p:p3, pct:(p3-entry)/entry*100, riskPct:(d3/entry*100).toFixed(2),
+            note:`🛡️ SL3 · 论点彻底失效 · 大周期低杠杆专用`,
+            invalidate:'大级别趋势逆转' },
+        ];
       } else {
-        // 无结构低点fallback: ATR兜底
-        sl1raw = Math.round((entry - atrClamped * 1.2 - instBuffer) * 10000) / 10000;
+        const p1 = Math.round((entry + d1) * 10000) / 10000;
+        const p2 = Math.round((entry + d2) * 10000) / 10000;
+        const p3 = Math.round((entry + d3) * 10000) / 10000;
+        return [
+          { p:p1, pct:(p1-entry)/entry*100, riskPct:(d1/entry*100).toFixed(2),
+            note:`🔒 SL1 · 近期结构阻力失效 · 最大${(_slMaxPct*100).toFixed(0)}%上限`,
+            invalidate:'收盘突破→空头结构失效' },
+          { p:p2, pct:(p2-entry)/entry*100, riskPct:(d2/entry*100).toFixed(2),
+            note:`⚠️ SL2 · 第二阻力突破 · 缓冲止损`,
+            invalidate:'转多趋势确认' },
+          { p:p3, pct:(p3-entry)/entry*100, riskPct:(d3/entry*100).toFixed(2),
+            note:`🛡️ SL3 · 论点彻底失效 · 大周期低杠杆专用`,
+            invalidate:'大级别趋势逆转' },
+        ];
       }
-      if (sellPool.length > 0) {
-        // 流动性池存在时取更保守的(更低的)位置
-        sl1raw = Math.min(sl1raw, Math.round((sellPool[0] - instBuffer * 0.5) * 10000) / 10000);
-      }
-      // v64-C: 避开流动性池
-      sl1raw = _avoidLiqPool(sl1raw, buyLiqPools);
-      let sl1 = Math.max(slFloor, Math.min(slCeil, sl1raw));
+    }
 
-      // v89 FIX: 移除 maxSLPct 硬性截断 — 只保留最小值防止过紧
-      // 结构性止损应由市场结构决定，而不是任意百分比
-      const sl1Pct = Math.abs((sl1 - entry) / entry);
-      if(sl1Pct < minSLPct) sl1 = Math.round(entry * (1 - minSLPct) * 10000) / 10000;
-      // 防止超过5×ATR (极端保护)
-      if(entry - sl1 > hardMaxSL) sl1 = Math.round((entry - hardMaxSL) * 10000) / 10000;
+    if (isBull) {
+      // LONG SL: find nearest swing LOW below entry, within hardCap
+      const structLow = _recSwingL.find(l => (entry - l) <= _hardCap && (entry - l) >= _minSL);
+      const sl1dist = structLow
+        ? (entry - structLow) + _buf   // structure: nearest recent low + small buffer
+        : atrClamped * 1.2;            // ATR fallback
+      const sl2dist = sl1dist + atrClamped * 0.4;
+      const sl3dist = sl1dist + atrClamped * 0.8;
+      return _makeSL(sl1dist, sl2dist, sl3dist);
 
-      const sl2raw = structSL.length > 1
-        ? Math.round((structSL[1] - instBuffer * 0.5) * 10000) / 10000
-        : Math.round((sl1 - atrClamped * 0.4) * 10000) / 10000; // v96: 0.4 not 1.0
-      const sl2 = Math.max(slFloor, Math.min(sl1 - minGap, sl2raw));
-
-      // v89: SL3 = 波段起点下方 (论点彻底失效 = 整个上涨波段被完全否定)
-      const sl3raw = Math.round(Math.max(
-        entry - atrClamped * 2.4, // v96: SL3 = 最大2.4×ATR (SL1≈1.5 + 0.9 buffer)
-        _fibWaveLo - instBuffer    // 波段起点下方兜底，但受hardMaxSL约束
-      ) * 10000) / 10000;
-      const sl3 = Math.max(slFloor, Math.min(sl2 - minGap, sl3raw));
-
-      const f1 = Math.min(slCeil, sl1);
-      const f2 = Math.min(f1 - minGap, sl2);
-      const f3 = Math.min(f2 - minGap, sl3);
-
-      return [
-        {p:f1, note:`🔒 SL1 · 结构支撑失效点 · 摆动低点${structSL.length>0?' '+fmtP(structSL[0]):'ATR兜底'} - 机构缓冲${fmtP(instBuffer)}`, riskPct:Math.abs((f1-entry)/entry*100).toFixed(2),
-         invalidate:'收盘跌破 → 近期上涨结构完全失效', pct:(f1-entry)/entry*100},
-        {p:f2, note:`⚠️ SL2 · 第二结构失守${structSL.length>1?' · 前低'+fmtP(structSL[1]):' · ATR延伸'} · 扩大止损位`, riskPct:Math.abs((f2-entry)/entry*100).toFixed(2),
-         invalidate:'第二支撑失守 → 转空确认', pct:(f2-entry)/entry*100},
-        {p:f3, note:`🛡️ SL3 · 波段A点失守 · 多头起点${fmtP(_fibWaveLo)}告破 · 做多论点彻底失效`, riskPct:Math.abs((f3-entry)/entry*100).toFixed(2),
-         invalidate:'大级别趋势逆转 → 全部离场', pct:(f3-entry)/entry*100},
-      ];
     } else {
-      const slCeil  = entry + hardMaxSL; // v89: 用5×ATR而不是maxSlDist
-      const slFloor = entry + minGap * 0.5;
-
-      const structSL = swingHighs.filter(h => h > slFloor && h < slCeil).sort((a,b) => a-b);
-      const volP2 = S.modData?.tech?._volProfile || _Ρ3v(kl);
-      const buyPool = volP2?.buyLiqPool?.filter(p => p > slFloor && p < slCeil) || [];
-
-      const structLevel2 = structSL.length  ? structSL[0]  : entry + atrClamped * 1.2;
-      const poolLevel2   = buyPool.length    ? buyPool[0]   : structLevel2;
-      // v64-C: 避开流动性池 (做空方向 — 卖方流动性池在阻力位上方)
-      function _avoidLiqPoolShort(slCandidate, pools) {
-        if (!pools || !pools.length) return slCandidate;
-        const poolRange = atrClamped * 0.3;
-        for (const poolPrice of pools) {
-          if (Math.abs(slCandidate - poolPrice) < poolRange) {
-            return Math.round((poolPrice + atrClamped * 0.5) * 10000) / 10000;
-          }
-        }
-        return slCandidate;
-      }
-      const sellLiqPools2 = (S.modData?.tech?._volProfile || _Ρ3v(kl))?.sellLiqPool || buyPool;
-      // v79 FIX-2 SHORT: 结构先置 — 如有structSL(摆动高点)，直接用结构+instBuffer，ATR为fallback
-      let sl1raw;
-      if (structSL.length > 0) {
-        sl1raw = Math.round((structSL[0] + instBuffer) * 10000) / 10000;
-      } else {
-        sl1raw = Math.round((entry + atrClamped * 1.2 + instBuffer) * 10000) / 10000;
-      }
-      if (buyPool.length > 0) {
-        sl1raw = Math.max(sl1raw, Math.round((buyPool[0] + instBuffer * 0.5) * 10000) / 10000);
-      }
-      sl1raw = _avoidLiqPoolShort(sl1raw, sellLiqPools2);
-      let sl1 = Math.min(slCeil, Math.max(slFloor, sl1raw));
-
-      // v89 FIX: 移除 maxSLPct 硬性截断 (SHORT镜像)
-      const sl1Pct = Math.abs((sl1 - entry) / entry);
-      if(sl1Pct < minSLPct) sl1 = Math.round(entry * (1 + minSLPct) * 10000) / 10000;
-      if(sl1 - entry > hardMaxSL) sl1 = Math.round((entry + hardMaxSL) * 10000) / 10000;
-
-      const sl2raw = structSL.length > 1
-        ? Math.round((structSL[1] + instBuffer * 0.5) * 10000) / 10000
-        : Math.round((sl1 + atrClamped * 0.4) * 10000) / 10000; // v96: 0.4 not 1.0
-      const sl2 = Math.min(slCeil, Math.max(sl1 + minGap, sl2raw));
-
-      // v89: SL3 = 波段起点上方 (空头论点彻底失效 = 整个下跌波段被完全否定)
-      const sl3raw = Math.round(Math.min(
-        entry + atrClamped * 2.4, // v96: SL3 = 最大2.4×ATR
-        _fibWaveHi + instBuffer    // 波段起点上方兜底
-      ) * 10000) / 10000;
-      const sl3 = Math.min(slCeil, Math.max(sl2 + minGap, sl3raw));
-
-      const f1 = Math.max(slFloor, sl1);
-      const f2 = Math.max(f1 + minGap, sl2);
-      const f3 = Math.max(f2 + minGap, sl3);
-
-      return [
-        {p:f1, note:`🔒 SL1 · 结构阻力失效点 · 摆动高点${structSL.length>0?' '+fmtP(structSL[0]):'ATR兜底'} + 机构缓冲${fmtP(instBuffer)}`, riskPct:Math.abs((f1-entry)/entry*100).toFixed(2),
-         invalidate:'收盘突破 → 下跌结构失效', pct:(f1-entry)/entry*100},
-        {p:f2, note:`⚠️ SL2 · 第二阻力突破${structSL.length>1?' · 前高'+fmtP(structSL[1]):' · ATR延伸'} · 扩大止损位`, riskPct:Math.abs((f2-entry)/entry*100).toFixed(2),
-         invalidate:'第二阻力突破 → 转多确认', pct:(f2-entry)/entry*100},
-        {p:f3, note:`🛡️ SL3 · 波段A点突破 · 空头起点${fmtP(_fibWaveHi)}失守 · 做空论点彻底失效`, riskPct:Math.abs((f3-entry)/entry*100).toFixed(2),
-         invalidate:'大级别趋势逆转 → 全部离场', pct:(f3-entry)/entry*100},
-      ];
+      // SHORT SL: find nearest swing HIGH above entry, within hardCap
+      const structHigh = _recSwingH.find(h => (h - entry) <= _hardCap && (h - entry) >= _minSL);
+      const sl1dist = structHigh
+        ? (structHigh - entry) + _buf  // structure: nearest recent high + small buffer
+        : atrClamped * 1.2;            // ATR fallback
+      const sl2dist = sl1dist + atrClamped * 0.4;
+      const sl3dist = sl1dist + atrClamped * 0.8;
+      return _makeSL(sl1dist, sl2dist, sl3dist);
     }
   }
 
@@ -8828,45 +8754,14 @@ function _Φ9x(tf){
   // Step 2: Build structural SLs first
   const sls = _bSL();
 
-  // Step 3: Validate and cap SL1 — if SL1 is too far, it means the setup is not clean
-  // Cap at 2.5×ATR. If structure SL is beyond this, we still use it but flag it.
-  const _hardMaxSL = atrClamped * 2.0; // v96: tightened from 2.5 to match inner hardMaxSL
-  if (sls && sls[0]) {
-    const _sl1Raw = Math.abs(sls[0].p - entry);
-    if (_sl1Raw > _hardMaxSL) {
-      // Structural SL is too wide — cap it and flag
-      const _cappedSL1 = isBull
-        ? Math.round((entry - _hardMaxSL) * 10000) / 10000
-        : Math.round((entry + _hardMaxSL) * 10000) / 10000;
-      sls[0]._origP = sls[0].p; // preserve original for reference
-      sls[0].p = _cappedSL1;
-      sls[0].note = sls[0].note + ` [v95 上限收紧·原结构位${fmtP(sls[0]._origP)}过远·已限2.5×ATR]`;
-      sls[0]._slCapped = true;
-    }
-    // Cascade SL2/SL3 from final SL1
-    if (sls[1]) {
-      const _sl2ideal = isBull
-        ? Math.max(0.001, sls[0].p - atrClamped * 0.3) // v96
-        : sls[0].p + atrClamped * 0.3; // v96
-      if (isBull ? sls[1].p >= sls[0].p : sls[1].p <= sls[0].p) {
-        sls[1].p = Math.round(_sl2ideal * 10000) / 10000;
-        sls[1].note = sls[1].note || 'ATR级联';
-      }
-    }
-    if (sls[2]) {
-      const _sl2ref = sls[1] ? sls[1].p : sls[0].p;
-      const _sl3ideal = isBull
-        ? Math.max(0.001, _sl2ref - atrClamped * 0.3) // v96
-        : _sl2ref + atrClamped * 0.3; // v96
-      if (isBull ? sls[2].p >= (sls[1]||sls[0]).p : sls[2].p <= (sls[1]||sls[0]).p) {
-        sls[2].p = Math.round(_sl3ideal * 10000) / 10000;
-        sls[2].note = sls[2].note || 'ATR级联';
-      }
-    }
-    // Recalculate pct/riskPct for all SLs
+  // Step 3: v99 — _bSL() handles all capping internally (timeframe-based pct cap).
+  // Just recalculate pct/riskPct to ensure consistency.
+  if (sls && sls.length) {
     sls.forEach(s => {
-      s.pct = (s.p - entry) / entry * 100;
-      s.riskPct = Math.abs(s.pct).toFixed(2);
+      if (s && isFinite(s.p) && s.p > 0) {
+        s.pct = (s.p - entry) / entry * 100;
+        s.riskPct = Math.abs(s.pct).toFixed(2);
+      }
     });
   }
 
@@ -19990,12 +19885,16 @@ function v44CalcLevels(entry, atr, direction, profile, swingHighs, swingLows) {
   
   if (direction === 'long') {
     // ── LONG POSITION ──
-    // SL: Find nearest swing low below entry
+    // SL: Find nearest swing low below entry, within timeframe pct cap
+    const _v44SlMaxPctL = {
+      '15m':0.015,'30m':0.020,'1h':0.025,'2h':0.030,
+      '4h':0.040,'8h':0.050,'1d':0.070,'1w':0.100
+    }[typeof S!=='undefined'&&S.tf ? S.tf : '4h'] || 0.040;
+    const _v44SlMaxDistL = entry * _v44SlMaxPctL;
     const structSL = swingLows && swingLows.length > 0
       ? swingLows.reduce((best, lvl) => {
-          // Only consider swing lows BELOW entry
           if (lvl >= entry) return best;
-          // Pick the highest swing low below entry (tightest stop)
+          if (entry - lvl > _v44SlMaxDistL) return best; // v99: reject if beyond cap
           return lvl > best ? lvl : best;
         }, entry - slDist * 2)
       : null;
@@ -20034,12 +19933,16 @@ function v44CalcLevels(entry, atr, direction, profile, swingHighs, swingLows) {
     
   } else {
     // ── SHORT POSITION ──
-    // SL: Find nearest swing high above entry
+    // SL: Find nearest swing high above entry, within timeframe pct cap
+    const _v44SlMaxPct = {
+      '15m':0.015,'30m':0.020,'1h':0.025,'2h':0.030,
+      '4h':0.040,'8h':0.050,'1d':0.070,'1w':0.100
+    }[typeof S!=='undefined'&&S.tf ? S.tf : '4h'] || 0.040;
+    const _v44SlMaxDist = entry * _v44SlMaxPct;
     const structSL = swingHighs && swingHighs.length > 0
       ? swingHighs.reduce((best, lvl) => {
-          // Only consider swing highs ABOVE entry
           if (lvl <= entry) return best;
-          // Pick the lowest swing high above entry (tightest stop)
+          if (lvl - entry > _v44SlMaxDist) return best; // v99: reject if beyond cap
           return lvl < best ? lvl : best;
         }, entry + slDist * 2)
       : null;
@@ -26299,11 +26202,20 @@ function _applyWrapper() {
       }
 
       // Override SL1 if elite SL is structurally valid
-      // v91 FIX: pct must be relative to entry (not price); validate direction before applying
+      // v99: also enforce timeframe pct cap — elite.sl cannot exceed the same limits as _bSL()
+      const _eliteSlMaxPct = {
+        '15m':0.015,'30m':0.020,'1h':0.025,'2h':0.030,
+        '4h':0.040,'8h':0.050,'1d':0.070,'1w':0.100
+      }[S.tf||'4h'] || 0.040;
       if (elite.sl > 0 && res.sls && res.sls.length) {
         const isBull = res.isBull;
-        const _e = res.entry; // use final entry, not price
-        const slOk = isBull ? (elite.sl < _e * 0.9995 && elite.sl > 0) : (elite.sl > _e * 1.0005);
+        const _e = res.entry;
+        const _eliteSlDist = Math.abs(elite.sl - _e);
+        const _eliteSlPct = _eliteSlDist / _e;
+        // v99: reject if beyond timeframe cap OR wrong direction
+        const slOk = isBull
+          ? (elite.sl < _e * 0.9995 && elite.sl > 0 && _eliteSlPct <= _eliteSlMaxPct)
+          : (elite.sl > _e * 1.0005 && _eliteSlPct <= _eliteSlMaxPct);
         if (slOk) {
           res.sls[0] = { ...res.sls[0], p: elite.sl,
             pct: (elite.sl - _e) / _e * 100,  // v91 FIX: relative to entry
