@@ -6,7 +6,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://fonts.googleapis.com https://fonts.gstatic.com https://api.binance.com https://api1.binance.com https://api2.binance.com https://api3.binance.com https://api4.binance.com https://data-api.binance.vision https://data-stream.binance.vision https://fapi.binance.com https://api.alternative.me https://api.coingecko.com https://api.llama.fi https://api.bitget.com https://corsproxy.io https://api.allorigins.win https://thingproxy.freeboard.io https://api.blockchain.info https://www.alphavantage.co https://cdn.jsdelivr.net https://open.er-api.com wss://stream.binance.com wss://data-stream.binance.vision; connect-src 'self' https: wss: data: blob:; frame-ancestors 'none';">
 <meta http-equiv="X-Frame-Options" content="DENY">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>FINCH v90 — 全维度市场分析</title>
+<title>FINCH v98 — 全维度市场分析</title>
 
 <!-- ═══ PWA / iOS APP META ═══ -->
 <meta name="mobile-web-app-capable" content="yes">
@@ -2016,15 +2016,16 @@ const PAIRS = [
   {s:'LTCUSDT',  b:'LTC',  n:'Litecoin',               cls:'crypto'},
   {s:'ATOMUSDT', b:'ATOM', n:'Cosmos',                 cls:'crypto'},
   {s:'NEARUSDT', b:'NEAR', n:'NEAR Protocol',          cls:'crypto'},
-  // ── Metals (Binance Futures — REAL-TIME) ──────────────────────
-  {s:'XAU/USD', b:'GOLD',  n:'Gold (黄金)',    cls:'metal', fSym:'XAUUSDT'},
-  {s:'XAG/USD', b:'SILVER',n:'Silver (白银)',  cls:'metal', fSym:'XAGUSDT'},
+  // ── Metals (Bitget Futures PRIMARY + Binance Futures fallback) ──
+  {s:'XAU/USD', b:'GOLD',  n:'Gold (黄金)',    cls:'metal', fSym:'XAUUSDT', exchange:'bitget', bitgetSym:'XAUUSDT'},
+  {s:'XAG/USD', b:'SILVER',n:'Silver (白银)',  cls:'metal', fSym:'XAGUSDT', exchange:'bitget', bitgetSym:'XAGUSDT'},
   // ── Forex (open.er-api — unlimited free) ──────────────────────
   {s:'USD/SGD', b:'USDSGD', n:'USD/SGD', cls:'forex', erFrom:'USD', erTo:'SGD'},
   {s:'SGD/MYR', b:'SGDMYR', n:'SGD/MYR', cls:'forex', erCross:['SGD','MYR']},
-  // ── Oil (Stooq.com CSV — free, no key; CL.F=WTI, BZ.F=Brent) ─
-  {s:'WTI/USD',   b:'OIL',  n:'Crude Oil WTI (石油)', cls:'commodity', stooqSym:'cl.f',  oilId:'WTI'},
-  {s:'BRENT/USD', b:'BRENT',n:'Brent Crude (布伦特)',  cls:'commodity', stooqSym:'bz.f',  oilId:'BRENT'},
+  // ── Oil (Bitget Futures — v93 FIX: CLUSDT/BZUSDT 是Bitget实际合约名) ─
+  // WTI = CLUSDT (97.76+), Brent = BZUSDT (102.29+) — 已在Bitget App截图确认
+  {s:'WTI/USD',   b:'OIL',  n:'Crude Oil WTI (石油)', cls:'commodity', exchange:'bitget', bitgetSym:'CLUSDT',   stooqSym:'cl.f', oilId:'WTI'},
+  {s:'BRENT/USD', b:'BRENT',n:'Brent Crude (布伦特)',  cls:'commodity', exchange:'bitget', bitgetSym:'BZUSDT',   stooqSym:'bz.f', oilId:'BRENT'},
   // ── 美股合约 (Bitget USDT-Futures) ───────────────────────────
   {s:'TSLA/USD',  b:'TSLA',  n:'Tesla',          cls:'stock',        exchange:'bitget', bitgetSym:'TSLAUSDT'},
   {s:'NVDA/USD',  b:'NVDA',  n:'NVIDIA',         cls:'stock',        exchange:'bitget', bitgetSym:'NVDAUSDT'},
@@ -2178,15 +2179,16 @@ function _updateDailyHL(sym, px) {
   return _dailyHL[sym];
 }
 
-// ── 1. Binance Futures price (metals: XAUUSDT / XAGUSDT) ─────────
+// ── 1. Binance Futures price (metals fallback: XAUUSDT / XAGUSDT) ─
 async function _binanceFuturesPrice(fSym) {
   const endpoints = [
     `https://fapi.binance.com/fapi/v2/ticker/price?symbol=${fSym}`,
     `https://data-api.binance.vision/fapi/v2/ticker/price?symbol=${fSym}`,
   ];
-  const pxFns=[u=>u,u=>`https://corsproxy.io/?${encodeURIComponent(u)}`,u=>`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`];
+  const pxFns=[u=>u,u=>`https://corsproxy.io/?${encodeURIComponent(u)}`];
+  // 并行竞速 — 只用2个proxy (allorigins太慢，去掉)
   const attempts=endpoints.flatMap(url=>pxFns.map(fn=>
-    tryFetch(fn(url),5000).then(r=>r.json()).then(d=>{
+    tryFetch(fn(url),3000).then(r=>r.json()).then(d=>{  // 3s timeout (was 5s)
       const px=parseFloat(d.price||d[0]?.price||0);
       if(!px||!isFinite(px)||px<=0)throw new Error('invalid');
       return px;
@@ -2196,7 +2198,7 @@ async function _binanceFuturesPrice(fSym) {
   catch(e){ throw new Error('binance futures price failed for '+fSym); }
 }
 
-// Fetch Binance Futures klines (OHLCV)
+// Fetch Binance Futures klines (OHLCV) — metals fallback
 async function _binanceFuturesKlines(fSym, iv, limit=300) {
   const ivMap = {'15m':'15m','30m':'30m','1h':'1h','2h':'2h','4h':'4h','8h':'8h','1d':'1d','1w':'1w'};
   const interval = ivMap[iv] || '4h';
@@ -2204,9 +2206,10 @@ async function _binanceFuturesKlines(fSym, iv, limit=300) {
     `https://fapi.binance.com/fapi/v1/klines?symbol=${fSym}&interval=${interval}&limit=${limit}`,
     `https://data-api.binance.vision/fapi/v1/klines?symbol=${fSym}&interval=${interval}&limit=${limit}`,
   ];
-  const pxFns=[u=>u,u=>`https://corsproxy.io/?${encodeURIComponent(u)}`,u=>`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`];
+  const pxFns=[u=>u,u=>`https://corsproxy.io/?${encodeURIComponent(u)}`];
+  // 并行竞速 — 4个组合 (去掉allorigins，太慢)
   const attempts=endpoints.flatMap(url=>pxFns.map(fn=>
-    tryFetch(fn(url),8000).then(r=>r.json()).then(raw=>{
+    tryFetch(fn(url),5000).then(r=>r.json()).then(raw=>{  // 5s timeout (was 8s)
       if(!Array.isArray(raw)||raw.length<5)throw new Error('bad');
       const kl=raw.map(k=>({t:+k[0],o:+k[1],h:+k[2],l:+k[3],c:+k[4],v:+k[5]}));
       kl._isMock=false;return kl;
@@ -2228,13 +2231,17 @@ async function _stooqOilPrice(stooqSym) {
   ];
   const attempts = proxies.map(fn =>
     tryFetch(fn(url), 7000).then(r => r.text()).then(csv => {
-      // CSV format: Symbol,Date,Time,Open,High,Low,Close,Volume
       const lines = csv.trim().split('\n');
       if (lines.length < 2) throw new Error('empty');
-      const vals = lines[1].split(',');
-      // Close is index 6 (0-based) in "Symbol,Date,Time,Open,High,Low,Close,Volume"
-      const px = parseFloat(vals[6] || vals[4]);
-      if (!isFinite(px) || px < 30 || px > 500) throw new Error('range: ' + px);
+      // v92 FIX: parse header to find Close column dynamically
+      const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+      const closeIdx = headers.indexOf('close');
+      const dataVals = lines[1].split(',');
+      // Use detected index, fallback to positional guesses
+      let px = closeIdx >= 0 ? parseFloat(dataVals[closeIdx]) : NaN;
+      if (!isFinite(px) || px <= 0) px = parseFloat(dataVals[6]); // sd2t2ohlcv → index 6
+      if (!isFinite(px) || px <= 0) px = parseFloat(dataVals[4]); // ohlcv → index 4
+      if (!isFinite(px) || px < 20 || px > 500) throw new Error('range: ' + px);
       return px;
     })
   );
@@ -2242,38 +2249,60 @@ async function _stooqOilPrice(stooqSym) {
 }
 
 async function _yahooOilPrice(yahooSym) {
-  // Yahoo Finance v8 quote endpoint
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${yahooSym}?interval=1d&range=1d`;
+  // v93 FIX: Multiple Yahoo endpoints + better price field extraction
+  const endpoints = [
+    `https://query1.finance.yahoo.com/v8/finance/chart/${yahooSym}?interval=1d&range=1d`,
+    `https://query2.finance.yahoo.com/v8/finance/chart/${yahooSym}?interval=1d&range=1d`,
+  ];
   const proxies = [
     u => `https://corsproxy.io/?${encodeURIComponent(u)}`,
     u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
   ];
-  const attempts = proxies.map(fn =>
+  // Race all endpoint+proxy combos
+  const attempts = endpoints.flatMap(url => proxies.map(fn =>
     tryFetch(fn(url), 8000).then(r => r.json()).then(d => {
       const result = d?.chart?.result?.[0];
-      const px = result?.meta?.regularMarketPrice || result?.meta?.previousClose;
-      if (!isFinite(px) || px < 30 || px > 500) throw new Error('yahoo range: ' + px);
-      return parseFloat(px);
+      const meta = result?.meta;
+      // Try multiple price fields in priority order
+      const px = parseFloat(
+        meta?.regularMarketPrice ||
+        meta?.chartPreviousClose ||
+        meta?.previousClose ||
+        (result?.indicators?.quote?.[0]?.close?.filter(v=>v!=null).slice(-1)[0]) ||
+        0
+      );
+      if (!isFinite(px) || px < 20 || px > 500) throw new Error('yahoo range: ' + px + ' sym=' + yahooSym);
+      console.log('[FINCH] Yahoo oil OK:', yahooSym, px);
+      return px;
     })
-  );
+  ));
   return await Promise.any(attempts);
 }
 
-// Master oil price fetcher: Stooq → Yahoo → stored fallback
+// Master oil price fetcher: Yahoo(primary) → Stooq → stored fallback
+// v93 FIX: Yahoo Finance is more reliable than Stooq for oil; parallel race for speed
 async function _oilPriceFetch(stooqSym, yahooSym, oilId) {
-  // 1. Try Stooq first (fastest, no key)
+  // 1. Race Yahoo and Stooq in parallel — fastest wins
   try {
-    const px = await _stooqOilPrice(stooqSym);
-    if (px > 0) return px;
-  } catch(e) {}
-  // 2. Try Yahoo Finance
-  try {
-    const px = await _yahooOilPrice(yahooSym);
-    if (px > 0) return px;
-  } catch(e) {}
-  // 3. Stored last-known
+    const px = await Promise.any([
+      _yahooOilPrice(yahooSym).then(p => { if(p>0) return p; throw new Error('yahoo invalid'); }),
+      _stooqOilPrice(stooqSym).then(p => { if(p>0) return p; throw new Error('stooq invalid'); }),
+    ]);
+    if (px > 0) {
+      console.log('[FINCH] Oil price OK (' + oilId + '):', px, 'from parallel race');
+      try { localStorage.setItem('finch_v90_oil_' + oilId, px.toString()); } catch(e) {}
+      return px;
+    }
+  } catch(e) { console.warn('[FINCH] Oil parallel race failed:', oilId, e.message); }
+  // 2. Last-known stored value
   const stored = localStorage.getItem('finch_v90_oil_' + oilId);
-  if (stored) { const px = parseFloat(stored); if (px > 0) return px; }
+  if (stored) {
+    const px = parseFloat(stored);
+    if (px > 20 && px < 300) {
+      console.warn('[FINCH] Oil using stored fallback:', oilId, px);
+      return px;
+    }
+  }
   throw new Error('oil price unavailable: ' + oilId);
 }
 
@@ -2287,7 +2316,7 @@ async function _stooqOilKlines(stooqSym, yahooSym, oilId, iv, limit) {
   let currentPx;
   try { currentPx = await _oilPriceFetch(stooqSym, yahooSym, oilId); } catch(e) {
     const stored = localStorage.getItem('finch_v90_oil_' + oilId);
-    currentPx = stored ? parseFloat(stored) : (oilId === 'WTI' ? 78 : 82);
+    currentPx = stored ? parseFloat(stored) : (oilId === 'WTI' ? 62 : 65); // v93: realistic 2025 fallback
   }
 
   const now = Date.now();
@@ -2390,66 +2419,100 @@ async function _erForexKlines(from, to, iv, limit) {
 const BITGET_CONFIG = {
   baseUrl: 'https://api.bitget.com',
   productType: 'USDT-FUTURES',
+  // v92 FIX: commodities (oil/gold/silver) use USDT-FUTURES but with SUSDT fallback
+  _oilProductTypes: ['USDT-FUTURES', 'SUSDT-FUTURES'],
 };
 
-// 通用代理回退 fetch — 依次尝试直连、corsproxy.io、allorigins
-async function _bitgetFetch(url, timeoutMs = 8000) {
+// Bitget fetch — 并行竞速所有代理，谁快用谁 (降低延迟)
+async function _bitgetFetch(url, timeoutMs = 5000) {
   const proxies = [
-    u => u,
-    u => `https://corsproxy.io/?${encodeURIComponent(u)}`,
-    u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+    u => u,                                                          // 直连 (最快)
+    u => `https://corsproxy.io/?${encodeURIComponent(u)}`,          // corsproxy
+    u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`, // allorigins
   ];
-  for (const buildUrl of proxies) {
-    try {
-      const resp = await fetch(buildUrl(url), { signal: AbortSignal.timeout(timeoutMs) });
-      if (!resp.ok) continue;
-      const data = await resp.json();
-      if (data && data.code === '00000') return data;
-    } catch(e) {}
+  // 并行发起所有请求，用 Promise.any 取最快成功的
+  const attempts = proxies.map(buildUrl =>
+    fetch(buildUrl(url), { signal: AbortSignal.timeout(timeoutMs) })
+      .then(resp => {
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        return resp.json();
+      })
+      .then(data => {
+        if (data && data.code === '00000') return data;
+        throw new Error('bad code: ' + data?.code);
+      })
+  );
+  try {
+    return await Promise.any(attempts);
+  } catch(e) {
+    throw new Error(`[Bitget] All proxies failed for: ${url}`);
   }
-  throw new Error(`[Bitget] All proxies failed for: ${url}`);
 }
 
 // Ticker — 实时价格、24h高低、OI、资金费率
-async function _bitgetTicker(bitgetSym) {
-  const url = `${BITGET_CONFIG.baseUrl}/api/v2/mix/market/ticker?symbol=${bitgetSym}&productType=${BITGET_CONFIG.productType}`;
-  const data = await _bitgetFetch(url, 8000);
-  const t = Array.isArray(data.data) ? data.data[0] : data.data;
-  if (!t) throw new Error('[Bitget] empty ticker data');
-  return {
-    px:          parseFloat(t.lastPr)      || 0,
-    bid:         parseFloat(t.bidPr)       || 0,
-    ask:         parseFloat(t.askPr)       || 0,
-    high:        parseFloat(t.high24h)     || 0,
-    low:         parseFloat(t.low24h)      || 0,
-    vol:         parseFloat(t.usdtVolume || t.baseVolume || 0),
-    oi:          parseFloat(t.holdingAmount || 0),
-    fundingRate: parseFloat(t.fundingRate  || 0),
-  };
+// v93 FIX: CLUSDT/BZUSDT correct Bitget symbols; USDT-FUTURES then SUSDT-FUTURES fallback
+async function _bitgetTicker(bitgetSym, isCommodity=false) {
+  const productTypes = isCommodity
+    ? BITGET_CONFIG._oilProductTypes
+    : [BITGET_CONFIG.productType];
+  let lastErr;
+  for (const pt of productTypes) {
+    try {
+      const url = `${BITGET_CONFIG.baseUrl}/api/v2/mix/market/ticker?symbol=${bitgetSym}&productType=${pt}`;
+      const data = await _bitgetFetch(url, 8000);
+      const t = Array.isArray(data.data) ? data.data[0] : data.data;
+      if (!t) { console.warn('[Bitget] empty data for', bitgetSym, pt); continue; }
+      const px = parseFloat(t.lastPr);
+      if (!px || !isFinite(px) || px <= 0) { console.warn('[Bitget] invalid px', bitgetSym, pt, t.lastPr); continue; }
+      console.log('[Bitget] OK', bitgetSym, pt, 'px=', px);
+      return {
+        px,
+        bid:         parseFloat(t.bidPr)       || 0,
+        ask:         parseFloat(t.askPr)       || 0,
+        high:        parseFloat(t.high24h)     || 0,
+        low:         parseFloat(t.low24h)      || 0,
+        vol:         parseFloat(t.usdtVolume || t.baseVolume || 0),
+        oi:          parseFloat(t.holdingAmount || 0),
+        fundingRate: parseFloat(t.fundingRate  || 0),
+      };
+    } catch(e) { console.warn('[Bitget] ticker error', bitgetSym, pt, e.message); lastErr = e; }
+  }
+  throw lastErr || new Error('[Bitget] all productTypes failed for ' + bitgetSym);
 }
 
 // K线 — 标准 OHLCV 格式
-async function _bitgetKlines(bitgetSym, interval, limit = 300) {
+// v92 FIX: isCommodity tries USDT-FUTURES then SUSDT-FUTURES
+async function _bitgetKlines(bitgetSym, interval, limit = 300, isCommodity=false) {
   const granMap = {
     '1m':'1m','5m':'5m','15m':'15m','30m':'30m',
-    '1h':'1H','4h':'4H','1d':'1Dutc','1w':'1Wutc'
+    '1h':'1H','2h':'2H','4h':'4H','8h':'8H',
+    '1d':'1Dutc','1w':'1Wutc'
   };
   const granularity = granMap[interval] || '1H';
-  const url = `${BITGET_CONFIG.baseUrl}/api/v2/mix/market/candles?symbol=${bitgetSym}&granularity=${granularity}&limit=${limit}&productType=${BITGET_CONFIG.productType}`;
-  const data = await _bitgetFetch(url, 10000);
-  if (!Array.isArray(data.data) || !data.data.length) throw new Error('[Bitget] empty kline data');
-  // Bitget返回: [ts, open, high, low, close, vol, volUSDT]
-  return data.data
-    .map(c => ({
-      t: parseInt(c[0]),
-      o: parseFloat(c[1]),
-      h: parseFloat(c[2]),
-      l: parseFloat(c[3]),
-      c: parseFloat(c[4]),
-      v: parseFloat(c[5]),
-    }))
-    .filter(c => c.t > 0 && c.c > 0)
-    .sort((a, b) => a.t - b.t);  // 确保时间升序
+  const productTypes = isCommodity
+    ? BITGET_CONFIG._oilProductTypes
+    : [BITGET_CONFIG.productType];
+  let lastErr;
+  for (const pt of productTypes) {
+    try {
+      const url = `${BITGET_CONFIG.baseUrl}/api/v2/mix/market/candles?symbol=${bitgetSym}&granularity=${granularity}&limit=${limit}&productType=${pt}`;
+      const data = await _bitgetFetch(url, 5000);
+      if (!Array.isArray(data.data) || !data.data.length) continue;
+      const klines = data.data
+        .map(c => ({
+          t: parseInt(c[0]),
+          o: parseFloat(c[1]),
+          h: parseFloat(c[2]),
+          l: parseFloat(c[3]),
+          c: parseFloat(c[4]),
+          v: parseFloat(c[5]),
+        }))
+        .filter(c => c.t > 0 && c.c > 0)
+        .sort((a, b) => a.t - b.t);
+      if (klines.length > 5) return klines;
+    } catch(e) { lastErr = e; }
+  }
+  throw lastErr || new Error('[Bitget] klines all productTypes failed for ' + bitgetSym);
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -2461,15 +2524,23 @@ async function tdQuote(sym) {
   const p = getPair(sym);
   if(!p) return cached?.q||null;
 
-  // ── Bitget 美股合约 ──────────────────────────────────────────
+  // ── Bitget Futures: 股票/黄金/白银/石油 (主要数据源) ────────────
   if (p.exchange === 'bitget' && p.bitgetSym) {
+    // Asset-specific price range validation
+    const _bitgetRanges = {
+      'XAU/USD': [1000, 6000], 'XAG/USD': [10, 120],
+      'WTI/USD': [20, 200], 'BRENT/USD': [20, 210],
+    };
+    const _range = _bitgetRanges[sym];
+    // v92 FIX: pass isCommodity so ticker tries USDT-FUTURES + SUSDT-FUTURES
+    const _isCommodity = (p.cls === 'commodity' || p.cls === 'metal');
     try {
-      const ticker = await _bitgetTicker(p.bitgetSym);
+      const ticker = await _bitgetTicker(p.bitgetSym, _isCommodity);
       if (!ticker.px || !isFinite(ticker.px) || ticker.px <= 0) throw new Error('invalid bitget price');
+      if (_range && (ticker.px < _range[0] || ticker.px > _range[1])) throw new Error(`Bitget price ${ticker.px} out of range [${_range}] for ${sym}`);
       const hl  = _updateDailyHL(sym, ticker.px);
       const prev = cached?.q?.px;
       const chg  = (prev && prev > 0 && isFinite(prev)) ? (ticker.px - prev) / prev * 100 : 0;
-      // 缓存资金费率供信号引擎使用
       if (!S.fundingRates) S.fundingRates = {};
       S.fundingRates[sym] = ticker.fundingRate;
       const q = {
@@ -2477,13 +2548,64 @@ async function tdQuote(sym) {
         high: Math.max(ticker.high, hl.high || ticker.high),
         low:  Math.min(ticker.low,  hl.low  || ticker.low),
         vol: ticker.vol, oi: ticker.oi, fundingRate: ticker.fundingRate,
+        _src: 'bitget',
       };
       _avQuoteCache[sym] = { q, ts: Date.now() };
+      // Cache oil price for offline fallback
+      if (p.cls === 'commodity' && p.oilId) {
+        try { localStorage.setItem('finch_v90_oil_'+p.oilId, ticker.px.toString()); } catch(e) {}
+      }
       updTDStatus(true);
       updateDataSourceStatus(sym);
       return q;
     } catch(e) {
       console.warn('[FINCH] Bitget quote error:', sym, e.message);
+      // Fallback: metals → Binance Futures; oil → stored price
+      if (p.cls === 'metal' && p.fSym) {
+        try {
+          const px = await _binanceFuturesPrice(p.fSym);
+          if (px > 0) {
+            const hl = _updateDailyHL(sym, px);
+            const prev = cached?.q?.px;
+            const chg = (prev && prev > 0) ? (px - prev) / prev * 100 : 0;
+            const q = { px, chg, open: hl.open||px, high: hl.high, low: hl.low, vol: 0, _src: 'binance_fallback' };
+            _avQuoteCache[sym] = { q, ts: Date.now() };
+            updTDStatus(true);
+            return q;
+          }
+        } catch(e2) {}
+      }
+      // v92 FIX: oil fallback → real Stooq/Yahoo fetch, NOT dead values 75/79
+      if (p.cls === 'commodity' && p.oilId) {
+        try {
+          const yahooMap = { 'WTI': 'CL=F', 'BRENT': 'BZ=F' };
+          const px = await _oilPriceFetch(p.stooqSym, yahooMap[p.oilId]||'CL=F', p.oilId);
+          if (px > 0) {
+            const hl = _updateDailyHL(sym, px);
+            const prev = cached?.q?.px;
+            const chg = (prev && prev > 0) ? (px - prev) / prev * 100 : 0;
+            const q = { px, chg, open: hl.open||px, high: hl.high, low: hl.low, vol: 0, _src: 'stooq_fallback' };
+            _avQuoteCache[sym] = { q, ts: Date.now() };
+            try { localStorage.setItem('finch_v90_oil_'+p.oilId, px.toString()); } catch(e) {}
+            updTDStatus(true);
+            updateDataSourceStatus(sym);
+            return q;
+          }
+        } catch(e2) {
+          // Last resort: stored value
+          const stored = localStorage.getItem('finch_v90_oil_'+p.oilId);
+          if (stored) {
+            const px = parseFloat(stored);
+            if (px > 0) {
+              const hl = _updateDailyHL(sym, px);
+              const q = { px, chg: 0, open: hl.open||px, high: hl.high, low: hl.low, vol: 0, _src: 'stored_fallback' };
+              _avQuoteCache[sym] = { q, ts: Date.now() };
+              updTDStatus(false);
+              return q;
+            }
+          }
+        }
+      }
       updTDStatus(false);
       return cached?.q || null;
     }
@@ -2511,7 +2633,7 @@ async function tdQuote(sym) {
         px = await _oilPriceFetch(p.stooqSym, yahoo, p.oilId);
       } catch(e) {
         const stored = localStorage.getItem('finch_v90_oil_'+p.oilId);
-        px = stored ? parseFloat(stored) : (p.oilId==='WTI' ? 78 : 82);
+        px = stored ? parseFloat(stored) : (p.oilId==='WTI' ? 62 : 65); // v93: realistic 2025 fallback
       }
     }
 
@@ -2586,21 +2708,96 @@ async function _getMetalKlines(p, iv, limit) {
 // Stubs for removed AV functions (prevent ReferenceErrors)
 async function _avFXDailyKlines(from,to,limit){ return await _erForexKlines(from,to,'1d',limit); }
 async function _sgdMyrDailyKlines(limit){ return await _erForexKlines('SGD','MYR','1d',limit); }
+// v93 NEW: Yahoo Finance OHLCV klines for oil — real historical data
+// Supports: CL=F (WTI), BZ=F (Brent)
+async function _yahooOilKlines(yahooSym, iv, limit=300) {
+  const ivToRange = {
+    '15m':{'range':'5d','interval':'15m'},
+    '30m':{'range':'1mo','interval':'30m'},
+    '1h': {'range':'3mo','interval':'1h'},
+    '2h': {'range':'3mo','interval':'1h'},  // Yahoo doesn't have 2h, resample from 1h
+    '4h': {'range':'6mo','interval':'1h'},  // resample from 1h
+    '8h': {'range':'1y', 'interval':'1d'},  // resample from 1d
+    '1d': {'range':'2y', 'interval':'1d'},
+    '1w': {'range':'5y', 'interval':'1wk'},
+  };
+  const cfg = ivToRange[iv] || {'range':'3mo','interval':'1h'};
+  const needResample = (iv==='2h'||iv==='4h'||iv==='8h');
+  const resampleFactor = iv==='2h'?2:iv==='4h'?4:iv==='8h'?8:1;
+
+  const endpoints = [
+    `https://query1.finance.yahoo.com/v8/finance/chart/${yahooSym}?interval=${cfg.interval}&range=${cfg.range}`,
+    `https://query2.finance.yahoo.com/v8/finance/chart/${yahooSym}?interval=${cfg.interval}&range=${cfg.range}`,
+  ];
+  const proxies = [
+    u => `https://corsproxy.io/?${encodeURIComponent(u)}`,
+    u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+  ];
+
+  const attempts = endpoints.flatMap(url => proxies.map(fn =>
+    tryFetch(fn(url), 10000).then(r => r.json()).then(d => {
+      const result = d?.chart?.result?.[0];
+      if(!result) throw new Error('no result');
+      const ts = result.timestamp;
+      const q = result.indicators?.quote?.[0];
+      if(!ts||!q) throw new Error('no timestamps/quotes');
+      let kl = ts.map((t,i) => ({
+        t: t*1000,
+        o: q.open?.[i]   || 0,
+        h: q.high?.[i]   || 0,
+        l: q.low?.[i]    || 0,
+        c: q.close?.[i]  || 0,
+        v: q.volume?.[i] || 0,
+      })).filter(k => k.t>0 && k.c>0 && k.c>20 && k.c<500);
+      if(kl.length < 5) throw new Error('insufficient klines: ' + kl.length);
+      kl.sort((a,b) => a.t-b.t);
+      // Resample if needed
+      if(needResample && resampleFactor > 1) {
+        const out = [];
+        for(let i=0;i<kl.length;i+=resampleFactor){
+          const chunk = kl.slice(i, i+resampleFactor);
+          if(!chunk.length) continue;
+          out.push({
+            t: chunk[0].t,
+            o: chunk[0].o,
+            h: Math.max(...chunk.map(c=>c.h)),
+            l: Math.min(...chunk.map(c=>c.l)),
+            c: chunk[chunk.length-1].c,
+            v: chunk.reduce((s,c)=>s+c.v,0),
+          });
+        }
+        kl = out;
+      }
+      return kl.slice(-limit);
+    })
+  ));
+  return await Promise.any(attempts);
+}
+
 async function _avOilKlines(p,iv,limit){ return await _oilKlinesV45(p,iv,limit); }
 async function _avFXSpot(from,to){ return await _erCrossRate(from,to); }
 
 async function _oilKlinesV45(p, iv, limit) {
-  // v90: Use Stooq-based real oil klines (real price snapshots + intraday expansion)
+  // v93 FIX: Yahoo Finance klines as primary (more reliable OHLCV history)
+  // then Stooq, then simulation
+  const yahooMap = { 'WTI': 'CL=F', 'BRENT': 'BZ=F' };
+  const yahooSym = yahooMap[p.oilId] || 'CL=F';
+
+  // Try Yahoo Finance klines first (has real OHLCV history)
+  try {
+    const kl = await _yahooOilKlines(yahooSym, iv, limit);
+    if(kl && kl.length > 10) { kl._isMock = false; console.log('[FINCH] Oil klines via Yahoo:', p.oilId, kl.length); return kl; }
+  } catch(e) { console.warn('[FINCH] Yahoo oil klines failed:', p.oilId, e.message); }
+
+  // Try Stooq
   if(p.stooqSym) {
     try {
-      const yahooMap = { 'WTI': 'CL=F', 'BRENT': 'BZ=F' };
-      const yahoo = yahooMap[p.oilId] || 'CL=F';
-      const kl = await _stooqOilKlines(p.stooqSym, yahoo, p.oilId, iv, limit);
+      const kl = await _stooqOilKlines(p.stooqSym, yahooSym, p.oilId, iv, limit);
       if(kl.length > 5) { kl._isMock = false; return kl; }
     } catch(e) {}
   }
   // Fallback: pure simulation from stored price
-  const lastPx = parseFloat(localStorage.getItem('finch_v90_oil_'+p.oilId) || (p.oilId==='WTI'?'78':'82'));
+  const lastPx = parseFloat(localStorage.getItem('finch_v90_oil_'+p.oilId) || (p.oilId==='WTI'?'62':'65')); // v93 fallback
   const now = Date.now();
   const daily = [];
   // Build 200-day simulated OHLCV with realistic oil vol (~1.5% daily)
@@ -2631,11 +2828,29 @@ async function tdKlines(sym, iv, limit=300) {
 
   let kl = null;
   try {
-    // ── Bitget 美股合约 ────────────────────────────────────────
+    // ── Bitget Futures: 股票/黄金/白银/石油 (主要数据源) ──────────
     if (p.exchange === 'bitget' && p.bitgetSym) {
-      kl = await _bitgetKlines(p.bitgetSym, iv, limit);
-      if (!kl || kl.length < 5) throw new Error('insufficient bitget klines');
-      kl._isMock = false;
+      try {
+        kl = await _bitgetKlines(p.bitgetSym, iv, limit, (p.cls==='commodity'||p.cls==='metal'));
+        if (!kl || kl.length < 5) throw new Error('insufficient bitget klines');
+        kl._isMock = false;
+      } catch(eBitget) {
+        console.warn('[FINCH] Bitget klines failed, trying fallback:', sym, eBitget.message);
+        // Fallback: metals → Binance Futures klines
+        if (p.cls === 'metal' && p.fSym) {
+          try { kl = await _getMetalKlines(p, iv, limit); } catch(e2) {}
+        }
+        // Fallback: oil → stooq/stored snapshot klines
+        if ((p.cls === 'commodity') && !kl) {
+          try { kl = await _oilKlinesV45(p, iv, limit); } catch(e2) {}
+        }
+        if (!kl || kl.length < 5) {
+          // Use cache if available
+          if (cached?.data?.length >= 5) return cached.data;
+          return [];
+        }
+        kl._isMock = false;
+      }
       // Inject live spot into last candle
       const spot = _avQuoteCache[sym];
       if (spot?.q?.px > 0) {
@@ -2649,10 +2864,7 @@ async function tdKlines(sym, iv, limit=300) {
       return kl;
     }
 
-    if(p.cls==='metal' && p.fSym) {
-      kl = await _getMetalKlines(p, iv, limit);
-
-    } else if(p.erCross) {
+    if(p.erCross) {
       // SGD/MYR from er-api snapshots
       const daily = await _erForexKlines(p.erCross[0], p.erCross[1], '1d', limit);
       kl = _expandDailyToIntraday(daily, iv).slice(-limit);
@@ -2663,9 +2875,6 @@ async function tdKlines(sym, iv, limit=300) {
       const daily = await _erForexKlines(p.erFrom, p.erTo, '1d', limit);
       kl = _expandDailyToIntraday(daily, iv).slice(-limit);
       kl._isMock = false;
-
-    } else if(p.cls === 'commodity') {
-      kl = await _oilKlinesV45(p, iv, limit);
 
     } else return cached?.data||[];
 
@@ -2848,9 +3057,10 @@ function showAVKeyDialog(){
     <div style="background:var(--bg1);border:1px solid var(--gold);border-radius:12px;padding:24px 28px;width:min(440px,92vw);box-shadow:0 24px 80px rgba(0,0,0,0.4);">
       <div style="font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:var(--gold);margin-bottom:6px;">📡 FINCH · 数据源状态</div>
       <div style="font-size:12px;color:var(--text);line-height:2.0;margin-bottom:16px;">
-        🟡 <b>黄金/白银</b>：Binance Futures 实时 ✅ 无需密钥<br>
+        🟡 <b>黄金/白银</b>：Bitget Futures 实时 ✅ (XAUUSDT/XAGUSDT)<br>
         💱 <b>USD/SGD · SGD/MYR</b>：open.er-api.com ✅ 完全免费<br>
-        🛢️ <b>WTI/Brent 原油</b>：Binance + 本地估算 ✅<br>
+        🛢️ <b>WTI/Brent 原油</b>：Bitget CLUSDT/BZUSDT (v93修正) → Yahoo Finance CL=F/BZ=F → Stooq → 本地缓存 多层回退 ✅<br>
+        📈 <b>美股合约</b>：Bitget Futures 实时 ✅ (TSLA/NVDA/AAPL等)<br>
         🪙 <b>加密货币</b>：Binance WebSocket 实时 ✅<br>
         <span style="color:var(--green);font-size:11px;">所有数据源完全免费，无需任何 API 密钥。</span>
       </div>
@@ -7137,7 +7347,30 @@ function _Φ9x(tf){
     }
   } catch(e) {}
   // 波段幅度 — 这是Fib延伸的基础单位
-  const _fibWaveRange = Math.max(_fibWaveHi - _fibWaveLo, price * 0.01);
+  // v91 FIX: Cap _fibWaveRange to prevent inflation from fallback extremes.
+  // When a proper swing Lo→Hi wave is found, use it directly.
+  // When using fallback (120-bar historical extremes), cap at 3×ATR to avoid absurd TP projections.
+  const _rawWaveRange = _fibWaveHi - _fibWaveLo;
+  const _atrForCap = rawAtr || price * 0.02;
+  const _isProperWave = (() => {
+    try {
+      const _pvTest = _Δ1p(recentKL, Math.min(5, Math.floor(recentKL.length / 10)));
+      const _peaks = _pvTest.peaks.sort((a,b) => b.idx - a.idx);
+      const _troughs = _pvTest.troughs.sort((a,b) => b.idx - a.idx);
+      if(isBull) {
+        const _lo = _troughs.find(t => t.price < price * 0.995);
+        const _hi = _lo ? _peaks.find(p => p.price > price * 1.001 && p.idx > _lo.idx) : null;
+        return !!(  _lo && _hi && _hi.price > _lo.price);
+      } else {
+        const _hi = _peaks.find(p => p.price > price * 1.001);
+        const _lo = _hi ? _troughs.find(t => t.price < price * 0.999 && t.idx > _hi.idx) : null;
+        return !!(_hi && _lo && _lo.price < _hi.price);
+      }
+    } catch(e) { return false; }
+  })();
+  const _fibWaveRange = _isProperWave
+    ? Math.max(_rawWaveRange, price * 0.01)
+    : Math.min(Math.max(_rawWaveRange, price * 0.01), _atrForCap * 3.0); // cap fallback at 3×ATR
 
   const recentRange=Math.max(fibHi-fibLo, price*0.01);
   const adRange=Math.max(
@@ -8251,10 +8484,14 @@ function _Φ9x(tf){
       );
 
       // Select 3 well-spaced TPs sorted by price
+      // v97 FIX: filter candidates with p > price*10 (absurd upside) before picks
+      // Mirrors the SHORT fix — prevents e.g. Fib 2.618 on a huge wave inflating TP1
+      const _maxTPLong = price * 10; // sanity ceiling
       candidates.sort((a,b)=>a.p-b.p);
       const picks=[];let floor=entry+minGap;
       for(const c of candidates){
         const p=Math.round(c.p*10000)/10000;
+        if(p<=0||!isFinite(p)||p>_maxTPLong) continue;
         if(p>=floor&&p>0&&picks.length<3){
           picks.push({p,note:c.src,priority:c.priority});
           floor=p+minGap*1.5;
@@ -8267,12 +8504,15 @@ function _Φ9x(tf){
 
       const labels=['🎯 TP1 保守止盈','🏆 TP2 中期目标','🚀 TP3 进取目标'];
       const actions=['触及后止盈50%，SL移至成本价','再止盈30%，剩余20%持有','全部止盈或持有至信号变化'];
+      // v91 FIX: rrRatio denominator = SL risk (atrSL proxy), not self-referential TP1 distance
+      // This makes rrRatio consistent across all TPs (TP1=0.5R, TP2=1.5R, TP3=1.7R as intended)
+      const _longSLProxy = atrSL || atrClamped * 1.2;
       const result = picks.map((c,i)=>({...c,
         note:c.note,
         label:labels[i],
         action:actions[i],
         pct:(c.p-entry)/entry*100,
-        rrRatio:Math.abs(c.p-entry)/Math.abs(entry-(picks[0]?.p||entry-atrClamped))
+        rrRatio:Math.abs(c.p-entry)/_longSLProxy
       }));
 
       // v79 FIX-3: POC磁力位截断 — 如果POC在entry和TP1之间，TP1收紧至POC
@@ -8322,10 +8562,17 @@ function _Φ9x(tf){
         {p:entry-atrTP*5.5,src:'进取目标(Regime调整)',priority:4}   // v60: 3.5→5.5
       );
 
+      // v97 FIX: filter p>0 BEFORE Math.max(0.001) so the 0.001 sentinel never enters picks
+      // Root cause of TP1=0.001 bug: ATR fallback entry-atrTP*5.5 goes negative for wide-range
+      // assets (XRP 1D), Math.max(0.001,...) maps it to 0.001, which then passes the p<=ceil
+      // check and lands in picks as TP1/TP2. Fix: require p > price*0.01 (sanity floor).
+      const _minTPShort = price * 0.01; // absolute floor: TP must be > 1% of current price
       candidates.sort((a,b)=>b.p-a.p);
       const picks=[];let ceil=entry-minGap;
       for(const c of candidates){
-        const p=Math.max(0.001,Math.round(c.p*10000)/10000);
+        const _raw=Math.round(c.p*10000)/10000;
+        if(_raw<=0||_raw<_minTPShort) continue; // skip negative/absurd candidates outright
+        const p=_raw;
         if(p<=ceil&&picks.length<3){
           picks.push({p,note:c.src,priority:c.priority});
           ceil=p-minGap*1.5;
@@ -8333,17 +8580,24 @@ function _Φ9x(tf){
       }
       while(picks.length<3){
         const last=picks.length?picks[picks.length-1].p:entry;
-        picks.push({p:Math.max(0.001,Math.round((last-atrClamped*2)*10000)/10000),note:'ATR延伸',priority:3});
+        // v97: fallback uses 1×ATR steps (not 2×) to stay near structure, min=price*0.01
+        const _fb=Math.round((last-atrClamped)*10000)/10000;
+        picks.push({p:Math.max(_minTPShort,_fb),note:'ATR延伸',priority:3});
       }
 
       const labels=['🎯 TP1 保守止盈','🏆 TP2 中期目标','🚀 TP3 进取目标'];
       const actions=['触及后平仓50%，SL移至成本价','再平仓30%，剩余20%持有','全部平仓或持有至信号变化'];
+      // v91 FIX: rrRatio for SHORT must use SL risk distance as denominator
+      // Previously used entry-(picks[0].p) which is self-referential and meaningless for TP1
+      // Correct: rrRatio = |TP_dist| / |SL_dist| — SL for short is ABOVE entry
+      // We use atrSL as proxy since sls[] not yet built here; will be recalculated after _bSL()
+      const _shortSLProxy = atrSL || atrClamped * 1.2;
       const result = picks.map((c,i)=>({...c,
         note:c.note,
         label:labels[i],
         action:actions[i],
-        pct:(c.p-entry)/entry*100,
-        rrRatio:Math.abs(c.p-entry)/Math.abs(entry-(picks[0]?.p||entry+atrClamped))
+        pct:(c.p-entry)/entry*100,  // negative for short TPs (correct)
+        rrRatio:Math.abs(c.p-entry)/_shortSLProxy
       }));
 
       // v79 FIX-3 SHORT: POC磁力位截断 — 如果POC在entry下方且高于TP1，TP1收紧至POC
@@ -8368,15 +8622,27 @@ function _Φ9x(tf){
   //      SL2 = full invalidation (wider structure fails)
   //      SL3 = catastrophic stop (thesis completely wrong)
   function _bSL(){
-    // v89 CORE PHILOSOPHY: SL必须放在真正的技术性无效点
-    // "我的止损放在市场证明我错了的位置，不是放在我害怕亏损的位置" — Paul Tudor Jones
-    // v89 FIX: 完全移除 maxSLPct 硬性百分比上限
-    // 原因: 2.5%/3%的硬上限导致SL被截断到随机位置，既不在结构位，也不在ATR倍数位
-    //       真正的量化交易: SL = 结构位 + 机构缓冲，然后根据SL距离计算仓位大小
-    const instBuffer = atrClamped * 0.35;  // 机构缓冲: 避开明显止损池 (0.35×ATR)
-    // 合理SL上限: 不超过5个ATR (防止极端值，但不截断结构性止损)
-    const hardMaxSL = atrClamped * 5.0;
-    const minSLPct = 0.005;  // 最小 0.5% (防止止损过紧，被正常tick扫出)
+    // v98 CORE REWRITE: TP1/TP2/TP3 ordering — NEAREST FIRST (PTJ philosophy)
+    //   Problem: _minTP1Dist = _1R * minRR pushed TP1 to 1R away, skipping the nearest
+    //   structural level (e.g. 78,202 skipped, 67,937 became TP1 — completely inverted).
+    //   Fix: TP1 = nearest valid structural candidate (conservative, highest probability).
+    //        TP2 = next level (standard). TP3 = furthest (aggressive, lowest probability).
+    //   Also: removed v95 Elite R:R gate that pushed TP1 farther (conflicted with above).
+    //   Also: TP probability labels corrected — TP1 35-80%, TP2 18-55%, TP3 10-35%.
+    // v97 FIX: TP1=0.001 bug on SHORT 1D assets (XRP/wide-range)
+    //   Root: ATR fallback candidates (entry - atrTP*5.5) go negative for 1D wide ATR.
+    //   Math.max(0.001,...) maps them to 0.001 sentinel, which passes p<=ceil check
+    //   and lands in picks as TP1/TP2. Fix: filter candidates with p < price*0.01
+    //   before picks selection (SHORT), and p > price*10 (LONG defensive mirror).
+    //   Also: fallback while-loop now uses 1×ATR steps instead of 2× for tighter spacing.
+    // v96 CORE: SL = 结构失效点 + 严格硬上限
+    // v96 FIX: hardMaxSL 从 5×ATR 降至 2.0×ATR
+    // 原因: BTC 4H ATR ≈ 1500-2000，5×ATR = 9-12% — 对期货任何杠杆都是本金清零
+    // Jane Street / Citadel 标准: SL1 ≤ 1.5×ATR，必须是最近结构失效点，不是随机ATR倍数
+    // 如果结构SL超过2×ATR，说明入场点本身太差，宁可不入场等更好机会
+    const instBuffer = atrClamped * 0.15;  // v96: 缓冲减小 (0.35→0.15)，避免SL被推太宽
+    const hardMaxSL = atrClamped * 2.0;    // v96 HARD CAP: 绝对上限 2×ATR (BTC≈3-4%)
+    const minSLPct = 0.003;  // 最小 0.3%
 
     if(isBull){
       const slFloor = Math.max(0.001, entry - hardMaxSL); // v89: 用5×ATR而不是maxSlDist
@@ -8434,13 +8700,13 @@ function _Φ9x(tf){
 
       const sl2raw = structSL.length > 1
         ? Math.round((structSL[1] - instBuffer * 0.5) * 10000) / 10000
-        : Math.round((sl1 - atrClamped * 1.0) * 10000) / 10000;
+        : Math.round((sl1 - atrClamped * 0.4) * 10000) / 10000; // v96: 0.4 not 1.0
       const sl2 = Math.max(slFloor, Math.min(sl1 - minGap, sl2raw));
 
       // v89: SL3 = 波段起点下方 (论点彻底失效 = 整个上涨波段被完全否定)
       const sl3raw = Math.round(Math.max(
-        entry - atrSL * 3.0,   // v89: 扩大到3.0×ATR，给结构足够空间
-        _fibWaveLo - instBuffer // 波段起点(A点)下方 = 多头thesis完全失效
+        entry - atrClamped * 2.4, // v96: SL3 = 最大2.4×ATR (SL1≈1.5 + 0.9 buffer)
+        _fibWaveLo - instBuffer    // 波段起点下方兜底，但受hardMaxSL约束
       ) * 10000) / 10000;
       const sl3 = Math.max(slFloor, Math.min(sl2 - minGap, sl3raw));
 
@@ -8498,13 +8764,13 @@ function _Φ9x(tf){
 
       const sl2raw = structSL.length > 1
         ? Math.round((structSL[1] + instBuffer * 0.5) * 10000) / 10000
-        : Math.round((sl1 + atrClamped * 1.0) * 10000) / 10000;
+        : Math.round((sl1 + atrClamped * 0.4) * 10000) / 10000; // v96: 0.4 not 1.0
       const sl2 = Math.min(slCeil, Math.max(sl1 + minGap, sl2raw));
 
       // v89: SL3 = 波段起点上方 (空头论点彻底失效 = 整个下跌波段被完全否定)
       const sl3raw = Math.round(Math.min(
-        entry + atrSL * 3.0,   // v89: 扩大到3.0×ATR
-        _fibWaveHi + instBuffer // 波段起点(A点高点)上方 = 空头thesis完全失效
+        entry + atrClamped * 2.4, // v96: SL3 = 最大2.4×ATR
+        _fibWaveHi + instBuffer    // 波段起点上方兜底
       ) * 10000) / 10000;
       const sl3 = Math.min(slCeil, Math.max(sl2 + minGap, sl3raw));
 
@@ -8523,78 +8789,295 @@ function _Φ9x(tf){
     }
   }
 
-  // === PATCH 4: Regime-Adaptive R:R multipliers ===
-  // v74 FIX: atrTP/atrSL公式根本性修复
-  // 原公式: atrTP = atrClamped * (tpMult * dynScale) / 2.0
-  //   问题: _dynScale = _dynATRMult/2.0 ≈ 0.5, 再除以2.0 = atrTP极小
-  //   trending_strong: atrTP ≈ atrClamped*0.625, atrSL ≈ atrClamped*0.733
-  //   → TP1 = entry+1.25×ATR, SL1 ≈ entry-1.5×ATR → R:R=0.83 永远<1.2 → 永远WAIT
-  // 修复: 去掉/2.0除法, dynScale clamp到[0.7,1.5]防止极端值
+  // ═══════════════════════════════════════════════════════════════════════
+  // v95 SL-FIRST ARCHITECTURE — 顶级量化员的思维方式
+  // ═══════════════════════════════════════════════════════════════════════
+  //
+  // 旧逻辑的根本缺陷:
+  //   _bTP() 和 _bSL() 各自独立运行，互不知道对方结果。
+  //   结果: TP由结构高低点决定(往往很近)，SL由结构摆动高低点决定(往往很远)。
+  //   BTC做空时: TP1=-2.5%(近处支撑), SL1=+5%(远处swing high) → R:R=0.5:1 → 不可接受
+  //
+  // 顶级量化员的思维顺序:
+  //   1. 判断方向 (已完成，isBull)
+  //   2. 确定失效位 (SL) — 市场证明你错了的结构位，这是固定的
+  //   3. 以SL距离为"1R"，计算TP必须在哪里才满足最低R:R
+  //   4. 检查候选TP价位是否与结构吻合(是则用结构价位，不是则用R:R推算)
+  //   5. 基于入场价和TP1/TP2，制定移仓计划 (到TP1时SL→成本，到TP2时SL→TP1)
+  //
+  // 设计参数:
+  //   最低R:R = 1.5:1 (TP1距离 ≥ SL1距离 × 1.5)
+  //   推荐R:R = 2.0:1 (趋势市), 1.5:1 (震荡市)
+  //   SL最大距离 = 2.5×ATR (超过此范围代表入场位置本身不合理，需等待更好入场)
+  // ═══════════════════════════════════════════════════════════════════════
+
+  // Step 1: ATR for this regime
+  // v96: minRR = minimum R:R for TP1; idealRR = target for TP2; extended for TP3
+  // Reduced so TP1 is always the NEAREST reasonable target, not a distant one
   const _rrAdjust = {
-    trending_strong: { tpMult: 2.5, slMult: 1.0 },
-    trending_weak:   { tpMult: 2.2, slMult: 1.2 },
-    pre_breakout:    { tpMult: 2.0, slMult: 1.3 },
-    ranging:         { tpMult: 1.8, slMult: 1.4 },
-  }[regime49] || { tpMult: 2.0, slMult: 1.2 };
-  // v74: dynScale仅做温和修正[0.7,1.5], 不再双重除法
+    trending_strong: { minRR: 1.0, idealRR: 2.0, slMult: 1.0 },
+    trending_weak:   { minRR: 1.0, idealRR: 1.8, slMult: 1.0 },
+    pre_breakout:    { minRR: 1.0, idealRR: 1.6, slMult: 1.0 },
+    ranging:         { minRR: 0.8, idealRR: 1.5, slMult: 1.0 },
+  }[regime49] || { minRR: 1.0, idealRR: 1.8, slMult: 1.0 };
   const _dynScale = Math.max(0.7, Math.min(1.5, _dynATRMult));
-  const atrTP = atrClamped * _rrAdjust.tpMult * _dynScale;
   const atrSL = atrClamped * _rrAdjust.slMult;
+  // atrTP retained for _bTP internal use (structural candidates only)
+  const atrTP = atrClamped * 2.0 * _dynScale;
 
-  const tps=_bTP();
-  const sls=_bSL();
+  // Step 2: Build structural SLs first
+  const sls = _bSL();
 
-  // ── Sanity checks v15 ──
-  // LONG: all TPs > entry (ascending), all SLs < entry (SL1 closest = highest, SL3 furthest = lowest)
-  // SHORT: all TPs < entry (descending), all SLs > entry (SL1 closest = lowest, SL3 furthest = highest)
-  if(isBull){
-    tps.forEach((t,i)=>{
-      if(!t.p||t.p<=entry||!isFinite(t.p)){
-        t.p=Math.round((entry+atrClamped*(i+1)*1.5)*10000)/10000;
-        t.note='ATR延伸';t.pct=(t.p-entry)/entry*100;
+  // Step 3: Validate and cap SL1 — if SL1 is too far, it means the setup is not clean
+  // Cap at 2.5×ATR. If structure SL is beyond this, we still use it but flag it.
+  const _hardMaxSL = atrClamped * 2.0; // v96: tightened from 2.5 to match inner hardMaxSL
+  if (sls && sls[0]) {
+    const _sl1Raw = Math.abs(sls[0].p - entry);
+    if (_sl1Raw > _hardMaxSL) {
+      // Structural SL is too wide — cap it and flag
+      const _cappedSL1 = isBull
+        ? Math.round((entry - _hardMaxSL) * 10000) / 10000
+        : Math.round((entry + _hardMaxSL) * 10000) / 10000;
+      sls[0]._origP = sls[0].p; // preserve original for reference
+      sls[0].p = _cappedSL1;
+      sls[0].note = sls[0].note + ` [v95 上限收紧·原结构位${fmtP(sls[0]._origP)}过远·已限2.5×ATR]`;
+      sls[0]._slCapped = true;
+    }
+    // Cascade SL2/SL3 from final SL1
+    if (sls[1]) {
+      const _sl2ideal = isBull
+        ? Math.max(0.001, sls[0].p - atrClamped * 0.3) // v96
+        : sls[0].p + atrClamped * 0.3; // v96
+      if (isBull ? sls[1].p >= sls[0].p : sls[1].p <= sls[0].p) {
+        sls[1].p = Math.round(_sl2ideal * 10000) / 10000;
+        sls[1].note = sls[1].note || 'ATR级联';
       }
-    });
-    // Ensure TPs are strictly ascending
-    for(let i=1;i<tps.length;i++){if(tps[i].p<=tps[i-1].p){tps[i].p=Math.round((tps[i-1].p+atrClamped)*10000)/10000;tps[i].pct=(tps[i].p-entry)/entry*100;}}
-    // Ensure all SLs < entry AND SL1 > SL2 > SL3 (SL1 is tightest = highest value)
-    sls.forEach((s,i)=>{
-      if(!s.p||s.p>=entry||!isFinite(s.p)){
-        s.p=Math.round((entry-atrClamped*(i+1)*1.2)*10000)/10000;
-        s.note='ATR修正';s.pct=(s.p-entry)/entry*100;
+    }
+    if (sls[2]) {
+      const _sl2ref = sls[1] ? sls[1].p : sls[0].p;
+      const _sl3ideal = isBull
+        ? Math.max(0.001, _sl2ref - atrClamped * 0.3) // v96
+        : _sl2ref + atrClamped * 0.3; // v96
+      if (isBull ? sls[2].p >= (sls[1]||sls[0]).p : sls[2].p <= (sls[1]||sls[0]).p) {
+        sls[2].p = Math.round(_sl3ideal * 10000) / 10000;
+        sls[2].note = sls[2].note || 'ATR级联';
       }
+    }
+    // Recalculate pct/riskPct for all SLs
+    sls.forEach(s => {
+      s.pct = (s.p - entry) / entry * 100;
+      s.riskPct = Math.abs(s.pct).toFixed(2);
     });
-    // Ensure SLs are strictly descending (SL1 highest, SL3 lowest)
-    for(let i=1;i<sls.length;i++){if(sls[i].p>=sls[i-1].p){sls[i].p=Math.round((sls[i-1].p-atrClamped*0.8)*10000)/10000;sls[i].pct=(sls[i].p-entry)/entry*100;}}
-  }else{
-    tps.forEach((t,i)=>{
-      if(!t.p||t.p>=entry||t.p<=0||!isFinite(t.p)){
-        t.p=Math.max(0.001,Math.round((entry-atrClamped*(i+1)*1.5)*10000)/10000);
-        t.note='ATR延伸';t.pct=(t.p-entry)/entry*100;
-      }
-    });
-    // Ensure TPs are strictly descending for SHORT
-    for(let i=1;i<tps.length;i++){if(tps[i].p>=tps[i-1].p){tps[i].p=Math.max(0.001,Math.round((tps[i-1].p-atrClamped)*10000)/10000);tps[i].pct=(tps[i].p-entry)/entry*100;}}
-    // Ensure all SLs > entry AND SL1 < SL2 < SL3 (SL1 is tightest = lowest value for short)
-    sls.forEach((s,i)=>{
-      if(!s.p||s.p<=entry||!isFinite(s.p)){
-        s.p=Math.round((entry+atrClamped*(i+1)*1.2)*10000)/10000;
-        s.note='ATR修正';s.pct=(s.p-entry)/entry*100;
-      }
-    });
-    // Ensure SLs are strictly ascending for SHORT (SL1 lowest, SL3 highest)
-    for(let i=1;i<sls.length;i++){if(sls[i].p<=sls[i-1].p){sls[i].p=Math.round((sls[i-1].p+atrClamped*0.8)*10000)/10000;sls[i].pct=(sls[i].p-entry)/entry*100;}}
   }
 
-  // ── v60: 删除R:R人为调整逻辑 — 原slCaps强制收紧SL导致显示R:R与实际风险不符
-  // 改为: 计算真实R:R, 低于阈值时在UI中标记警告而非人为美化数值
-  // (原R:R ENFORCEMENT块已移除)
+  // Step 4: The real 1R distance
+  const _1R = Math.abs(sls[0].p - entry);
 
-  const _rrSlDist=Math.abs(sls[0].p-entry)||atrClamped;
-  const rr=Math.abs(tps[0].p-entry)/_rrSlDist;
+  // Step 5: Build TPs — SL-FIRST. TPs must satisfy minRR:1 from SL distance.
+  // Gather structural candidates (same logic as _bTP but now filtered against R:R floor)
+  const _tpCandidates = [];
+  if (isBull) {
+    swingHighs.filter(h => h > entry + minGap).forEach(h =>
+      _tpCandidates.push({ p: h, src: '结构摆动高点阻力', priority: 10 }));
+    [
+      { r: 1.0, s: 'Fib 1.0 等幅投射', priority: 9 },
+      { r: 1.272, s: 'Fib 1.272 延伸', priority: 9 },
+      { r: 1.618, s: 'Fib 1.618φ 黄金延伸', priority: 10 },
+      { r: 2.0, s: 'Fib 2.0 双倍延伸', priority: 8 },
+      { r: 2.618, s: 'Fib 2.618φ 超级延伸', priority: 8 },
+    ].map(({ r, s, priority }) => ({ p: entry + _fibWaveRange * r, src: s, priority }))
+     .filter(f => f.p > entry + minGap && isFinite(f.p) && f.p > 0)
+     .forEach(f => _tpCandidates.push(f));
+    if (chanRes > entry + minGap) _tpCandidates.push({ p: chanRes, src: '缠论阻力位', priority: 9 });
+    // ATR-based fallbacks (pure R:R anchored)
+    _tpCandidates.push(
+      { p: entry + _1R * _rrAdjust.minRR, src: `${_rrAdjust.minRR}R 最低R:R保障`, priority: 7 },
+      { p: entry + _1R * _rrAdjust.idealRR, src: `${_rrAdjust.idealRR}R 理想R:R目标`, priority: 7 },
+      { p: entry + _1R * (_rrAdjust.idealRR * 1.5), src: `${(_rrAdjust.idealRR*1.5).toFixed(1)}R 进取目标`, priority: 6 }
+    );
+    // Round number magnets
+    const mag = Math.pow(10, Math.floor(Math.log10(price)) - 1);
+    for (let mult = 1; mult <= 15; mult++) {
+      const rp = Math.ceil(entry / mag) * mag + mult * mag;
+      if (rp > entry + minGap) _tpCandidates.push({ p: rp, src: `整数关口 ${fmtP(rp)}`, priority: 6 });
+    }
+  } else {
+    swingLows.filter(l => l < entry - minGap && l > 0).forEach(l =>
+      _tpCandidates.push({ p: l, src: '结构摆动低点支撑', priority: 10 }));
+    [
+      { r: 1.0, s: 'Fib 1.0 等幅投射', priority: 9 },
+      { r: 1.272, s: 'Fib 1.272 延伸', priority: 9 },
+      { r: 1.618, s: 'Fib 1.618φ 黄金延伸', priority: 10 },
+      { r: 2.0, s: 'Fib 2.0 双倍延伸', priority: 8 },
+      { r: 2.618, s: 'Fib 2.618φ 超级延伸', priority: 8 },
+    ].map(({ r, s, priority }) => ({ p: entry - _fibWaveRange * r, src: s, priority }))
+     .filter(f => f.p < entry - minGap && f.p > 0 && isFinite(f.p))
+     .forEach(f => _tpCandidates.push(f));
+    if (chanSup < entry - minGap && chanSup > 0) _tpCandidates.push({ p: chanSup, src: '缠论支撑位', priority: 9 });
+    _tpCandidates.push(
+      { p: entry - _1R * _rrAdjust.minRR, src: `${_rrAdjust.minRR}R 最低R:R保障`, priority: 7 },
+      { p: entry - _1R * _rrAdjust.idealRR, src: `${_rrAdjust.idealRR}R 理想R:R目标`, priority: 7 },
+      { p: Math.max(0.001, entry - _1R * (_rrAdjust.idealRR * 1.5)), src: `${(_rrAdjust.idealRR*1.5).toFixed(1)}R 进取目标`, priority: 6 }
+    );
+    const mag = Math.pow(10, Math.floor(Math.log10(price)) - 1);
+    for (let mult = 1; mult <= 15; mult++) {
+      const rp = Math.floor(entry / mag) * mag - mult * mag;
+      if (rp < entry - minGap && rp > 0) _tpCandidates.push({ p: rp, src: `整数关口 ${fmtP(rp)}`, priority: 6 });
+    }
+  }
 
-  // v60: R:R质量控制 — 低质量信号标记警告而非拒绝 (允许用户自判)
-  if(rr < 1.8){
-    console.warn(`[FINCH v60] 信号R:R偏低: ${rr.toFixed(2)}:1 (建议≥1.8:1), 请谨慎评估`);
+  // ═══════════════════════════════════════════════════════════════════════
+  // Step 6: PTJ-STYLE TP SELECTION — NEAREST FIRST (v98 complete rewrite)
+  // ═══════════════════════════════════════════════════════════════════════
+  // CORE PRINCIPLE (Paul Tudor Jones / Druckenmiller):
+  //   TP1 = CONSERVATIVE — nearest structural level, highest probability.
+  //         If you want to be safe, take profit here. Low R:R floor.
+  //   TP2 = STANDARD    — next meaningful structure, mid-probability.
+  //         Normal trade management target.
+  //   TP3 = AGGRESSIVE  — furthest extension, lowest probability.
+  //         Only runners / highest-conviction trades.
+  //
+  // ORDERING GUARANTEE: TP1 < TP2 < TP3 (LONG) / TP1 > TP2 > TP3 (SHORT)
+  //   i.e. TP1 is ALWAYS the one closest to entry — no exceptions.
+  //
+  // MINIMUM FLOOR: TP1 must be at least 0.5×ATR from entry (avoids noise).
+  //   No R:R floor imposed on TP1 — structure decides, not a minRR multiplier.
+  //   TP2 must be at least 0.7×ATR beyond TP1.
+  //   TP3 must be at least 0.7×ATR beyond TP2.
+  // ═══════════════════════════════════════════════════════════════════════
+
+  // Filter candidates: correct side of entry, above minimum noise floor
+  const _noiseFloor = atrClamped * 0.5; // must be this far from entry minimum
+  const _spacing = atrClamped * 0.7;    // minimum gap between consecutive TPs
+  const _minTPPrice = price * 0.01;     // absolute sanity floor (>1% of price)
+
+  const _validCands = _tpCandidates.filter(c => {
+    if (!isFinite(c.p) || c.p <= 0 || c.p < _minTPPrice) return false;
+    if (isBull) return c.p > entry + _noiseFloor;
+    else        return c.p < entry - _noiseFloor && c.p > _minTPPrice;
+  });
+
+  // Sort NEAREST to FURTHEST from entry — TP1 = closest = conservative
+  _validCands.sort((a, b) => isBull ? (a.p - b.p) : (b.p - a.p));
+
+  // Deduplicate: remove candidates within _spacing of a previously selected one
+  function _pickNearest(candidates, usedPrices, afterPrice) {
+    for (const c of candidates) {
+      const tooClose = usedPrices.some(up => Math.abs(c.p - up) < _spacing);
+      if (tooClose) continue;
+      const wrongOrder = isBull ? c.p <= afterPrice : c.p >= afterPrice;
+      if (wrongOrder) continue;
+      return c;
+    }
+    return null;
+  }
+
+  const _usedPrices = [];
+
+  // TP1: nearest valid structural candidate (conservative, high probability)
+  const _tp1raw = _pickNearest(_validCands, _usedPrices, entry);
+  const tp1Cand = _tp1raw || {
+    p: isBull ? entry + _1R * 0.8 : Math.max(_minTPPrice, entry - _1R * 0.8),
+    src: '0.8R 结构保底', priority: 5
+  };
+  _usedPrices.push(tp1Cand.p);
+
+  // TP2: next meaningful level after TP1 (standard target)
+  const _tp2raw = _pickNearest(_validCands, _usedPrices, tp1Cand.p);
+  const tp2Cand = _tp2raw || {
+    p: isBull ? tp1Cand.p + _1R * 1.0 : Math.max(_minTPPrice, tp1Cand.p - _1R * 1.0),
+    src: '延伸1R 标准目标', priority: 5
+  };
+  _usedPrices.push(tp2Cand.p);
+
+  // TP3: furthest extension (aggressive, low probability — runners only)
+  const _tp3raw = _pickNearest(_validCands, _usedPrices, tp2Cand.p);
+  const tp3Cand = _tp3raw || {
+    p: isBull ? tp2Cand.p + _1R * 1.2 : Math.max(_minTPPrice, tp2Cand.p - _1R * 1.2),
+    src: '延伸目标 进取', priority: 4
+  };
+
+  // Step 7: Build final TP array with trailing stop & move strategy
+  // Each TP carries: price, pct, rrRatio, action (with specific SL adjustment)
+  const _r1 = _1R; // 1R = SL1 distance from entry
+  const tps = [tp1Cand, tp2Cand, tp3Cand].map((c, i) => {
+    const p = Math.round(c.p * 10000) / 10000;
+    const pct = (p - entry) / entry * 100;
+    const dist = Math.abs(p - entry);
+    const rrRatio = _r1 > 0 ? dist / _r1 : 0;
+    const rr_str = rrRatio.toFixed(1);
+
+    // Dynamic SL adjustment at each TP — the trailing stop ladder
+    // TP1: move SL to breakeven (entry)
+    // TP2: move SL to TP1
+    // TP3: partial close, trail remainder
+    const slMoveTarget = i === 0
+      ? entry
+      : i === 1
+      ? tp1Cand.p
+      : tp2Cand.p;
+    const slMoveDesc = i === 0
+      ? `到达后: 平仓50% · 剩余仓位止损移至入场价 ${fmtP(entry)}（保本）`
+      : i === 1
+      ? `到达后: 再平仓30% · 止损上移至TP1 ${fmtP(Math.round(tp1Cand.p*10000)/10000)}（锁定利润）`
+      : `到达后: 全部平仓 或 剩余20%拖尾至信号反转`;
+
+    // Dynamic SL note with specific price
+    const trailNote = i === 0
+      ? `📌 止损移位: 到达TP1时 SL → ${fmtP(entry)}（成本位保本）`
+      : i === 1
+      ? `📌 止损移位: 到达TP2时 SL → ${fmtP(Math.round(tp1Cand.p*10000)/10000)}（TP1锁利）`
+      : `📌 剩余仓位: 可设拖尾止损 或 于信号反转时全平`;
+
+    const labels = ['🎯 TP1 保守目标', '🏆 TP2 标准目标', '🚀 TP3 进取目标'];
+    return {
+      p, pct, rrRatio,
+      note: c.src,
+      label: labels[i],
+      action: slMoveDesc,
+      trailNote,
+      slMoveTarget: Math.round(slMoveTarget * 10000) / 10000,
+      _rrStr: rr_str,
+    };
+  });
+
+  // Step 8: Final directional sanity — force-fix if any TP is wrong side
+  tps.forEach((t, i) => {
+    const wrongSide = isBull ? t.p <= entry : t.p >= entry;
+    if (wrongSide || !isFinite(t.p) || t.p <= 0) {
+      const fallbackDist = _1R * [_rrAdjust.minRR, _rrAdjust.idealRR, _rrAdjust.idealRR*1.6][i];
+      t.p = Math.round((isBull ? entry + fallbackDist : Math.max(0.001, entry - fallbackDist)) * 10000) / 10000;
+      t.pct = (t.p - entry) / entry * 100;
+      t.rrRatio = fallbackDist / _r1;
+      t.note = `${t._rrStr}R ATR兜底`;
+    }
+  });
+  // Ensure ascending (LONG) / descending (SHORT) order
+  for (let i = 1; i < tps.length; i++) {
+    if (isBull ? tps[i].p <= tps[i-1].p : tps[i].p >= tps[i-1].p) {
+      const step = atrClamped * 0.8;
+      tps[i].p = Math.round((isBull ? tps[i-1].p + step : Math.max(0.001, tps[i-1].p - step)) * 10000) / 10000;
+      tps[i].pct = (tps[i].p - entry) / entry * 100;
+      tps[i].rrRatio = Math.abs(tps[i].p - entry) / _r1;
+    }
+  }
+
+  // Final SL sanity (direction)
+  sls.forEach((s, i) => {
+    const wrongSide = isBull ? s.p >= entry : s.p <= entry;
+    if (wrongSide || !isFinite(s.p) || s.p <= 0) {
+      s.p = Math.round((isBull ? entry - atrClamped * (i+1) * 1.1 : entry + atrClamped * (i+1) * 1.1) * 10000) / 10000;
+      s.note = 'ATR修正';
+    }
+    s.pct = (s.p - entry) / entry * 100;
+    s.riskPct = Math.abs(s.pct).toFixed(2);
+  });
+
+  const _rrSlDist = _1R;
+  const rr = tps[0].rrRatio; // Already TP1 R:R vs SL1
+
+  if (rr < _rrAdjust.minRR) {
+    console.warn(`[FINCH v95] R:R ${rr.toFixed(2)}:1 仍低于最低要求 ${_rrAdjust.minRR}:1，信号质量差`);
   }
 
   // v60: 新增仓位管理计算函数
@@ -10513,20 +10996,23 @@ function _doRenderStrategy(res){
   const tpColors=['var(--teal)','var(--green)','var(--blue)'];
   const tpBgs=['rgba(10,96,80,0.07)','rgba(26,107,58,0.07)','rgba(26,58,138,0.07)'];
   const tpBds=['rgba(10,96,80,0.25)','var(--green-bd)','rgba(26,58,138,0.25)'];
-  const tpLabels=['🎯 保守目标','🏆 中期目标','🚀 进取目标'];
-  const tpActions=['到达后：平仓50%，止损移至成本价，锁定利润','再平仓30%，剩余20%继续持有','全部平仓，或持有至信号转变'];
+  const tpLabels=['🎯 首要目标','🏆 中期目标','🚀 进取目标'];
   const tpProbs=[68,45,28];
 
   const tpRows=tps.map((t,i)=>{
     const valid=isBull?t.p>entry:t.p<entry;
     if(!valid||!t.p||!isFinite(t.p))return'';
     const et=estTime(t.p,barMsVal);
-    const rrVal=(Math.abs(t.p-entry)/Math.max(Math.abs(sls[0].p-entry),0.001)).toFixed(1);
+    const rrVal=t.rrRatio!=null?t.rrRatio.toFixed(1):(Math.abs(t.p-entry)/Math.max(Math.abs(sls[0].p-entry),0.001)).toFixed(1);
+    // v95: show the SL move target for this TP
+    const slMovePrice = t.slMoveTarget != null ? t.slMoveTarget : (i===0 ? entry : i===1 ? tps[0].p : tps[1].p);
+    const slMoveLabel = i===0 ? `到TP1时 → SL移至 ${fmtP(slMovePrice)} 保本` : i===1 ? `到TP2时 → SL移至 ${fmtP(slMovePrice)} 锁利` : `剩余拖尾`;
+    const trailColor = i===0 ? 'var(--amber)' : i===1 ? 'var(--green)' : 'var(--blue)';
     return`
     <div style="display:grid;grid-template-columns:56px 1fr;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);align-items:start;">
       <div style="text-align:center;">
         <div style="font-size:10px;font-weight:700;padding:3px 6px;border-radius:5px;background:${tpBgs[i]};color:${tpColors[i]};border:1px solid ${tpBds[i]};margin-bottom:4px">TP${i+1}</div>
-        <div style="font-size:11px;color:${tpColors[i]};font-weight:700">${rrVal}R</div>
+        <div style="font-size:12px;color:${tpColors[i]};font-weight:800">${rrVal}R</div>
         <div style="font-size:10px;color:var(--dim)">${tpProbs[i]}%</div>
       </div>
       <div>
@@ -10539,23 +11025,43 @@ function _doRenderStrategy(res){
           <span style="font-size:11px;font-weight:700;color:var(--text)">⏱ ${et.label}</span>
           <span style="font-size:10px;color:var(--muted)">${et.date}</span>
         </div>
-        <div style="font-size:10px;color:var(--blue);margin-top:3px;line-height:1.5">▶ ${tpActions[i]}</div>
+        <div style="font-size:10px;color:var(--blue);margin-top:3px;line-height:1.5">▶ ${t.action||tpActions[i]}</div>
+        <div style="font-size:10px;color:${trailColor};margin-top:3px;padding:3px 6px;background:rgba(0,0,0,0.03);border-radius:4px;border-left:2px solid ${trailColor}">🔄 ${slMoveLabel}</div>
       </div>
     </div>`;
   }).join('');
 
-  const slLabels=['🔒 紧止损（推荐新手）','⚠️ 中止损（常规使用）','🛡️ 宽止损（大周期长线）'];
-  const slDescs=['仅给1-1.5×ATR空间，止损快，适合小仓位控险','给2-2.5×ATR空间，避开多数假突破','给3-4×ATR空间，适合周线级别大仓位'];
+  // v96: SL labels rewritten — institutional logic, not skill-level labels
+  const slLabels=['🔒 SL1 · 结构失效止损','⚠️ SL2 · 第二结构（参考）','🛡️ SL3 · 波段起点（参考）'];
+  const slUsage=[
+    `${isBull?'多头支撑破位':'空头阻力失效'} → 触及立即离场 · TP1到达后上移至成本保本`,
+    `结构参考位 · 期货交易不用这个做止损 · 仅理解市场结构深度`,
+    `整段行情A点失守 · 多头/空头论点彻底错误 · 仅大周期低杠杆持仓参考`
+  ];
+  // v96: read current leverage for capital loss calc
+  const _slRowLev=(()=>{try{const b=document.querySelector('.port-lev-btn.active');return b?parseInt(b.dataset.lev)||1:1;}catch(e){return 1;}})();
 
   const slRows=sls.map((s,i)=>{
     const valid=isBull?s.p<entry:s.p>entry;
     if(!valid||!s.p||!isFinite(s.p))return'';
-    const riskPct=Math.abs((s.p-entry)/entry*100).toFixed(2);
+    const riskPct=Math.abs((s.p-entry)/entry*100);
+    const riskPctStr=riskPct.toFixed(2);
+    const capLoss=(riskPct*_slRowLev).toFixed(1);
+    const capLossColor=parseFloat(capLoss)>=80?'var(--red)':parseFloat(capLoss)>=40?'var(--orange)':'var(--amber)';
+    const isRecommended=i===0;
+    const slTagColors=['var(--amber)','var(--orange)','var(--red)'];
+    const slTagBgs=['rgba(180,120,0,0.1)','rgba(200,80,0,0.08)','rgba(160,20,32,0.08)'];
+    const slTagBds=['rgba(180,120,0,0.25)','rgba(200,80,0,0.2)','var(--red-bd)'];
+    // SL1与当前SL的增量
+    const sl1RiskPct=sls[0]&&isFinite(sls[0].p)?Math.abs((sls[0].p-entry)/entry*100):riskPct;
+    const deltaPct=i>0?(riskPct-sl1RiskPct).toFixed(1):null;
+    const deltaCapStr=deltaPct!==null?(parseFloat(deltaPct)*_slRowLev).toFixed(1):null;
     return`
-    <div style="display:grid;grid-template-columns:56px 1fr;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);align-items:start;">
+    <div style="display:grid;grid-template-columns:64px 1fr;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);align-items:start;">
       <div style="text-align:center;">
-        <div style="font-size:10px;font-weight:700;padding:3px 6px;border-radius:5px;background:var(--red-bg);color:var(--red);border:1px solid var(--red-bd);margin-bottom:4px">SL${i+1}</div>
-        <div style="font-size:11px;color:var(--red);font-weight:700">-${riskPct}%</div>
+        <div style="font-size:10px;font-weight:700;padding:3px 6px;border-radius:5px;background:${slTagBgs[i]};color:${slTagColors[i]};border:1px solid ${slTagBds[i]};margin-bottom:4px">SL${i+1}</div>
+        <div style="font-size:11px;color:${slTagColors[i]};font-weight:700">-${riskPctStr}%</div>
+        ${isRecommended?'<div style="font-size:8px;font-weight:700;color:var(--green);margin-top:2px">✓ 用这个</div>':'<div style="font-size:8px;color:var(--dim);margin-top:2px">参考位</div>'}
       </div>
       <div>
         <div style="display:flex;align-items:baseline;gap:7px;margin-bottom:3px;">
@@ -10563,8 +11069,11 @@ function _doRenderStrategy(res){
           <span style="font-size:13px;font-weight:700;color:var(--red)">${fmtPct(s.pct)}</span>
         </div>
         <div style="font-size:11px;color:var(--muted);margin-bottom:3px">${slLabels[i]}</div>
-        <div style="font-size:10px;color:var(--dim);line-height:1.5">${slDescs[i]}</div>
-        ${s.invalidate?`<div style="font-size:10px;color:var(--red);margin-top:2px">⚠ 失效条件: ${s.invalidate}</div>`:''}
+        ${_slRowLev>1?`<div style="font-size:11px;font-weight:800;color:${capLossColor};margin-bottom:4px;padding:3px 7px;background:rgba(160,20,32,0.05);border-radius:4px;border-left:2px solid ${capLossColor}">${_slRowLev}× 杠杆触及 = 亏 <strong>${capLoss}%本金</strong>${parseFloat(capLoss)>=85?' 💀 接近爆仓':''}</div>`:
+        `<div style="font-size:10px;color:var(--muted);margin-bottom:4px">现货触及 = 亏 -${riskPctStr}%</div>`}
+        ${deltaPct!==null?`<div style="font-size:9px;color:var(--orange);margin-bottom:3px">比SL1多 +${deltaPct}%价格 · +${deltaCapStr}%本金</div>`:''}
+        <div style="font-size:10px;color:var(--dim);line-height:1.5">${slUsage[i]}</div>
+        ${s.invalidate?`<div style="font-size:10px;color:var(--red);margin-top:3px;padding:3px 6px;background:rgba(160,20,32,0.04);border-radius:4px">⚡ ${s.invalidate}</div>`:''}
       </div>
     </div>`;
   }).join('');
@@ -10596,7 +11105,7 @@ function _doRenderStrategy(res){
     <!-- 标题 -->
     <div style="padding:9px 14px 7px;background:linear-gradient(90deg,var(--bg2),var(--bg1));border-bottom:1px solid var(--line2);display:flex;align-items:center;justify-content:space-between">
       <span style="font-size:10px;font-weight:700;letter-spacing:2px;color:var(--gold);text-transform:uppercase">📊 概率分布</span>
-      <span style="font-size:10px;color:var(--muted)">数据置信 <strong style="color:${_confPct>=70?'var(--green)':_confPct>=50?'var(--amber)':'var(--red)'}">${_confPct}%</strong></span>
+      <span style="font-size:10px;color:var(--muted)">数据置信 <strong style="color:${_confPct>=70?'var(--green)':_confPct>=50?'var(--amber)':'var(--red)'}">${_confPct}%</strong>&nbsp;<span title="信心评级 ${Math.ceil(_confPct/20)}/5星" style="letter-spacing:1px">${(()=>{const s=Math.ceil(_confPct/20);return'★'.repeat(s)+'☆'.repeat(5-s);})()}</span></span>
     </div>
 
     <div style="padding:12px 14px">
@@ -10701,6 +11210,8 @@ function _doRenderStrategy(res){
         <div style="height:4px;background:var(--bg3);border-radius:2px;margin-top:5px;width:80px;overflow:hidden;margin-left:auto">
           <div style="height:100%;width:${conf}%;background:${conf>=70?'var(--green)':conf>=55?'var(--amber)':'var(--red)'};border-radius:2px"></div>
         </div>
+        <div style="margin-top:6px;text-align:right;font-size:15px;letter-spacing:2px;line-height:1" title="${Math.ceil(conf/20)}/5 星评级">${(()=>{const s=Math.min(5,Math.ceil(conf/20));const col=s>=4?'var(--green)':s>=3?'var(--amber)':'var(--red)';return Array.from({length:5},(_,i)=>`<span style="color:${i<s?col:'var(--bg3)'}">${i<s?'★':'★'}</span>`).join('');})()}</div>
+        <div style="font-size:9px;color:var(--muted);margin-top:2px;text-align:right">${Math.ceil(conf/20)}/5 星</div>
         ${(()=>{
           // v64-D: 置信度分解视图 — 各维度贡献百分比
           const eg = res.entryGrade || {};
@@ -10818,17 +11329,25 @@ function _doRenderStrategy(res){
             +'</div>';
         }).join('')}
       </div>
-      <!-- SL1 recommended strip -->
+      <!-- SL1 recommended strip — v96: leverage-aware capital loss display -->
       ${(()=>{
         const sl1=sls[0];
         const sl1Valid=sl1&&isFinite(sl1.p)&&(isBull?sl1.p<entry:sl1.p>entry);
         if(!sl1Valid)return'';
-        const riskPct=Math.abs((sl1.p-entry)/entry*100).toFixed(2);
+        const riskPct=Math.abs((sl1.p-entry)/entry*100);
+        const riskPctStr=riskPct.toFixed(2);
         const rrV=(tps[0]&&isFinite(tps[0].p)?Math.abs(tps[0].p-entry)/Math.max(Math.abs(sl1.p-entry),0.001):0).toFixed(2);
+        // v96: 读取当前杠杆
+        const _lev=(()=>{try{const b=document.querySelector('.port-lev-btn.active');return b?parseInt(b.dataset.lev)||1:1;}catch(e){return 1;}})();
+        const capLoss=(riskPct*_lev).toFixed(1);
+        const capLossColor=parseFloat(capLoss)>=80?'var(--red)':parseFloat(capLoss)>=40?'var(--orange)':'var(--amber)';
+        const levLine=_lev>1
+          ?'<div style="font-size:10px;font-weight:800;color:'+capLossColor+';margin-top:2px">'+_lev+'× → 亏 '+capLoss+'% 本金</div>'
+          :'<div style="font-size:10px;color:var(--muted);margin-top:2px">现货 · 亏 -'+riskPctStr+'%</div>';
         return '<div style="display:grid;grid-template-columns:auto 1fr auto;gap:6px;align-items:center;padding:8px 10px;background:rgba(160,20,32,0.06);border:1px solid rgba(160,20,32,0.18);border-radius:7px;margin-bottom:8px;">'
-          +'<div style="font-size:9px;font-weight:700;color:var(--red);letter-spacing:1px;white-space:nowrap">🛡️ SL1<br><span style="font-weight:400;color:var(--muted)">推荐</span></div>'
-          +'<div style="text-align:center"><span style="font-size:18px;font-weight:700;color:var(--red);font-variant-numeric:tabular-nums">'+fmtP(sl1.p)+'</span><span style="font-size:12px;font-weight:700;color:var(--red);margin-left:5px">'+fmtPct(sl1.pct)+'</span>'+(sl1.note?'<div style="font-size:9px;color:var(--dim);margin-top:1px">'+sl1.note.replace(/🔒 SL1 · /,'').split('·').slice(0,2).join('·').trim()+'</div>':'')+'</div>'
-          +'<div style="text-align:right"><div style="font-size:12px;font-weight:700;color:'+(parseFloat(rrV)>=2?'var(--green)':parseFloat(rrV)>=1.5?'var(--amber)':'var(--red)')+'">R:R '+rrV+'</div><div style="font-size:10px;color:var(--muted)">风险 '+riskPct+'%</div></div>'
+          +'<div style="font-size:9px;font-weight:700;color:var(--red);letter-spacing:1px;white-space:nowrap">🛡️ SL1<br><span style="font-weight:400;color:var(--green);font-size:8px">✓ 用这个</span></div>'
+          +'<div style="text-align:center"><span style="font-size:18px;font-weight:700;color:var(--red);font-variant-numeric:tabular-nums">'+fmtP(sl1.p)+'</span><span style="font-size:12px;font-weight:700;color:var(--red);margin-left:5px">'+fmtPct(sl1.pct)+'</span>'+(sl1.note?'<div style="font-size:9px;color:var(--dim);margin-top:1px">'+sl1.note.replace(/🔒 SL1 · /,'').split('·').slice(0,2).join('·').trim()+'</div>':'')+levLine+'</div>'
+          +'<div style="text-align:right"><div style="font-size:12px;font-weight:700;color:'+(parseFloat(rrV)>=2?'var(--green)':parseFloat(rrV)>=1.5?'var(--amber)':'var(--red)')+'">R:R '+rrV+'</div><div style="font-size:10px;color:var(--muted)">价格 -'+riskPctStr+'%</div></div>'
           +'</div>';
       })()}
     </div>
@@ -10863,9 +11382,33 @@ function _doRenderStrategy(res){
     const tpC=['var(--teal)','var(--green)','var(--blue)'];
     const tpBG=['rgba(10,96,80,0.06)','rgba(26,107,58,0.06)','rgba(26,58,138,0.06)'];
     const tpBD=['rgba(10,96,80,0.2)','var(--green-bd)','rgba(26,58,138,0.2)'];
-    const probs=[68,45,28];
+
+    // v98: TP概率动态化 — TP1最高概率(最近保守目标), TP3最低(最远进取目标)
+    // TP1 = 保守目标，最近，概率最高
+    // TP2 = 标准目标，中等距离，中等概率
+    // TP3 = 进取目标，最远，概率最低
+    // 基准: conf=70 → [68,42,22]；顺序不可变，TP1永远>TP2>TP3
+    const _confScale = Math.max(0.4, Math.min(1.3, conf / 70));
+    const probs=[
+      Math.round(Math.min(80, Math.max(35, 68 * _confScale))),  // TP1: 35-80%
+      Math.round(Math.min(55, Math.max(18, 42 * _confScale))),  // TP2: 18-55%
+      Math.round(Math.min(35, Math.max(10, 22 * _confScale)))   // TP3: 10-35%
+    ];
+    // 确保严格递减: TP1 > TP2 > TP3
+    if(probs[1] >= probs[0]) probs[1] = probs[0] - 5;
+    if(probs[2] >= probs[1]) probs[2] = probs[1] - 5;
+
     const tpActions=['TP1到达：平50%，止损移成本','TP2到达：再平30%，持有余量','TP3到达：全部止盈或挂单离场'];
-    const slDesc=['紧 · 新手推荐，1-1.5×ATR','中 · 常规，避开假突破','宽 · 长线，3-4×ATR大仓位'];
+
+    // v96: SL逻辑彻底重写 — Jane Street标准
+    // 读取用户当前杠杆（从portLevBtns或默认1x）
+    const _curLev = (()=>{
+      try {
+        const activeBtn = document.querySelector('.port-lev-btn.active');
+        return activeBtn ? (parseInt(activeBtn.dataset.lev)||1) : 1;
+      } catch(e) { return 1; }
+    })();
+
     const rows=[0,1,2].map(idx=>{
       const tp=tps[idx],sl=sls[idx];
       const sl1=sls[0];
@@ -10873,44 +11416,101 @@ function _doRenderStrategy(res){
       const vSL=sl&&isFinite(sl.p)&&(isBull?sl.p<entry:sl.p>entry);
       const et=vTP?estTime(tp.p,barMsVal):{label:'--'};
       const rrV=vTP&&sl1&&isFinite(sl1.p)?((Math.abs(tp.p-entry)/Math.max(Math.abs(sl1.p-entry),0.001)).toFixed(1)):'—';
-      const slRisk=vSL?Math.abs((sl.p-entry)/entry*100).toFixed(2):'—';
+      const slRiskPct=vSL?Math.abs((sl.p-entry)/entry*100):0;
+      const slRiskStr=vSL?slRiskPct.toFixed(2):'—';
+      // 杠杆本金损失 = 价格变动% × 杠杆
+      const slCapLoss=vSL?(slRiskPct*_curLev):0;
+      const slCapLossStr=vSL?slCapLoss.toFixed(1)+'%本金':'—';
+      // 爆仓阈值
+      const liqThresh=vSL?Math.min(100,(100/_curLev)*0.9):0;
+      const isLiqRisk=slCapLoss>=85;
+      // SL用途说明（机构逻辑，不是新手分级）
+      const slPurpose=[
+        '结构支撑失效点 · 触及立即离场 · 推荐用这个',
+        '第二结构失守 · 给SL1加缓冲用 · 仓位必须减半',
+        '波段起点失守 · 论点彻底错误 · 大周期低杠杆专用'
+      ];
+      // SL是否与SL1风险差异显著
+      const slDeltaVsSL1=idx>0&&sls[0]&&vSL?Math.abs(slRiskPct-Math.abs((sls[0].p-entry)/entry*100)).toFixed(1):null;
+
       const rowBg=idx%2===0?'transparent':'rgba(0,0,0,0.015)';
       const tpCell=vTP
-        ?'<div style="display:flex;align-items:center;gap:4px;margin-bottom:3px"><span style="font-size:9px;font-weight:700;padding:2px 5px;border-radius:4px;background:'+tpBG[idx]+';color:'+tpC[idx]+';border:1px solid '+tpBD[idx]+'">TP'+(idx+1)+'</span><span style="font-size:9px;font-weight:700;color:'+tpC[idx]+'">'+rrV+'R</span><span style="font-size:9px;color:var(--dim)">'+probs[idx]+'%</span></div>'
+        ?'<div style="display:flex;align-items:center;gap:4px;margin-bottom:3px"><span style="font-size:9px;font-weight:700;padding:2px 5px;border-radius:4px;background:'+tpBG[idx]+';color:'+tpC[idx]+';border:1px solid '+tpBD[idx]+'">TP'+(idx+1)+'</span><span style="font-size:9px;font-weight:700;color:'+tpC[idx]+'">'+rrV+'R</span><span style="font-size:9px;font-weight:600;color:var(--dim)">触达概率 '+probs[idx]+'%</span></div>'
           +'<div style="font-size:17px;font-weight:700;color:'+tpC[idx]+';font-variant-numeric:tabular-nums">'+fmtP(tp.p)+'</div>'
           +'<div style="font-size:11px;font-weight:700;color:'+tpC[idx]+'">'+fmtPct(tp.pct)+'</div>'
           +'<div style="font-size:10px;color:var(--muted);margin-top:3px">⏱ '+et.label+'</div>'
           +'<div style="font-size:10px;color:var(--blue);margin-top:2px;line-height:1.4">'+tpActions[idx]+'</div>'
         :'<span style="color:var(--muted);font-size:11px">—</span>';
-      const slCell=vSL
-        ?'<div style="display:flex;align-items:center;gap:4px;margin-bottom:3px"><span style="font-size:9px;font-weight:700;padding:2px 5px;border-radius:4px;background:var(--red-bg);color:var(--red);border:1px solid var(--red-bd)">SL'+(idx+1)+'</span><span style="font-size:9px;color:var(--muted)">'+slDesc[idx]+'</span></div>'
-          +'<div style="font-size:17px;font-weight:700;color:var(--red);font-variant-numeric:tabular-nums">'+fmtP(sl.p)+'</div>'
-          +'<div style="font-size:11px;font-weight:700;color:var(--red)">'+fmtPct(sl.pct)+'</div>'
-          +'<div style="font-size:10px;color:var(--muted);margin-top:3px">风险 -'+slRisk+'%</div>'
-          +(sl.invalidate?'<div style="font-size:9px;color:var(--red);margin-top:2px">⚠ '+sl.invalidate+'</div>':'')
-        :'<span style="color:var(--muted);font-size:11px">—</span>';
+
+      // v96: SL cell重写 — 核心是让用户一眼看到"我会亏多少本金"
+      const slCell=vSL?(()=>{
+        const capLossColor=slCapLoss>=80?'var(--red)':slCapLoss>=50?'var(--orange)':slCapLoss>=30?'var(--amber)':'var(--muted)';
+        const slTagColor=idx===0?'var(--amber)':idx===1?'var(--orange)':'var(--red)';
+        const slTagBg=idx===0?'rgba(180,120,0,0.12)':idx===1?'rgba(200,80,0,0.1)':'rgba(160,20,32,0.1)';
+        const slTagBd=idx===0?'rgba(180,120,0,0.3)':idx===1?'rgba(200,80,0,0.25)':'rgba(160,20,32,0.25)';
+        const isRecommended=idx===0;
+        let html='';
+        html+='<div style="display:flex;align-items:center;gap:4px;margin-bottom:3px">'
+          +'<span style="font-size:9px;font-weight:700;padding:2px 5px;border-radius:4px;background:'+slTagBg+';color:'+slTagColor+';border:1px solid '+slTagBd+'">SL'+(idx+1)+'</span>'
+          +(isRecommended?'<span style="font-size:8px;font-weight:700;padding:1px 5px;border-radius:3px;background:rgba(26,107,58,0.1);color:var(--green);border:1px solid var(--green-bd)">✓ 用这个</span>':'')
+          +(idx===1?'<span style="font-size:8px;color:var(--muted)">缓冲止损</span>':'')
+          +(idx===2?'<span style="font-size:8px;color:var(--red)">⚠ 大周期专用</span>':'')
+          +'</div>';
+        html+='<div style="font-size:17px;font-weight:700;color:var(--red);font-variant-numeric:tabular-nums">'+fmtP(sl.p)+'</div>';
+        html+='<div style="font-size:11px;font-weight:700;color:var(--red)">'+fmtPct(sl.pct)+'</div>';
+        // 关键信息：价格变动%
+        html+='<div style="font-size:10px;color:var(--muted);margin-top:3px">价格移动 -'+slRiskStr+'%</div>';
+        // 核心：杠杆本金损失
+        if(_curLev>1){
+          html+='<div style="font-size:11px;font-weight:800;color:'+capLossColor+';margin-top:3px;padding:3px 6px;background:rgba(160,20,32,0.06);border-radius:4px;border-left:2px solid '+capLossColor+'">'
+            +(isLiqRisk?'💀 ':'🔴 ')
+            +_curLev+'× 杠杆 = 亏 <strong>'+slCapLossStr+'</strong>'
+            +(isLiqRisk?' ⚠ 接近爆仓':'')
+            +'</div>';
+        } else {
+          html+='<div style="font-size:10px;color:var(--muted);margin-top:3px">1× 现货 · 亏 -'+slRiskStr+'%</div>';
+        }
+        // SL增量（SL2/SL3比SL1多亏多少）
+        if(slDeltaVsSL1!==null){
+          const deltaCap=(parseFloat(slDeltaVsSL1)*_curLev).toFixed(1);
+          html+='<div style="font-size:9px;color:var(--orange);margin-top:2px">比SL1多亏 +'+slDeltaVsSL1+'%价格 / +'+deltaCap+'%本金</div>';
+        }
+        // 失效条件
+        if(sl.invalidate) html+='<div style="font-size:9px;color:var(--red);margin-top:2px;line-height:1.4">⚡ '+sl.invalidate+'</div>';
+        // SL用途说明
+        html+='<div style="font-size:9px;color:var(--dim);margin-top:2px">'+slPurpose[idx]+'</div>';
+        return html;
+      })():'<span style="color:var(--muted);font-size:11px">—</span>';
+
       return '<div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--line);background:'+rowBg+'">'
         +'<div style="padding:9px 12px;border-right:1px solid var(--line)">'+tpCell+'</div>'
         +'<div style="padding:9px 12px">'+slCell+'</div>'
         +'</div>';
     }).join('');
 
+    // v96: 杠杆风险总结行
+    const _sl1Risk=sls[0]&&isFinite(sls[0].p)?Math.abs((sls[0].p-entry)/entry*100):0;
+    const _sl1CapLoss=(_sl1Risk*_curLev).toFixed(1);
+    const _sl1LevNote=_curLev>1?` · ${_curLev}× 杠杆触及SL1 = 亏 <strong style="color:${parseFloat(_sl1CapLoss)>=80?'var(--red)':parseFloat(_sl1CapLoss)>=40?'var(--orange)':'var(--amber)'}">${_sl1CapLoss}%本金</strong>`:'';
+    const _levWarning=_curLev>=10&&_sl1Risk>5?`<div style="margin-top:6px;padding:7px 10px;background:rgba(160,20,32,0.08);border:1px solid rgba(160,20,32,0.3);border-radius:5px;font-size:10px;color:var(--red);line-height:1.6">⚠️ <strong>${_curLev}× 杠杆警告</strong> — SL1价格距离 ${_sl1Risk.toFixed(2)}% 在 ${_curLev}× 杠杆下等于亏 ${_sl1CapLoss}% 本金。期货止损一定用SL1（结构位），SL2/SL3是用来理解市场结构的参考价位，<strong>不是止损选项</strong>，开期货仓只需一个止损。</div>`:(_curLev>1?`<div style="margin-top:5px;font-size:10px;color:var(--muted)">当前杠杆 ${_curLev}× · SL1触及 = 亏 ${_sl1CapLoss}% 本金 · 严格执行SL1，SL2/SL3为结构参考</div>`:'');
+
     return '<details style="margin-bottom:8px">'
       +'<summary style="list-style:none;cursor:pointer;padding:10px 14px;background:var(--card);border:1px solid var(--card-bd);border-radius:8px;display:flex;align-items:center;justify-content:space-between;user-select:none;box-shadow:var(--shadow);">'
       +'<div><span style="font-size:11px;font-weight:700;color:var(--text)">🎯 TP/SL 三级止盈止损详情</span>'
-      // v73 FIX: show fallback warning in the summary line so user immediately knows data quality
       +(isFallback?'<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;margin-left:6px;background:rgba(128,80,0,0.12);color:var(--amber);border:1px solid rgba(128,80,0,0.3)">⚠️ 保底估算·等待结构数据</span>':'')
-      +'<div style="font-size:10px;color:var(--muted);margin-top:1px">TP1 '+fmtP(tps[0]?.p||0)+' · TP2 '+(tps[1]?.p?fmtP(tps[1].p):'—')+' · TP3 '+(tps[2]?.p?fmtP(tps[2].p):'—')+' | SL1 '+fmtP(sls[0]?.p||0)+'（推荐）</div></div>'
+      +'<div style="font-size:10px;color:var(--muted);margin-top:1px">TP1 '+fmtP(tps[0]?.p||0)+' · TP2 '+(tps[1]?.p?fmtP(tps[1].p):'—')+' · TP3 '+(tps[2]?.p?fmtP(tps[2].p):'—')+' | <strong style="color:var(--amber)">止损 → SL1 '+fmtP(sls[0]?.p||0)+'</strong></div></div>'
       +'<span style="font-size:10px;color:var(--muted)">展开 ▼</span></summary>'
       +'<div style="margin-top:3px;background:var(--card);border:1px solid var(--card-bd);border-radius:8px;overflow:hidden;box-shadow:var(--shadow);">'
+      // v96: 说明行重写 — 清晰告知SL2/SL3是结构参考，不是止损选项
       +'<div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:2px solid var(--line2);">'
-      +'<div style="padding:7px 12px;background:rgba(26,107,58,0.04);border-right:1px solid var(--line)"><div style="font-size:9px;letter-spacing:1.5px;color:var(--green);font-weight:700;text-transform:uppercase">🎯 止盈 TP</div><div style="font-size:9px;color:var(--muted);margin-top:1px">价格 · 幅度 · R倍数 · 预计时间</div></div>'
-      +'<div style="padding:7px 12px;background:rgba(160,20,32,0.04)"><div style="font-size:9px;letter-spacing:1.5px;color:var(--red);font-weight:700;text-transform:uppercase">🛡️ 止损 SL</div><div style="font-size:9px;color:var(--muted);margin-top:1px">SL1紧→SL2中→SL3宽，按风格选</div></div>'
+      +'<div style="padding:7px 12px;background:rgba(26,107,58,0.04);border-right:1px solid var(--line)"><div style="font-size:9px;letter-spacing:1.5px;color:var(--green);font-weight:700;text-transform:uppercase">🎯 止盈目标 TP</div><div style="font-size:9px;color:var(--muted);margin-top:1px">TP1保守最近概率最高 · TP3进取最远概率最低</div></div>'
+      +'<div style="padding:7px 12px;background:rgba(160,20,32,0.04)"><div style="font-size:9px;letter-spacing:1.5px;color:var(--red);font-weight:700;text-transform:uppercase">🛡️ 止损参考 SL</div><div style="font-size:9px;color:var(--muted);margin-top:1px"><strong style="color:var(--amber)">期货只用SL1</strong> · SL2/SL3是结构参考位</div></div>'
       +'</div>'
       +rows
-      +'<div style="padding:7px 12px;background:rgba(0,0,0,0.02);border-top:1px solid var(--line);">'
-      +'<div style="font-size:10px;color:var(--muted);line-height:1.7">📌 <strong style="color:var(--text)">执行节奏：</strong>TP1→平50%后止损移至成本（保底）→TP2→再平30%→TP3→余20%续持至信号反转 | <strong style="color:var(--text)">止损原则：</strong>触及即离，不加仓不等反弹</div>'
-      // v73 FIX: warn user when TP/SL are fallback estimates, not structure-based
+      +'<div style="padding:8px 12px;background:rgba(0,0,0,0.02);border-top:1px solid var(--line);">'
+      +'<div style="font-size:10px;color:var(--muted);line-height:1.7">📌 <strong style="color:var(--text)">顶级交易员逻辑：</strong>TP1=保守目标(最近·最高概率)→平50%+止损移成本 | TP2=标准目标→再平30% | TP3=进取目标(最远·最低概率)→余量续持 | <strong style="color:var(--amber)">保守选TP1离场·冒险持至TP2/TP3</strong> | <strong style="color:var(--text)">止损铁律：</strong>触及SL1立即离场'
+      +_sl1LevNote+'</div>'
+      +_levWarning
       +(isFallback?'<div style="margin-top:6px;padding:7px 10px;background:rgba(128,80,0,0.08);border:1px solid rgba(128,80,0,0.25);border-radius:5px;font-size:10px;color:var(--amber);line-height:1.6">⚠️ <strong>保底模式</strong> — K线数据不足，当前 TP/SL 基于 MA5/MA20 固定百分比估算，<strong>不反映真实市场结构</strong>。请等待数据加载完成后重新分析，勿直接使用这些价位下单。</div>':'')
       +'</div></div></details>';
   })():''}
@@ -13476,7 +14076,14 @@ function updateAssistantContext(){
   const entryEl=document.getElementById('fb-signal-entry');
   if(dirEl){dirEl.textContent=dirTxt;dirEl.style.color=res.isBull?'var(--green)':'var(--red)';}
   if(confEl){confEl.textContent=Math.round(res.conf)+'%';confEl.style.color=confColor;}
-  if(rrEl){rrEl.textContent=(res.rr?.toFixed(2)||'--')+':1';rrEl.style.color=res.rr>=2?'var(--green)':res.rr>=1.5?'var(--amber)':'var(--muted)';}
+  if(rrEl){
+    const _rrV=res.rr;
+    rrEl.textContent=(_rrV?.toFixed(2)||'--')+':1';
+    rrEl.style.color=_rrV>=2.0?'var(--green)':_rrV>=1.5?'var(--amber)':'var(--red)';
+    // v95: show warning if R:R still below minimum
+    if(_rrV && _rrV < 1.5) rrEl.title = '⚠️ R:R低于1.5:1最低要求，请谨慎';
+    else if(_rrV && _rrV >= 2.0) rrEl.title = '✅ R:R达到机构标准(≥2:1)';
+  }
   if(entryEl)entryEl.textContent=fmtP(res.entry||px);
 
   // v82: Update MTF resonance mini badge
@@ -23210,14 +23817,16 @@ window._Φ9x = function(tf) {
 
       const fibRange = fibHi - fibLo;
       if (fibRange > 0) {
+        // v91 FIX: SHORT Fib targets = fibHi - fibRange × ratio (downward extension)
+        // Standard Fib extension for shorts: project DOWN from the swing high
         [
-          { r: 0.0,   s: 'Fib 0 区间底' },
-          { r: -0.272, s: 'Fib 1.272φ下行' },
-          { r: -0.618, s: 'Fib 1.618φ下行' },
-          { r: -1.0,   s: 'Fib 2.0φ下行' },
-          { r: -1.618, s: 'Fib 2.618φ下行' },
+          { r: 0.618, s: 'Fib 0.618 下行目标' },
+          { r: 1.0,   s: 'Fib 1.0 等幅下行' },
+          { r: 1.272, s: 'Fib 1.272φ下行' },
+          { r: 1.618, s: 'Fib 1.618φ黄金下行' },
+          { r: 2.0,   s: 'Fib 2.0φ下行' },
         ].forEach(({ r, s }) => {
-          const p = fibHi - fibRange * (1 - r > 0 ? 1 - r : Math.abs(r));
+          const p = fibHi - fibRange * r;
           if (p < entry - minTP1Dist * 0.8 && isFinite(p) && p > 0)
             candidates.push({ p, src: s, pri: 9 });
         });
@@ -25667,36 +26276,73 @@ function _applyWrapper() {
       if (!elite) return res;
 
       // Override entry
-      if (elite.entry > 0) {
+      // v91 FIX: In trending_strong regime, elite entry must NOT pull away from price to a distant
+      // support level — the whole point of trending_strong is to enter near current price (breakout).
+      // Only apply elite entry if deviation from current price is < 0.5% (same order as base engine).
+      const _isTrendingStrong = (res.regime49 === 'trending_strong');
+      const _eliteEntryDev = Math.abs(elite.entry - price) / price;
+      const _eliteEntryOk = (
+        elite.entry > 0 &&
+        // Directional guard: LONG entry must be <= price+0.5%; SHORT entry must be >= price-0.5%
+        (res.isBull ? elite.entry <= price * 1.005 : elite.entry >= price * 0.995) &&
+        // In trending_strong, only accept entry within 0.3% of price (no deep pullback levels)
+        (!_isTrendingStrong || _eliteEntryDev < 0.003)
+      );
+      if (_eliteEntryOk) {
         res.entry     = elite.entry;
         res.entryType = elite.entryType;
         if (elite.reasoning) res.entryNote = elite.reasoning + (res.entryNote ? '；' + res.entryNote : '');
         res.entryZone = `${_fp(elite.entry)} ±${(elite.entry * 0.002).toFixed(4)}`;
+      } else if (elite.reasoning) {
+        // Still annotate the note with elite analysis context, but don't override the price
+        res.entryNote = elite.reasoning + (res.entryNote ? '；' + res.entryNote : '');
       }
 
-      // Override SL1 if elite SL is tighter/more precise
+      // Override SL1 if elite SL is structurally valid
+      // v91 FIX: pct must be relative to entry (not price); validate direction before applying
       if (elite.sl > 0 && res.sls && res.sls.length) {
         const isBull = res.isBull;
-        const slOk   = isBull ? (elite.sl < res.entry && elite.sl > 0) : (elite.sl > res.entry);
+        const _e = res.entry; // use final entry, not price
+        const slOk = isBull ? (elite.sl < _e * 0.9995 && elite.sl > 0) : (elite.sl > _e * 1.0005);
         if (slOk) {
           res.sls[0] = { ...res.sls[0], p: elite.sl,
-            pct: (elite.sl - price) / price * 100,
-            note: `🔒 精英止损 · ${elite.wyckoffPhase !== 'unknown' ? elite.wyckoffNote : '流动性池外侧'} (v88)` };
+            pct: (elite.sl - _e) / _e * 100,  // v91 FIX: relative to entry
+            riskPct: Math.abs((elite.sl - _e) / _e * 100).toFixed(2),
+            note: `🔒 精英止损 · ${elite.wyckoffPhase !== 'unknown' ? elite.wyckoffNote : '流动性池外侧'} (v91)` };
+          // Cascade: recalculate SL2/SL3 from new SL1 to maintain ordering
+          const _atrC = res.atr || price * 0.015;
+          if (res.sls[1]) {
+            res.sls[1].p = isBull
+              ? Math.max(0.001, Math.round((elite.sl - _atrC * 0.8) * 10000) / 10000)
+              : Math.round((elite.sl + _atrC * 0.8) * 10000) / 10000;
+            res.sls[1].pct = (res.sls[1].p - _e) / _e * 100;
+            res.sls[1].riskPct = Math.abs(res.sls[1].pct).toFixed(2);
+          }
+          if (res.sls[2]) {
+            res.sls[2].p = isBull
+              ? Math.max(0.001, Math.round((elite.sl - _atrC * 1.5) * 10000) / 10000)
+              : Math.round((elite.sl + _atrC * 1.5) * 10000) / 10000;
+            res.sls[2].pct = (res.sls[2].p - _e) / _e * 100;
+            res.sls[2].riskPct = Math.abs(res.sls[2].pct).toFixed(2);
+          }
         }
       }
 
       // Override TP1 if elite TP is available and structurally valid
+      // v91 FIX: pct relative to entry; rr computed from entry-anchored distances
       if (elite.tp > 0 && res.tps && res.tps.length) {
         const isBull = res.isBull;
-        const tpOk   = isBull ? (elite.tp > res.entry) : (elite.tp < res.entry);
+        const _e = res.entry;
+        const tpOk = isBull ? (elite.tp > _e * 1.0005) : (elite.tp < _e * 0.9995);
         if (tpOk) {
+          const _sl1Dist = Math.abs(res.sls[0].p - _e) || (price * 0.015);
           res.tps[0] = { ...res.tps[0], p: elite.tp,
-            pct: (elite.tp - price) / price * 100,
-            note: `🎯 精英止盈 · 多阻力位加权 (v88)` };
-          // Recompute R:R
-          const slDist = Math.abs(elite.sl - price);
-          const tpDist = Math.abs(elite.tp - price);
-          if (slDist > 0) res.rr = Math.round(tpDist / slDist * 100) / 100;
+            pct: (elite.tp - _e) / _e * 100,  // v91 FIX: relative to entry
+            rrRatio: Math.abs(elite.tp - _e) / _sl1Dist,
+            note: `🎯 精英止盈 · 多阻力位加权 (v91)` };
+          // Recompute overall R:R using entry-anchored distances
+          const tpDist = Math.abs(elite.tp - _e);
+          if (_sl1Dist > 0) res.rr = Math.round(tpDist / _sl1Dist * 100) / 100;
         }
       }
 
@@ -25713,6 +26359,53 @@ function _applyWrapper() {
         liquidityPools:  { buy: elite.liquidityPools.buy.length, sell: elite.liquidityPools.sell.length },
         orderBlocks:     { bullish: elite.orderBlocks.bullish.length, bearish: elite.orderBlocks.bearish.length }
       };
+
+      // ── v91 FINAL RECONCILIATION PASS ────────────────────────────────
+      // After all three layers (base → PRO → Elite) have touched entry/tps/sls,
+      // force a single authoritative recalculation of ALL pct and rrRatio values,
+      // anchored exclusively to the final res.entry. This eliminates all cross-layer
+      // reference inconsistencies (price vs entry, old entry vs new entry, etc.).
+      try {
+        const _fe = res.entry;
+        const _isBull = res.isBull;
+        const _sl1Dist = res.sls && res.sls[0] ? Math.abs(res.sls[0].p - _fe) : (price * 0.015);
+
+        if (res.tps) {
+          res.tps.forEach(t => {
+            if (t && isFinite(t.p) && t.p > 0) {
+              t.pct = (t.p - _fe) / _fe * 100;
+              t.rrRatio = _sl1Dist > 0 ? Math.abs(t.p - _fe) / _sl1Dist : 0;
+            }
+          });
+        }
+        if (res.sls) {
+          res.sls.forEach(s => {
+            if (s && isFinite(s.p) && s.p > 0) {
+              s.pct = (s.p - _fe) / _fe * 100;
+              s.riskPct = Math.abs(s.pct).toFixed(2);
+            }
+          });
+        }
+        // Recompute global rr from final values
+        if (res.tps && res.tps[0] && res.sls && res.sls[0] && _sl1Dist > 0) {
+          res.rr = Math.round(Math.abs(res.tps[0].p - _fe) / _sl1Dist * 100) / 100;
+        }
+        // ── v98: R:R gate removed — TP1=nearest structural target (conservative).
+        // A low R:R means the setup needs better entry, not a pushed TP1.
+        // Log for awareness only.
+        if (res.rr < 1.0 && res.sls && res.sls[0] && res.tps && res.tps[0]) {
+          console.warn(`[FINCH v98] R:R ${(res.rr||0).toFixed(2)} — consider better entry or skip`);
+        }
+        // Final directional sanity — if anything is wrong side, log and skip
+        if (_isBull) {
+          if (res.tps) res.tps.forEach((t,i) => { if (t.p <= _fe) console.warn(`[FINCH v91] LONG TP${i+1} ${t.p} <= entry ${_fe}`); });
+          if (res.sls) res.sls.forEach((s,i) => { if (s.p >= _fe) console.warn(`[FINCH v91] LONG SL${i+1} ${s.p} >= entry ${_fe}`); });
+        } else {
+          if (res.tps) res.tps.forEach((t,i) => { if (t.p >= _fe) console.warn(`[FINCH v91] SHORT TP${i+1} ${t.p} >= entry ${_fe}`); });
+          if (res.sls) res.sls.forEach((s,i) => { if (s.p <= _fe) console.warn(`[FINCH v91] SHORT SL${i+1} ${s.p} <= entry ${_fe}`); });
+        }
+      } catch(e) { console.warn('[FINCH v91] Reconciliation error:', e.message); }
+      // ── END FINAL RECONCILIATION ──────────────────────────────────────
 
     } catch(e) { console.warn('[FINCH v88 Elite] Error:', e.message); }
     return res;
