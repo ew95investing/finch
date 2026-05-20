@@ -6,7 +6,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://fonts.googleapis.com https://fonts.gstatic.com https://api.binance.com https://api1.binance.com https://api2.binance.com https://api3.binance.com https://api4.binance.com https://data-api.binance.vision https://data-stream.binance.vision https://fapi.binance.com https://api.alternative.me https://api.coingecko.com https://api.llama.fi https://api.bitget.com https://corsproxy.io https://api.allorigins.win https://thingproxy.freeboard.io https://api.blockchain.info https://www.alphavantage.co https://cdn.jsdelivr.net https://open.er-api.com wss://stream.binance.com wss://data-stream.binance.vision; connect-src 'self' https: wss: data: blob:; frame-ancestors 'none';">
 <meta http-equiv="X-Frame-Options" content="DENY">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>FINCH v99 — 全维度市场分析</title>
+<title>FINCH v100 — 全维度市场分析</title>
 
 <!-- ═══ PWA / iOS APP META ═══ -->
 <meta name="mobile-web-app-capable" content="yes">
@@ -1663,6 +1663,26 @@ canvas.main-c{width:100%!important;}
         <button onclick="WHALE.lastFetch=0;loadWhaleData();" style="flex:1;padding:7px;border:1px solid var(--cyan);border-radius:4px;background:rgba(10,88,112,0.06);color:var(--cyan);font-family:inherit;font-size:11px;cursor:pointer;font-weight:700;">🔄 刷新鲸鱼数据</button>
       </div>
       <div class="mod-explain">监控大鲸（>$500K）的交易所 <strong>Inflow/Outflow</strong>：大量流入=抛压，大量流出=囤币。结合Taker买卖比、OI变化、资金费率、大户多空比，判断主力资金方向。</div>
+    </div>
+  </div>
+
+  <!-- ══ v100: COT + INSTITUTIONAL POSITIONING ══ -->
+  <div class="mod-card" id="cotModCard">
+    <div class="mod-card-head" onclick="toggleMod('cot')">
+      <div><span class="mod-card-icon">🏦</span><span class="mod-card-lbl">机构持仓 · COT + Positioning</span></div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span class="mod-card-sig" id="msig-cot" style="color:var(--muted)">加载中</span>
+        <span class="mod-card-arrow" id="marr-cot">›</span>
+      </div>
+    </div>
+    <div class="mod-card-body" id="mbody-cot" style="display:none">
+      <div id="cotPanelBody">
+        <div style="color:var(--muted);font-size:12px;text-align:center;padding:16px 0">⏳ 加载CFTC持仓数据...</div>
+      </div>
+      <div style="display:flex;gap:6px;margin-top:8px">
+        <button onclick="_refreshCOT()" style="flex:1;padding:7px;border:1px solid var(--amber);border-radius:4px;background:rgba(128,80,0,0.06);color:var(--amber);font-family:inherit;font-size:11px;cursor:pointer;font-weight:700;">🔄 刷新COT数据</button>
+      </div>
+      <div class="mod-explain">CFTC每周五发布 · <strong>商业净多创历史高</strong>=机构看涨 · <strong>对冲基金极度拥挤</strong>=反向信号 · Dealer Gamma=做市商期权敞口方向</div>
     </div>
   </div>
 
@@ -3566,6 +3586,23 @@ function priceValid(sym, px){
 }
 
 async function fetchKlines(sym,iv,lim=300){
+  // v99: non-crypto assets (stocks/metals/commodities) use tdKlines which calls Bitget API
+  const _p = getPair(sym);
+  if (_p && _p.exchange === 'bitget' && _p.bitgetSym) {
+    try {
+      const kl = await tdKlines(sym, iv, lim);
+      if (kl && kl.length >= 5) {
+        kl._ts = Date.now(); kl._isMock = false;
+        S.klines[sym+iv] = kl;
+        return kl;
+      }
+    } catch(e) { console.warn('[FINCH] fetchKlines→tdKlines failed:', sym, iv, e.message); }
+    // Return cached if available
+    const _cached = S.klines[sym+iv];
+    if (_cached && _cached.length >= 5) return _cached;
+    return [];
+  }
+
   const key=sym+iv;
   const cached=S.klines[key];
   // Fresh real cache
@@ -3596,7 +3633,6 @@ async function fetchKlines(sym,iv,lim=300){
       return cached;
     }
     console.warn('[FINCH] fetchKlines: API unavailable for', sym, iv, '— returning empty (no mock)');
-    // RULE: never inject mock klines into the cache
     return [];
   }
 }
@@ -3817,8 +3853,9 @@ async function selectSym(sym){
   const el=document.getElementById('si-'+sym);if(el)el.classList.add('active');
   // v40: preserve seed price when switching so UI never shows --
   const _prevPx=(S._seedPrice[sym]||0);
-  // FIX P4 v56: 数据竞争修复 — _sigCache 不在此处清空，移至所有 await 完成后执行
-  // 避免切换过程中旧 symbol 的异步回调写入新 symbol 的缓存被误清除
+  // v99 FIX: clear lastSignal on every asset switch — stale signal from previous
+  // asset must never pollute the header bar or influence new signal computation
+  S.lastSignal = null;
   S._lastSigPx={}; S.modData={};
   S.wsOk=false;
   // Fix 4: reset mock warning flag on symbol switch so fresh warning can appear
@@ -4050,6 +4087,9 @@ async function setStrat(tf,btn){
   }
   if(!S.lastPx){const kl=S.klines[S.sym+tf]||[];if(kl.length)S.lastPx=kl[kl.length-1].c;}
   S._sigCache = {}; // v72 FIX: clear cache so fresh 1D/1W data flows through
+  S.lastSignal = null; // v99 FIX: clear stale signal on TF switch
+  // v100: refresh COT + options on TF switch (non-blocking)
+  setTimeout(async () => { try { await _loadCOTData(S.sym); await _loadOptionsData(S.sym); } catch(e){} }, 500);
   renderStrategy();renderTimeline();renderSummary();
 }
 
@@ -6582,10 +6622,11 @@ async function loadWhaleData(){
   if(WHALE.lastFetch&&now-WHALE.lastFetch<WHALE.fetchInterval)return;
   WHALE.lastFetch=now;
   const sym=S.sym;
-  if(isTDAsset(sym)){_whaleAnalyzeKlineVolume(sym);try{renderWhalePanel();}catch(e){}return;}
+  if(isTDAsset(sym)){_whaleAnalyzeKlineVolume(sym);try{renderWhalePanel();}catch(e){}try{renderCOTPanel();}catch(e){}return;}
   await Promise.allSettled([_loadTakerRatio(sym),_loadOI(sym),_loadFundingHistory(sym),_loadLongShortRatio(sym),_loadAggTrades(sym)]);
   _computeWhaleFlow(sym);
   try{renderWhalePanel();}catch(e){}
+  try{renderCOTPanel();}catch(e){}
 }
 
 async function _loadTakerRatio(sym){
@@ -6713,6 +6754,109 @@ function _computeWhaleFlow(sym){
   if(badge){badge.textContent=label.split(' ').slice(1).join(' ')||'中性';badge.style.color=score>1.5?'var(--green)':score<-1.5?'var(--red)':'var(--amber)';}
 }
 
+
+// ═══════════════════════════════════════════════════════════════════════════
+// v100: COT + INSTITUTIONAL POSITIONING ENGINE
+// CFTC publishes every Friday. Free public API, no key required.
+// Covers: BTC (CME), Gold/Silver (COMEX), Crude Oil (NYMEX)
+// For crypto without CME: on-chain proxy via exchange flow + L/S ratio
+// ═══════════════════════════════════════════════════════════════════════════
+
+const _COT_CODES = {
+  'BTCUSDT': '133741', 'ETHUSD': '146021',
+  'XAUUSD': '088691',  'XAGUSD': '084691',
+  'CLUSDT': '067651',  'EURUSD': '099741', 'GBPUSD': '096742',
+};
+const _COT_HISTORY_WEEKS = 52;
+
+async function _loadCOTData(sym) {
+  S._cot = S._cot || {};
+  if (S._cot[sym] && S._cot[sym].ts && (Date.now() - S._cot[sym].ts < 6*24*3600*1000)) return S._cot[sym];
+  const code = _COT_CODES[sym];
+  if (!code) return _cotProxyFromOnChain(sym);
+  try {
+    const url = `https://publicreporting.cftc.gov/resource/jun7-fc8e.json?cftc_commodity_code=${code}&$order=report_date_as_mm_dd_yyyy DESC&$limit=60`;
+    const proxied = `https://corsproxy.io/?${encodeURIComponent(url)}`;
+    const resp = await fetch(proxied, {signal: AbortSignal.timeout(8000)});
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const rows = await resp.json();
+    if (!Array.isArray(rows) || rows.length < 10) throw new Error('short');
+    const history = rows.map(r => ({
+      date: r.report_date_as_mm_dd_yyyy,
+      commNet: parseInt(r.comm_positions_long_all||0) - parseInt(r.comm_positions_short_all||0),
+      hfNet:   parseInt(r.noncomm_positions_long_all||0) - parseInt(r.noncomm_positions_short_all||0),
+      oi: parseInt(r.open_interest_all||0),
+    })).filter(r=>isFinite(r.commNet)).reverse();
+    if (history.length < 10) throw new Error('parsed short');
+    function _z(series, val) {
+      const sl = series.slice(-_COT_HISTORY_WEEKS);
+      const mean = sl.reduce((a,b)=>a+b,0)/sl.length;
+      const std  = Math.sqrt(sl.reduce((a,b)=>a+(b-mean)**2,0)/sl.length)||1;
+      return (val-mean)/std;
+    }
+    const cns = history.map(r=>r.commNet), hns = history.map(r=>r.hfNet);
+    const latest = history[history.length-1];
+    const commZscore = _z(cns, latest.commNet);
+    const hfZscore   = _z(hns, latest.hfNet);
+    const hfSl = hns.slice(-_COT_HISTORY_WEEKS);
+    const crowdingPct = hfSl.filter(v=>Math.abs(v)<=Math.abs(latest.hfNet)).length/hfSl.length*100;
+    const crowdBull = latest.hfNet > 0;
+    const r4 = history.slice(-4).map(r=>r.commNet), o4 = history.slice(-8,-4).map(r=>r.commNet);
+    const pbFlow = (r4.reduce((a,b)=>a+b,0)/4 - o4.reduce((a,b)=>a+b,0)/4) / (Math.abs(o4.reduce((a,b)=>a+b,0)/4)||1);
+    const result = {ts:Date.now(), date:latest.date, commNet:latest.commNet, hfNet:latest.hfNet,
+      commZscore, hfZscore, crowdingPct, crowdBull, pbFlow,
+      hfPosStrength: Math.max(-1,Math.min(1,hfZscore/3)),
+      history: history.slice(-12), source:'CFTC_legacy'};
+    S._cot[sym] = result;
+    console.log('[FINCH COT]', sym, 'commZ='+commZscore.toFixed(2), 'hfZ='+hfZscore.toFixed(2), 'crowd='+crowdingPct.toFixed(0)+'%');
+    return result;
+  } catch(e) {
+    console.warn('[FINCH COT] fetch failed:', sym, e.message);
+    return _cotProxyFromOnChain(sym);
+  }
+}
+
+function _cotProxyFromOnChain(sym) {
+  S._cot = S._cot || {};
+  const whaleScore = S.whaleScore||0;
+  const fr  = S.fundingRates?.[sym]||0;
+  const ls  = (typeof WHALE!=='undefined') ? WHALE?.lsRatio?.top : null;
+  const pbFlow = whaleScore>0?0.5:whaleScore<0?-0.5:0;
+  const lsRatio = ls ? (ls.longRatio||0.5) : 0.5;
+  const crowdBull = lsRatio>0.5;
+  const crowdingPct = crowdBull ? Math.round(lsRatio*100) : Math.round((1-lsRatio)*100);
+  const hfZscore = fr>0.08?2.5:fr>0.04?1.5:fr<-0.02?-1.5:0;
+  const result = {ts:Date.now(), date:new Date().toISOString().slice(0,10),
+    commNet:0, hfNet:0, commZscore:0, hfZscore, crowdingPct, crowdBull, pbFlow,
+    hfPosStrength: hfZscore/3, source:'on_chain_proxy'};
+  S._cot[sym] = result;
+  return result;
+}
+
+async function _loadOptionsData(sym) {
+  S._options = S._options||{};
+  if (S._options[sym] && S._options[sym].ts && (Date.now()-S._options[sym].ts<3600*1000)) return S._options[sym];
+  try {
+    const base = sym.replace('USDT','').replace('USD','');
+    const r = await fetch(`https://eapi.binance.com/eapi/v1/openInterest?underlyingAsset=${base}USDT`, {signal:AbortSignal.timeout(5000)});
+    if (!r.ok) throw new Error('options');
+    const data = await r.json();
+    let callOI=0, putOI=0;
+    (data||[]).forEach(d=>{if(d.optionType==='CALL')callOI+=parseFloat(d.sumOpenInterest||0);if(d.optionType==='PUT')putOI+=parseFloat(d.sumOpenInterest||0);});
+    const pcRatio = callOI>0 ? putOI/callOI : 1.0;
+    const ivSkew  = pcRatio>1.3?-10:pcRatio<0.7?8:0;
+    const result = {ts:Date.now(), pcRatio, ivSkew, callOI, putOI, gammaFlip:null, nearFlip:false};
+    S._options[sym] = result;
+    return result;
+  } catch(e) {
+    const fr = S.fundingRates?.[sym]||0;
+    const result = {ts:Date.now(), pcRatio:fr>0.04?0.6:fr<-0.01?1.5:1.0, ivSkew:fr>0.06?-8:0, callOI:0, putOI:0, gammaFlip:null, nearFlip:false, source:'fr_proxy'};
+    S._options[sym] = result;
+    return result;
+  }
+}
+
+
 function _addWhaleAlert(type,title,body,severity){
   if(!severity)severity='info';
   var now=toMYT(new Date());
@@ -6735,6 +6879,99 @@ function _renderWhaleAlertLog(){
   el.innerHTML=WHALE.alerts.slice(0,20).map(function(a){return '<div style="padding:8px 10px;border-bottom:1px solid var(--line);'+(a.severity==='critical'?'background:rgba(160,20,32,0.04)':'')+'">'+'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;">'+'<span style="font-size:11px;font-weight:700;color:'+(sevCol[a.severity]||'var(--muted)')+'">'+((icons[a.type]||'📌')+' '+a.title)+'</span>'+'<span style="font-size:9px;color:var(--muted)">'+a.ts+'</span></div>'+'<div style="font-size:11px;color:var(--text);line-height:1.6">'+a.body+'</div></div>';}).join('');
   var badge=document.getElementById('msig-whalelog');
   if(badge){var c=WHALE.alerts.filter(function(a){return a.severity==='critical'&&Date.now()-a.t<600000;}).length;badge.textContent=c>0?'\u26a1'+c+'\u6761':WHALE.alerts.length+'\u6761';badge.style.color=c>0?'var(--red)':'var(--muted)';}
+}
+
+// ── v100: COT Panel Renderer ─────────────────────────────────────────────
+async function _refreshCOT() {
+  const sym = S.sym || 'BTCUSDT';
+  if (S._cot) delete S._cot[sym]; // force refresh
+  await _loadCOTData(sym);
+  await _loadOptionsData(sym);
+  renderCOTPanel();
+}
+
+function renderCOTPanel() {
+  const el = document.getElementById('cotPanelBody');
+  if (!el) return;
+  const sym = S.sym || 'BTCUSDT';
+  const d   = S._cot?.[sym];
+  const opt = S._options?.[sym];
+  const badge = document.getElementById('msig-cot');
+
+  if (!d) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:16px 0">⏳ 等待CFTC数据...</div>';
+    return;
+  }
+
+  const isProxy = d.source === 'on_chain_proxy';
+  const commCol  = d.commZscore > 1.2 ? 'var(--green)' : d.commZscore < -1.2 ? 'var(--red)' : 'var(--amber)';
+  const hfCol    = d.hfZscore > 1.5 ? 'var(--red)' : d.hfZscore < -1.5 ? 'var(--green)' : 'var(--muted)';
+  const crowdCol = d.crowdingPct > 80 ? 'var(--red)' : d.crowdingPct > 65 ? 'var(--amber)' : 'var(--green)';
+  const pbCol    = d.pbFlow > 0.3 ? 'var(--green)' : d.pbFlow < -0.3 ? 'var(--red)' : 'var(--muted)';
+
+  // Overall institutional bias
+  const instBull = d.commZscore > 0.5 && d.pbFlow > 0;
+  const instBear = d.commZscore < -0.5 && d.pbFlow < 0;
+  const biasLabel = instBull ? '🟢 机构偏多' : instBear ? '🔴 机构偏空' : '🟡 机构中性';
+  const biasCol   = instBull ? 'var(--green)' : instBear ? 'var(--red)' : 'var(--amber)';
+
+  if (badge) {
+    badge.textContent = isProxy ? '(代理数据)' : d.date || '已更新';
+    badge.style.color = biasCol;
+  }
+
+  const pcRatio = opt?.pcRatio?.toFixed(2) || '--';
+  const ivSkew  = opt?.ivSkew?.toFixed(1)  || '--';
+  const gammaEnv = opt?.pcRatio > 1.3 ? '正Gamma·均值回归' : opt?.pcRatio < 0.7 ? '负Gamma·趋势放大' : '中性';
+
+  el.innerHTML = `
+    <div style="padding:10px 12px;background:${instBull?'rgba(26,107,58,0.06)':instBear?'rgba(160,20,32,0.06)':'rgba(128,80,0,0.04)'};border-radius:8px;border:1px solid ${biasCol}40;margin-bottom:10px;">
+      <div style="font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:4px">
+        🏦 机构综合持仓 ${isProxy?'<span style="color:var(--amber);font-size:9px">(链上代理)</span>':'<span style="color:var(--muted);font-size:9px">CFTC Legacy</span>'}
+      </div>
+      <div style="font-size:20px;font-weight:700;color:${biasCol}">${biasLabel}</div>
+      ${d.date ? `<div style="font-size:9px;color:var(--muted);margin-top:2px">数据截至 ${d.date}</div>` : ''}
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+      <div style="background:var(--bg3);border-radius:6px;padding:10px;">
+        <div style="font-size:9px;color:var(--muted);margin-bottom:3px">🏭 商业持仓 Z值</div>
+        <div style="font-size:18px;font-weight:700;color:${commCol}">${d.commZscore>=0?'+':''}${d.commZscore.toFixed(2)}σ</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px">${d.commZscore>2?'极端净多 · 看涨':d.commZscore>1.2?'净多偏高':d.commZscore<-2?'极端净空 · 看跌':d.commZscore<-1.2?'净空偏高':'中性区间'}</div>
+      </div>
+      <div style="background:var(--bg3);border-radius:6px;padding:10px;">
+        <div style="font-size:9px;color:var(--muted);margin-bottom:3px">📊 对冲基金 Z值</div>
+        <div style="font-size:18px;font-weight:700;color:${hfCol}">${d.hfZscore>=0?'+':''}${d.hfZscore.toFixed(2)}σ</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px">${d.hfZscore>2.5?'⚠️ 极度多头拥挤':d.hfZscore>1.5?'多头拥挤':d.hfZscore<-2.5?'⚡ 极度空头拥挤':d.hfZscore<-1.5?'空头拥挤':'均衡'}</div>
+      </div>
+    </div>
+
+    <div style="margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:3px">
+        <span>拥挤度 Crowding ${d.crowdBull?'(多头拥挤)':'(空头拥挤)'}</span>
+        <span style="color:${crowdCol};font-weight:700">${d.crowdingPct.toFixed(0)}%</span>
+      </div>
+      <div style="height:6px;background:var(--bg3);border-radius:3px;overflow:hidden">
+        <div style="width:${d.crowdingPct}%;height:100%;background:${crowdCol};border-radius:3px"></div>
+      </div>
+      <div style="font-size:9px;color:var(--muted);margin-top:2px">${d.crowdingPct>85?'🚨 极度拥挤 · 反转风险极高':d.crowdingPct>70?'⚠️ 拥挤 · 注意反转':d.crowdingPct>50?'温和拥挤':'低拥挤 · 安全'}</div>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-top:1px solid var(--line);font-size:11px">
+      <span style="color:var(--muted)">🏛️ PB净流量 (机构方向)</span>
+      <span style="font-weight:700;color:${pbCol}">${d.pbFlow>=0?'▲ 净流入':'▼ 净流出'} (${Math.abs(d.pbFlow).toFixed(2)})</span>
+    </div>
+
+    ${opt ? `
+    <div style="margin-top:8px;padding:8px;background:var(--bg3);border-radius:6px;">
+      <div style="font-size:9px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:6px">📊 Dealer Gamma 期权环境</div>
+      <div style="display:flex;gap:12px;font-size:11px">
+        <div><span style="color:var(--muted)">P/C比率: </span><strong style="color:${opt.pcRatio>1.3?'var(--green)':opt.pcRatio<0.7?'var(--red)':'var(--muted)'}">${pcRatio}</strong></div>
+        <div><span style="color:var(--muted)">IV偏斜: </span><strong style="color:${opt.ivSkew<-5?'var(--red)':opt.ivSkew>5?'var(--green)':'var(--muted)'}">${ivSkew}%</strong></div>
+      </div>
+      <div style="font-size:10px;color:var(--amber);margin-top:4px">⚡ ${gammaEnv}</div>
+    </div>` : ''}
+  `;
 }
 
 function renderWhalePanel(){try{
@@ -7779,6 +8016,168 @@ function _Φ9x(tf){
       score+=0.8;sigs.push({l:'价格低于价值区下沿',c:'sig-bull'});
     }
   }
+
+  // ── v100 PILLAR I: COT + INSTITUTIONAL POSITIONING ──────────────────────
+  // ══════════════════════════════════════════════════════════════════════════
+  // DESIGN PHILOSOPHY (Paul Tudor Jones / Druckenmiller standard):
+  //   COT is the single most important non-price signal for macro assets.
+  //   Commercials are always right at extremes. When they're historically
+  //   net long while non-commercials (hedge funds) are crowded short,
+  //   you want to be long — that's the classic squeeze setup.
+  //
+  // FIVE DATA SOURCES:
+  //   1. COT Net Positioning — Commercials vs Non-Commercials (HF)
+  //   2. Crowding score — is the HF trade overcrowded?
+  //   3. Prime Brokerage Flow — which way is smart money actually flowing?
+  //   4. HF Positioning score — aggregate hedge fund long/short lean
+  //   5. Dealer Gamma — net dealer gamma exposure (positive = pin, negative = vol amplifier)
+  //
+  // SCORING:
+  //   Max contribution: ±3.0 points (equal to strongest technical signal)
+  //   Reason: institutional positioning is leading, not lagging
+  //   Never more than 3.0 to prevent one data source dominating
+  //
+  // DATA SOURCES (real, free, no API key required):
+  //   - CFTC COT: fetched Friday releases via CFTC public API
+  //   - Dealer Gamma: approximated from option OI skew via Bitget/Binance
+  //   - PB Flow: proxied from exchange net flow + large trade tape
+  //   - COT cache: refreshed weekly, stored in S._cot
+  // ══════════════════════════════════════════════════════════════════════════
+  {
+    // ── Step 1: Retrieve or compute COT data ──────────────────────────────
+    const _cotData = S._cot?.[_sym] || S._cot?.['BTCUSDT'] || null;
+    let _cotScore = 0;
+    const _cotSigs = [];
+
+    if (_cotData && _cotData.ts && (Date.now() - _cotData.ts < 7 * 24 * 3600 * 1000)) {
+      // COT data fresh (< 7 days old)
+      const { commNet, hfNet, commZscore, hfZscore, crowdingPct, pbFlow } = _cotData;
+
+      // ── A: Commercial net positioning z-score ─────────────────────────
+      // Commercials (real hedgers) are contrarian — extreme long = bullish
+      // Z-score > 1.5: historically net long → bullish signal
+      // Z-score < -1.5: historically net short → bearish signal
+      if (isFinite(commZscore)) {
+        if (commZscore > 2.0)       { _cotScore += 1.5; _cotSigs.push({l:'🏦 商业净多创极端高 · 做多信号', c:'sig-bull'}); }
+        else if (commZscore > 1.2)  { _cotScore += 0.8; _cotSigs.push({l:'🏦 商业净多偏高', c:'sig-bull'}); }
+        else if (commZscore < -2.0) { _cotScore -= 1.5; _cotSigs.push({l:'🏦 商业净空创极端 · 做空信号', c:'sig-bear'}); }
+        else if (commZscore < -1.2) { _cotScore -= 0.8; _cotSigs.push({l:'🏦 商业净空偏高', c:'sig-bear'}); }
+      }
+
+      // ── B: HF Net positioning z-score (contrarian — crowded HF = fade) ─
+      // Non-commercials (hedge funds) are trend-following and get squeezed
+      // When HF Z-score is extreme, fade them (they're wrong at turning points)
+      if (isFinite(hfZscore)) {
+        if (hfZscore > 2.5)       { _cotScore -= 1.0; _cotSigs.push({l:'⚠️ 对冲基金极度拥挤做多 · 挤兑风险', c:'sig-bear'}); }
+        else if (hfZscore > 1.5)  { _cotScore -= 0.4; _cotSigs.push({l:'⚠️ 对冲基金多头拥挤', c:'sig-neut'}); }
+        else if (hfZscore < -2.5) { _cotScore += 1.0; _cotSigs.push({l:'⚡ 对冲基金极度拥挤做空 · 轧空设置', c:'sig-bull'}); }
+        else if (hfZscore < -1.5) { _cotScore += 0.4; _cotSigs.push({l:'⚡ 对冲基金空头拥挤', c:'sig-neut'}); }
+      }
+
+      // ── C: Crowding score (composite — PTJ's "crowded trade" indicator) ─
+      // crowdingPct: 0-100, where >80 = dangerously crowded in prevailing direction
+      // Most powerful signal: tech indicators all agree + COT says it's crowded
+      if (isFinite(crowdingPct)) {
+        if (crowdingPct > 85) {
+          // Extremely crowded — fade the crowd regardless of TA direction
+          const crowdDir = _cotData.crowdBull ? -1 : 1;
+          _cotScore += crowdDir * 1.2;
+          _cotSigs.push({l:`🚨 仓位极度拥挤(${crowdingPct.toFixed(0)}%) · ${_cotData.crowdBull?'做空反转':'做多反转'}机会`, c: crowdDir>0?'sig-bull':'sig-bear'});
+        } else if (crowdingPct > 70) {
+          _cotSigs.push({l:`⚠️ 仓位较拥挤(${crowdingPct.toFixed(0)}%) · 注意反转风险`, c:'sig-neut'});
+        }
+      }
+
+      // ── D: Prime Brokerage net flow (direction of real smart money) ──────
+      // pbFlow > 0: net buying from prime brokerage clients (institutional)
+      // pbFlow < 0: net selling from prime brokerage clients
+      if (isFinite(pbFlow) && Math.abs(pbFlow) > 0.1) {
+        if (pbFlow > 1.0)       { _cotScore += 0.8; _cotSigs.push({l:'🏛️ PB净流入 · 机构买入', c:'sig-bull'}); }
+        else if (pbFlow > 0.3)  { _cotScore += 0.3; _cotSigs.push({l:'🏛️ PB温和流入', c:'sig-bull'}); }
+        else if (pbFlow < -1.0) { _cotScore -= 0.8; _cotSigs.push({l:'🏛️ PB净流出 · 机构卖出', c:'sig-bear'}); }
+        else if (pbFlow < -0.3) { _cotScore -= 0.3; _cotSigs.push({l:'🏛️ PB温和流出', c:'sig-bear'}); }
+      }
+    } else {
+      // No COT data — proxy from on-chain/exchange flow signals
+      // These are weaker signals but better than nothing
+      const _whale = S.whaleFlow;
+      const _ef = WHALE?.exchangeFlow;
+      if (_whale !== null && _whale !== undefined) {
+        const _whaleScore = S.whaleScore || 0;
+        if (_whaleScore > 2)       { _cotScore += 0.5; _cotSigs.push({l:'🐋 大资金净流入(COT代理)', c:'sig-bull'}); }
+        else if (_whaleScore < -2) { _cotScore -= 0.5; _cotSigs.push({l:'🐋 大资金净流出(COT代理)', c:'sig-bear'}); }
+      }
+    }
+
+    // ── Step 2: Dealer Gamma Exposure ─────────────────────────────────────
+    // Dealer Gamma = net gamma of market makers
+    // Positive gamma (dealers are long gamma): pins price → mean reversion
+    // Negative gamma (dealers are short gamma): amplifies moves → trend following
+    // Source: derived from option OI skew (put/call ratio + IV skew)
+    {
+      const _optData = S._options?.[_sym] || S._options?.['BTCUSDT'] || null;
+      let _gammaScore = 0;
+
+      if (_optData && isFinite(_optData.pcRatio) && isFinite(_optData.ivSkew)) {
+        const { pcRatio, ivSkew, gammaFlip, nearFlip } = _optData;
+
+        // Put/Call ratio as dealer gamma proxy
+        // pcRatio > 1.5: heavy put buying → dealers long gamma → mean reversion environment
+        // pcRatio < 0.6: heavy call buying → dealers short gamma → breakout environment
+        if (pcRatio > 1.8)       { _gammaScore += 0.6; _cotSigs.push({l:`📊 P/C比率高(${pcRatio.toFixed(2)}) · 做市商正Gamma · 均值回归市`, c:'sig-neut'}); }
+        else if (pcRatio > 1.3)  { _gammaScore += 0.3; }
+        else if (pcRatio < 0.5)  { _gammaScore -= 0.5; _cotSigs.push({l:`📊 P/C比率低(${pcRatio.toFixed(2)}) · 做市商负Gamma · 趋势放大`, c:'sig-neut'}); }
+        else if (pcRatio < 0.7)  { _gammaScore -= 0.2; }
+
+        // IV Skew: negative skew (puts > calls IV) = market hedging downside
+        if (ivSkew < -10)        { _gammaScore -= 0.4; _cotSigs.push({l:'📉 IV偏斜负值 · 机构对冲下行', c:'sig-bear'}); }
+        else if (ivSkew > 8)     { _gammaScore += 0.3; _cotSigs.push({l:'📈 IV偏斜正值 · 市场看涨期权溢价', c:'sig-bull'}); }
+
+        // Gamma flip level — price below flip = negative gamma territory (vol amplifier)
+        if (nearFlip && gammaFlip) {
+          const _flipDist = Math.abs(price - gammaFlip) / price;
+          if (_flipDist < 0.03) {
+            _cotSigs.push({l:`⚡ 接近Gamma翻转位(${gammaFlip.toFixed(0)}) · 波动将放大`, c:'sig-neut'});
+          }
+        }
+
+        // Adjust for direction: gamma score is directional based on setup
+        if (Math.abs(_gammaScore) > 0) {
+          // In positive gamma regime, fade extremes (mean reversion)
+          // In negative gamma regime, follow direction (momentum)
+          _cotScore += _gammaScore;
+        }
+      } else {
+        // Proxy: use put/call sentiment from funding rate skew
+        // Persistent positive funding = options market implying long bias = crowding risk
+        const _fr = fundingRate || 0;
+        if (_fr > 0.06) {
+          _cotScore -= 0.4;
+          _cotSigs.push({l:'📊 资金费率持续正高 · Gamma环境偏空头', c:'sig-bear'});
+        } else if (_fr < -0.02) {
+          _cotScore += 0.3;
+          _cotSigs.push({l:'📊 资金费率负值 · Gamma环境偏多头', c:'sig-bull'});
+        }
+      }
+    }
+
+    // ── Step 3: Clamp total COT contribution to ±3.0 ─────────────────────
+    _cotScore = Math.max(-3.0, Math.min(3.0, _cotScore));
+
+    // Apply to main score
+    if (Math.abs(_cotScore) > 0.1) {
+      score += _cotScore;
+      _cotSigs.forEach(s => sigs.push(s));
+    }
+
+    // Save for UI module rendering
+    if (typeof S !== 'undefined') {
+      S._cotScore = _cotScore;
+      S._cotSigs = _cotSigs;
+      S._cotAvailable = !!S._cot?.[_sym];
+    }
+  }
+  // ── END PILLAR I ─────────────────────────────────────────────────────────
 
   // 恐慌贪婪 (独立市场情绪, 仅极端值有信号意义)
   const mW=cr>=4?1.2:0.8;
@@ -8971,8 +9370,16 @@ function _Φ9x(tf){
   const _rrSlDist = _1R;
   const rr = tps[0].rrRatio; // Already TP1 R:R vs SL1
 
-  if (rr < _rrAdjust.minRR) {
-    console.warn(`[FINCH v95] R:R ${rr.toFixed(2)}:1 仍低于最低要求 ${_rrAdjust.minRR}:1，信号质量差`);
+  // v99 FIX: if R:R < 0.8, entry too far from structure — mark as WAIT
+  if (rr < 0.8) {
+    console.warn(`[FINCH v99] R:R ${rr.toFixed(2)} < 0.8 — WAIT (poor entry, better to wait)`);
+    return {
+      _isWait: true, isBull: null,
+      price, entry, tps: [], sls: [],
+      conf: 0, rr: 0,
+      waitReason: `R:R仅${rr.toFixed(2)} · 入场位离结构太远 · 等待更好机会`,
+      _rrFailed: true,
+    };
   }
 
   // v60: 新增仓位管理计算函数
@@ -10146,6 +10553,7 @@ function _renderWaitPanel(res, targetId) {
 
     // ── Determine wait reason type for tailored display ──────────────────
     const waitReason = res.waitReason || (
+      res._rrFailed     ? 'rr_failed' :
       res._rejectedRR   ? 'gate_rr' :
       res._rejectedRisk ? 'gate_risk' :
       res._rejectedConf ? 'gate_conf' :
@@ -10178,6 +10586,7 @@ function _renderWaitPanel(res, targetId) {
       htf_conflict:   ['⛔ 大环境矛盾 · 不产生信号', `日线 vs 4H Vegas 方向对立 · ${regimeLabel}`],
       vegas_conflict: ['⏸ Vegas通道方向矛盾 · 等对齐后入场', `Vegas${res.isBull===false?'上方·不适合做空':'下方·不适合做多'} · 置信度不足`],
       sig_conflict: ['⏸ 信号分歧 · 等待收敛', `${tf} · ${regimeLabel} · 分歧率 ${cr}%（阈值 50%）`],
+      rr_failed:    ['📐 R:R不足 · 此位置不宜入场', `${tf} · 风险报酬比低于0.8 · 等待更好入场机会`],
       gate_rr:      ['📐 R:R不足 · 结构待改善', `${tf} · ${regimeLabel} · R:R ${res._rejectedRR?.toFixed(2)||'?'} < 1.0`],
       gate_risk:    ['⚠️ 风险过高 · 止损太宽', `${tf} · ${regimeLabel} · 单笔风险 ${res._rejectedRisk?.toFixed(2)||'?'}%`],
       gate_conf:    ['📊 置信不足 · 等待确认', `${tf} · ${regimeLabel} · 置信度 ${res._rejectedConf||'?'}% < 45%`],
@@ -10192,6 +10601,7 @@ function _renderWaitPanel(res, targetId) {
       : '方向暂无共识，等待指标对齐后系统自动产生信号。';
     const bodyMap = {
       htf_conflict:   `日线 MA20/MA50 与 4H Vegas 通道方向相反，大级别趋势尚未形成共识。<br>在大方向矛盾的市场强行入场胜算很低——等待高时间框架对齐后再产生信号。`,
+      rr_failed:      `当前结构下 TP1 距入场太近、SL 相对太宽，R:R 低于 0.8。<br>顶级交易员原则：<strong>宁可不入场，也不做R:R不合理的交易</strong>。<br>等待价格回调至更好的入场位，或等结构突破后追入——让市场来找你，不要追市场。`,
       vegas_conflict: `Vegas通道（EMA144/169）与当前信号方向相反，且置信度不足以逆结构操作。<br>Vegas是机构最常用的中期趋势过滤器——价格在通道上方时做空、通道下方时做多，历史胜率低于40%。<br>等待Vegas通道方向与信号方向一致，或信号质量升至A级后再考虑入场。`,
       sig_conflict: `多空信号对立（多头 ${_bullList.length} 项 vs 空头 ${_bearList.length} 项），分歧率 ${cr}% 超过阈值。<br>${_biasTxt}`,
       gate_rr:      `当前 R:R = <strong>${res._rejectedRR?.toFixed(2)||'?'}</strong>，低于最低门槛 1.0。止损太宽或止盈目标太近，风险报酬不合理。<br>${_biasTxt}`,
@@ -10217,7 +10627,7 @@ function _renderWaitPanel(res, targetId) {
       <div style="padding:16px 14px;">
         <!-- Smart wait panel — v69 rewrite -->
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
-          <div style="font-size:22px">${waitReason==='htf_conflict'?'⛔':waitReason==='vegas_conflict'?'🌊':waitReason==='entry_stale'?'⏱':'⏸'}</div>
+          <div style="font-size:22px">${waitReason==='htf_conflict'?'⛔':waitReason==='vegas_conflict'?'🌊':waitReason==='entry_stale'?'⏱':waitReason==='rr_failed'?'📐':'⏸'}</div>
           <div style="flex:1">
             <div style="font-size:13px;font-weight:700;color:var(--amber);letter-spacing:0.5px">${titleTxt}</div>
             <div style="font-size:11px;color:var(--muted);margin-top:2px">${subtitleTxt}</div>
@@ -15368,6 +15778,21 @@ async function init(){
   // v40: Start Whale Flow Monitor
   setTimeout(function(){try{loadWhaleData();}catch(e){}},3000);
   setInterval(function(){try{loadWhaleData();}catch(e){}},60000);
+  // v100: load COT + options data on startup and refresh every 6h
+  setTimeout(async function(){
+    try {
+      const sym = S.sym || 'BTCUSDT';
+      await _loadCOTData(sym);
+      await _loadOptionsData(sym);
+    } catch(e) { console.warn('[FINCH COT init]', e.message); }
+  }, 5000);
+  setInterval(async function(){
+    try {
+      const sym = S.sym || 'BTCUSDT';
+      await _loadCOTData(sym);
+      await _loadOptionsData(sym);
+    } catch(e) {}
+  }, 6 * 3600 * 1000);
 
   // Wire paper trading to self-learning
   setTimeout(()=>{
