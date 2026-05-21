@@ -6,7 +6,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://fonts.googleapis.com https://fonts.gstatic.com https://api.binance.com https://api1.binance.com https://api2.binance.com https://api3.binance.com https://api4.binance.com https://data-api.binance.vision https://data-stream.binance.vision https://fapi.binance.com https://api.alternative.me https://api.coingecko.com https://api.llama.fi https://api.bitget.com https://corsproxy.io https://api.allorigins.win https://thingproxy.freeboard.io https://api.blockchain.info https://www.alphavantage.co https://cdn.jsdelivr.net https://open.er-api.com wss://stream.binance.com wss://data-stream.binance.vision; connect-src 'self' https: wss: data: blob:; frame-ancestors 'none';">
 <meta http-equiv="X-Frame-Options" content="DENY">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>FINCH v100 — 全维度市场分析</title>
+<title>FINCH v101 — 全维度市场分析</title>
 
 <!-- ═══ PWA / iOS APP META ═══ -->
 <meta name="mobile-web-app-capable" content="yes">
@@ -3328,8 +3328,8 @@ function fmtP(n){
   if(abs>=0.001) return n.toFixed(6);
   return n.toFixed(8);
 }
-function fmtPct(n,dp=2){if(isNaN(n))return'--';return(n>=0?'+':'')+n.toFixed(dp)+'%';}
-function fmtVol(n){if(!n)return'--';if(n>=1e9)return(n/1e9).toFixed(2)+'B';if(n>=1e6)return(n/1e6).toFixed(2)+'M';if(n>=1e3)return(n/1e3).toFixed(1)+'K';return n.toFixed(0);}
+function fmtPct(n,dp=2){if(n==null||isNaN(n))return'--';return(n>=0?'+':'')+n.toFixed(dp)+'%';}
+function fmtVol(n){if(!n||n<=0)return'--';if(n>=1e12)return(n/1e12).toFixed(2)+'T USDT';if(n>=1e9)return(n/1e9).toFixed(2)+'B USDT';if(n>=1e6)return(n/1e6).toFixed(2)+'M USDT';if(n>=1e3)return(n/1e3).toFixed(1)+'K USDT';return n.toFixed(0)+' USDT';}
 function pctC(n){return n>0?'pos':n<0?'neg':'neu';}
 // MYT = UTC+8
 function toMYT(dt){return new Date(dt.getTime()+8*3600000);}
@@ -3654,7 +3654,7 @@ async function refreshPrices(){
       if(tc){tc.textContent=fmtPct(c,1);tc.className='tick-chg '+pctC(c);}
       if(t.symbol===S.sym&&!S.wsOk){
         S.lastPx=p;S._seedPrice[t.symbol]=p;
-        updatePH({price:p,change:c,high:+t.highPrice,low:+t.lowPrice,vol:+t.volume});
+        updatePH({price:p,change:c,high:+t.highPrice,low:+t.lowPrice,vol:+t.quoteVolume});
       }
     });
   }catch(e){
@@ -3732,7 +3732,7 @@ function connectWS(sym){
           if(sym!==S.sym){S.wsOk=true;return;}
           S.lastPx=wsPrice;S._seedPrice[sym]=wsPrice;
           S.wsOk=true;
-          const change=+d.P,hi=+d.h,lo=+d.l,vol=+d.v;
+          const change=+d.P,hi=+d.h,lo=+d.l,vol=+d.q; // d.q = quoteVolume (USDT), d.v = baseVolume (coins)
           const safeHi=(hi>wsPrice*0.5&&hi<wsPrice*2)?hi:wsPrice;
           const safeLo=(lo>wsPrice*0.3&&lo<wsPrice*1.5)?lo:wsPrice;
           updatePH({price:wsPrice,change,high:safeHi,low:safeLo,vol});
@@ -6662,7 +6662,9 @@ async function _loadOI(sym){
     const chgPct=prev>0?(cur-prev)/prev*100:0;
     const oi8h=hist.length>=9?hist[hist.length-9].oi:prev;
     const trend8h=oi8h>0?(cur-oi8h)/oi8h*100:0;
-    WHALE.oi={current:cur,currentUSD:curUSD,changePct:chgPct,trend8h:trend8h,surging:chgPct>=WHALE_CFG.oiSurgeUp,plunging:chgPct<=WHALE_CFG.oiSurgeDn};
+    WHALE.oi={current:cur,currentUSD:curUSD,changePct:chgPct,trend8h:trend8h,surging:chgPct>=WHALE_CFG.oiSurgeUp,plunging:chgPct<=WHALE_CFG.oiSurgeDn,hist:hist};
+    // Sync to S.openInterest for strategy engine access
+    if(typeof S!=='undefined'){S.openInterest=S.openInterest||{};S.openInterest[sym]={current:cur,currentUSD:curUSD,changePct:chgPct,trend8h:trend8h,surging:WHALE.oi.surging,plunging:WHALE.oi.plunging};}
     if(Math.abs(chgPct)>=WHALE_CFG.oiSurgeUp)_addWhaleAlert(chgPct>0?'inflow':'outflow','持仓量'+(chgPct>0?'增加':'骤降')+' '+Math.abs(chgPct).toFixed(1)+'%','OI '+(chgPct>0?'增至':'降至')+' '+fmtTVL(curUSD)+' · '+(chgPct>0?'新仓开立':'大量平仓'),Math.abs(chgPct)>5?'critical':'warning');
   }catch(e){WHALE.oi=null;}
 }
@@ -6985,7 +6987,13 @@ function renderWhalePanel(){try{
   var html='';
   if(flow){var cc=flow.conf>=70?'var(--green)':flow.conf>=50?'var(--amber)':'var(--red)';html+='<div style="background:'+fb+';border:2px solid '+fc+'40;border-radius:8px;padding:12px 14px;margin-bottom:10px;"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;"><div><div style="font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:3px">\ud83d\udc0b \u9cb8\u9c7c\u8d44\u91d1\u6d41\u7efc\u5408</div><div style="font-size:20px;font-weight:700;color:'+fc+'">'+flow.label+'</div></div><div style="text-align:right"><div style="font-size:28px;font-weight:700;color:'+cc+';line-height:1">'+flow.conf+'%</div><div style="font-size:9px;color:var(--muted)">\u7f6e\u4fe1\u5ea6</div></div></div><div style="height:4px;background:var(--bg3);border-radius:2px;margin-bottom:8px;overflow:hidden"><div style="width:'+flow.conf+'%;height:100%;background:'+cc+';border-radius:2px"></div></div><div style="display:flex;flex-wrap:wrap;gap:4px">'+flow.factors.map(function(f2){return '<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:'+(fs>0?'rgba(26,107,58,0.1)':'rgba(160,20,32,0.1)')+';color:'+(fs>0?'var(--green)':'var(--red)')+';border:1px solid '+(fs>0?'rgba(26,107,58,0.2)':'rgba(160,20,32,0.2)')+'">'+f2+'</span>';}).join('')+'</div></div>';}
   if(t){var tp=(t.current*100).toFixed(1),bw=t.current*100,sw=(1-t.current)*100,tc2=t.bull?'var(--green)':t.bear?'var(--red)':'var(--amber)';html+='<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:3px"><span>\ud83d\udcca \u4e3b\u52a8\u4e70\u5356\u6bd4'+(t.estimated?' <span style="color:var(--amber);font-size:9px">(\u4f30\u7b97)</span>':'')+' </span><span style="font-weight:700;color:'+tc2+'">'+tp+'% \u4e70\u5165</span></div><div style="display:flex;height:8px;border-radius:4px;overflow:hidden;gap:1px"><div style="width:'+bw+'%;background:var(--green);border-radius:4px 0 0 4px"></div><div style="flex:1;background:var(--red);border-radius:0 4px 4px 0"></div></div><div style="display:flex;justify-content:space-between;font-size:9px;color:var(--muted);margin-top:2px"><span style="color:var(--green)">\u4e70 '+bw.toFixed(1)+'%</span><span>'+(t.trend>0.02?'\u2191\u4e70\u538b\u589e\u5f3a':t.trend<-0.02?'\u2193\u5356\u538b\u589e\u5f3a':'\u2192\u7a33\u5b9a')+'</span><span style="color:var(--red)">\u5356 '+sw.toFixed(1)+'%</span></div></div>';}
-  if(o){var oc=o.changePct>1?'var(--green)':o.changePct<-1?'var(--red)':'var(--muted)';var oi2=o.surging&&S.lastSignal&&S.lastSignal.isBull?'\u591a\u5934\u5f00\u4ed3':o.surging?'\u65b0\u4ed3\u5f00\u7acb':o.plunging?'\u5927\u91cf\u5e73\u4ed3':'\u6b63\u5e38\u6ce2\u52a8';html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--line);font-size:11px"><span style="color:var(--muted)">\ud83d\udcc8 \u6301\u4ed3\u91cf OI</span><div style="text-align:right"><div style="font-weight:700;color:'+oc+'">'+(o.changePct>=0?'+':'')+o.changePct.toFixed(2)+'%</div><div style="font-size:9px;color:var(--muted)">'+fmtTVL(o.currentUSD)+' \u00b7 '+oi2+'</div></div></div>';}
+  if(o){var oc=o.changePct>1?'var(--green)':o.changePct<-1?'var(--red)':'var(--muted)';
+  var _prUp2=(S.klines[S.sym+'15m']||S.klines[S.sym+'1h']||[]).slice(-2);
+  var _prUp2b=_prUp2.length>=2&&_prUp2[_prUp2.length-1].c>_prUp2[_prUp2.length-2].c;
+  var _oiQ=o.changePct>0.8&&_prUp2b?'🟢新多建仓·趋势延续':o.changePct>0.8&&!_prUp2b?'🔴新空建仓':o.changePct<-0.8&&_prUp2b?'⚠️空头回补':o.changePct<-0.8?'🩸多头离场':'中性';
+  html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--line);font-size:11px"><span style="color:var(--muted)">📈 持仓量 OI</span><div style="text-align:right"><div style="font-weight:700;color:'+oc+'">'+(o.changePct>=0?'+':'')+o.changePct.toFixed(2)+'%</div><div style="font-size:9px;color:var(--muted)">'+fmtTVL(o.currentUSD)+' · '+_oiQ+'</div></div></div>';
+  var _tv=S._turnover;if(_tv&&_tv.ratio>0){var _tvc=_tv.ratio>1.5?'var(--red)':_tv.ratio>0.8?'var(--amber)':_tv.ratio<0.12?'var(--green)':'var(--muted)';var _tvl=_tv.ratio>1.5?'投机主导·不稳':_tv.ratio>0.8?'换手偏高':_tv.ratio<0.12?'机构持仓稳':'正常';html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--line);font-size:11px"><span style="color:var(--muted)">🔄 换手率(8H)</span><div style="text-align:right"><div style="font-weight:700;color:'+_tvc+'">'+_tv.ratio.toFixed(2)+'×OI</div><div style="font-size:9px;color:var(--muted)">'+_tvl+'</div></div></div>';}
+}
   if(f){var fc2=f.extremeLong?'var(--red)':f.extremeShort?'var(--green)':f.current>0?'var(--amber)':'var(--cyan)';var fi=f.extremeLong?'\ud83d\udd34 \u591a\u5934\u62e5\u6324':f.extremeShort?'\ud83d\udfe2 \u7a7a\u5934\u62e5\u6324':f.current>0.03?'\u591a\u5934\u652f\u4ed8':f.current<-0.01?'\u7a7a\u5934\u652f\u4ed8':'\u6b63\u5e38';html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--line);font-size:11px"><span style="color:var(--muted)">\ud83d\udcb0 \u8d44\u91d1\u8d39\u7387 Funding</span><div style="text-align:right"><div style="font-weight:700;color:'+fc2+'">'+(f.current>=0?'+':'')+f.current.toFixed(4)+'% /8h</div><div style="font-size:9px;color:var(--muted)">'+fi+'</div></div></div>';}
   if(ls){var lc=ls.current>=WHALE_CFG.lsBullish?'var(--green)':ls.current<=WHALE_CFG.lsBearish?'var(--red)':'var(--muted)';html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--line);font-size:11px"><span style="color:var(--muted)">\u2696\ufe0f \u5927\u6237\u591a\u7a7a\u6bd4 L/S</span><div style="text-align:right"><div style="font-weight:700;color:'+lc+'">'+ls.current.toFixed(3)+'</div><div style="font-size:9px;color:var(--muted)">\u591a '+ls.longPct.toFixed(1)+'% \u00b7 \u7a7a '+ls.shortPct.toFixed(1)+'%</div></div></div>';}
   if(ef&&ef.count5m>0){var ec=ef.net5m>0?'var(--green)':'var(--red)';html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;font-size:11px"><span style="color:var(--muted)">\ud83d\udc0b 5\u5206\u949f\u51c0\u6d41</span><div style="text-align:right"><div style="font-weight:700;color:'+ec+'">'+(ef.net5m>=0?'+':'')+fmtTVL(ef.net5m)+'</div><div style="font-size:9px;color:var(--muted)">\u4e70'+fmtTVL(ef.buy5m)+' / \u5356'+fmtTVL(ef.sell5m)+' ('+ef.count5m+'\u7b14)</div></div></div>';}
@@ -7960,24 +7968,213 @@ function _Φ9x(tf){
     else if (pa.building)   { sigs.push({l:`🔋 能量积累中(横盘蓄力)`,c:'sig-neut'}); }
   }
 
-  // ── v64-B: OI + Funding Rate 联动矩阵 ──────────────────────────
-  // 单独看FR只在极端值才有意义; OI×FR矩阵准确度提升2-3倍
+  // ── v101 INSTITUTIONAL SIGNALS: OI × Price × L/S × Taker × ChangeHand ──
+  // Philosophy: Real money follows order flow, not price. These 5 signals
+  // are what prop desks and quant funds monitor in real-time. Each is
+  // independent — together they form the "smart money footprint".
+  //
+  // QUADRANT MATRIX (OI × Price direction — the most reliable framework):
+  //   OI↑ + Price↑ = New longs entering → trend continuation HIGH conviction
+  //   OI↑ + Price↓ = New shorts entering → bearish continuation HIGH conviction
+  //   OI↓ + Price↑ = Shorts covering (squeeze) → rally often exhausted soon
+  //   OI↓ + Price↓ = Longs liquidating (panic) → watch for capitulation bounce
   {
-    const oi = S.openInterest?.[S.sym] || S.modData?.intel?.oi || null;
-    const oiChgPct = oi?.changePct || 0;
-    const fr = fundingRate;
-    const oiUp = oiChgPct > 1.0;
-    const oiDn = oiChgPct < -1.0;
-    const frUp = fr > 0.02;
-    const frDn = fr < -0.01;
-    if (oiUp && frUp)  { score -= 1.2; sigs.push({l:'🔴 OI↑+FR↑=真多头过热(空头埋伏)', c:'sig-bear'}); }
-    else if (oiUp && frDn) { score += 1.2; sigs.push({l:'🟢 OI↑+FR↓=真多头建仓(弱FR压制)', c:'sig-bull'}); }
-    else if (oiDn && frUp) { score += 0.8; sigs.push({l:'🟡 OI↓+FR↑=多头平仓去杠杆', c:'sig-neut'}); }
-    else if (oiDn && frDn) { score -= 0.8; sigs.push({l:'🔴 OI↓+FR↓=空头主导平仓', c:'sig-bear'}); }
-    else if (fr > 0.08)  { score -= 1.0; sigs.push({l:'资金费率极高(多头过热)',c:'sig-bear'}); }
-    else if (fr < -0.03) { score += 1.0; sigs.push({l:'资金费率负值(空头过热)',c:'sig-bull'}); }
-    else if (fr > 0.04)  { score -= 0.4; sigs.push({l:'资金费率偏高',c:'sig-neut'}); }
+    const _oi   = WHALE.oi   || S.openInterest?.[S.sym] || null;
+    const _fr   = fundingRate || WHALE.funding?.current || 0;
+    const _ls   = WHALE.lsRatio;
+    const _tk   = WHALE.takerRatio;
+    const _oiCur = _oi?.current || 0;
+    const _oiChg = _oi?.changePct || 0;       // % change in OI vs prev period
+    const _oiTrend8h = _oi?.trend8h || 0;     // % change over 8 hours
+    const _priceUp = prices.length >= 2 && prices[prices.length-1] > prices[prices.length-2];
+    const _oiUp    = _oiChg > 0.5;
+    const _oiDn    = _oiChg < -0.5;
+    const _oiSurge = Math.abs(_oiChg) > 2.5;
+
+    // ── 1. OI × PRICE QUADRANT ────────────────────────────────────────────
+    // This is the highest-quality institutional signal available for crypto
+    if (_oi && _oiSurge) {
+      if (_oiUp && _priceUp) {
+        score += 1.8;
+        sigs.push({l:`🟢 OI↑${_oiChg.toFixed(1)}%+价格↑=新多建仓·趋势延续`, c:'sig-bull'});
+      } else if (_oiUp && !_priceUp) {
+        score -= 1.8;
+        sigs.push({l:`🔴 OI↑${_oiChg.toFixed(1)}%+价格↓=新空建仓·空头动能`, c:'sig-bear'});
+      } else if (_oiDn && _priceUp) {
+        score += 0.6; // rally on short squeeze — weaker signal, often near exhaustion
+        sigs.push({l:`⚠️ OI↓${Math.abs(_oiChg).toFixed(1)}%+价格↑=空头回补·注意顶部`, c:'sig-neut'});
+      } else if (_oiDn && !_priceUp) {
+        score -= 1.2;
+        sigs.push({l:`🔴 OI↓${Math.abs(_oiChg).toFixed(1)}%+价格↓=多头平仓·恐慌抛售`, c:'sig-bear'});
+      }
+    } else if (_oi && Math.abs(_oiChg) > 0.8) {
+      // Moderate OI change — lighter signal
+      if (_oiUp && _priceUp)       { score += 0.8; sigs.push({l:`OI增加${_oiChg.toFixed(1)}%+价格上涨·顺势`, c:'sig-bull'}); }
+      else if (_oiUp && !_priceUp) { score -= 0.8; sigs.push({l:`OI增加${_oiChg.toFixed(1)}%+价格下跌·空头`, c:'sig-bear'}); }
+      else if (_oiDn && !_priceUp) { score -= 0.5; sigs.push({l:`OI减少·多头出场中`, c:'sig-neut'}); }
+    }
+
+    // ── 2. OI × FUNDING RATE MATRIX (2×2 → 4 regimes) ───────────────────
+    // This catches leverage extremes the price alone can't show
+    const _frUp = _fr > 0.02;
+    const _frDn = _fr < -0.01;
+    const _frExtreme = Math.abs(_fr) > 0.06;
+    if (_oi) {
+      if (_oiUp && _frUp && _fr > 0.04) {
+        score -= 1.5;
+        sigs.push({l:`🔴 OI↑+FR↑(${(_fr*100).toFixed(3)}%)=多头过热·强做空机会`, c:'sig-bear'});
+      } else if (_oiUp && _frDn) {
+        score += 1.3;
+        sigs.push({l:`🟢 OI↑+FR负=真实多头建仓·强势`, c:'sig-bull'});
+      } else if (_oiDn && _frUp) {
+        score += 0.5; // longs leaving, FR still positive = temporary easing
+        sigs.push({l:`OI↓+FR正=多头去杠杆·阶段性底部`, c:'sig-neut'});
+      } else if (_frExtreme && _fr > 0) {
+        score -= 1.0;
+        sigs.push({l:`资金费率极高(${(_fr*100).toFixed(3)}%)·做多成本过高`, c:'sig-bear'});
+      } else if (_fr < -0.03) {
+        score += 1.0;
+        sigs.push({l:`资金费率极度负值·空头挤压临近`, c:'sig-bull'});
+      } else if (_fr > 0.04) {
+        score -= 0.4;
+        sigs.push({l:`资金费率偏高·注意多头拥挤`, c:'sig-neut'});
+      }
+    } else {
+      // OI not available — FR only signal (weaker)
+      if (_fr > 0.08)  { score -= 1.0; sigs.push({l:'资金费率极高(多头过热)',c:'sig-bear'}); }
+      else if (_fr < -0.03) { score += 1.0; sigs.push({l:'资金费率负值(空头过热)',c:'sig-bull'}); }
+      else if (_fr > 0.04)  { score -= 0.4; sigs.push({l:'资金费率偏高',c:'sig-neut'}); }
+    }
+
+    // ── 3. CHANGE-HAND RATIO (Turnover Rate) ─────────────────────────────
+    // Turnover = 24h QuoteVolume / Open Interest (in USD)
+    // HIGH turnover (>0.8 per 8h) = speculative, retail-driven, unstable positions
+    // LOW turnover (<0.1 per 8h) = conviction holding, institutional accumulation
+    // Druckenmiller: "real moves have low turnover at the start, volume comes after"
+    if (_oiCur > 0 && S.lastPx > 0) {
+      // Get 24h quote volume from ticker (USDT-denominated)
+      const _q24hVol = +(S.ticker?.[S.sym]?.quoteVolume || 0);
+      const _oiUSD   = _oiCur * S.lastPx;
+      if (_q24hVol > 0 && _oiUSD > 0) {
+        // Normalize to 8h window (turnover per 8h = typical OI settlement cycle)
+        const _turnover8h = (_q24hVol / 3) / _oiUSD;
+        // Store for UI
+        if (typeof S !== 'undefined') { S._turnover = { ratio: _turnover8h, vol24h: _q24hVol, oiUSD: _oiUSD }; }
+
+        if (_turnover8h > 1.5) {
+          // Extremely high turnover: hot money, no conviction, reversal prone
+          score *= 0.88;
+          sigs.push({l:`⚠️ 换手率极高(${_turnover8h.toFixed(1)}×OI)·投机主导·信号质量降`, c:'sig-neut'});
+        } else if (_turnover8h > 0.8) {
+          sigs.push({l:`换手率偏高(${_turnover8h.toFixed(1)}×)·注意反转`, c:'sig-neut'});
+        } else if (_turnover8h < 0.08) {
+          // Very low turnover with rising OI: institutional accumulation signal
+          if (_oiUp) {
+            score += 0.8;
+            sigs.push({l:`🏛️ 低换手率+OI增加=机构建仓·强信号`, c:'sig-bull'});
+          } else {
+            sigs.push({l:`低换手率·主力持仓稳定`, c:'sig-neut'});
+          }
+        } else if (_turnover8h < 0.2 && _oiUp) {
+          score += 0.4;
+          sigs.push({l:`换手率低+OI增·聪明钱增持`, c:'sig-bull'});
+        }
+      }
+    }
+
+    // ── 4. LONG/SHORT RATIO (Top Traders + Global) ───────────────────────
+    // Top trader L/S is the single most actionable retail sentiment signal.
+    // KEY INSIGHT: extreme L/S is CONTRARIAN — not trend following.
+    // When >70% of top traders are long, there's nobody left to buy → fade longs.
+    // When <30% are long, short squeeze potential is enormous.
+    if (_ls?.top) {
+      const _topLS = _ls.top;
+      const _longPct = _topLS.longPct || 50;
+      const _shortPct = _topLS.shortPct || 50;
+      const _lsRatio = _topLS.current;
+      const _lsAvg = _topLS.avg12h || _lsRatio;
+      const _lsChange = _lsRatio - _lsAvg; // trending direction of L/S
+
+      // Extreme crowding — contrarian signal (strongest)
+      if (_longPct > 75) {
+        score -= 1.5;
+        sigs.push({l:`🔴 大户多头极拥挤(${_longPct.toFixed(0)}%多)·反转风险高`, c:'sig-bear'});
+      } else if (_longPct > 65) {
+        score -= 0.7;
+        sigs.push({l:`⚠️ 大户偏多拥挤(${_longPct.toFixed(0)}%多)`, c:'sig-neut'});
+      } else if (_shortPct > 70) {
+        score += 1.5;
+        sigs.push({l:`🟢 大户空头极拥挤(${_shortPct.toFixed(0)}%空)·轧空机会`, c:'sig-bull'});
+      } else if (_shortPct > 60) {
+        score += 0.7;
+        sigs.push({l:`⚡ 大户偏空(${_shortPct.toFixed(0)}%空)·反弹潜力`, c:'sig-bull'});
+      }
+
+      // L/S ratio trending (momentum of sentiment shift)
+      if (Math.abs(_lsChange) > 0.15) {
+        if (_lsChange > 0) {
+          sigs.push({l:`大户多头增加中(L/S ${_lsRatio.toFixed(2)})·注意过热`, c:'sig-neut'});
+        } else {
+          sigs.push({l:`大户多头撤退(L/S ${_lsRatio.toFixed(2)})·空头收益期`, c:'sig-neut'});
+        }
+      }
+
+      // Global L/S ratio (retail sentiment — opposite signal direction)
+      if (_ls.global) {
+        const _gLongPct = _ls.global.longPct || 50;
+        // When retail is massively wrong (>80% retail long with price falling) → fade
+        if (_gLongPct > 80 && !_priceUp) {
+          score -= 1.0;
+          sigs.push({l:`散户极度看多(${_gLongPct.toFixed(0)}%)·下跌中·反指信号`, c:'sig-bear'});
+        } else if (_gLongPct < 25 && _priceUp) {
+          score += 0.8;
+          sigs.push({l:`散户极度看空(${_gLongPct.toFixed(0)}%)·上涨中·轧空`, c:'sig-bull'});
+        }
+      }
+    }
+
+    // ── 5. TAKER BUY/SELL RATIO (aggressive order flow) ──────────────────
+    // Taker ratio = % of volume that is aggressive buying vs selling.
+    // This is real-time order flow — the most honest signal for short-term direction.
+    // >0.62 = aggressive buyers → bullish momentum
+    // <0.38 = aggressive sellers → bearish momentum
+    // DIVERGENCE (taker bull but price flat) = accumulation underway
+    if (_tk) {
+      const _tkCur = _tk.current;
+      const _tkTrend = _tk.trend || 0;
+      const _tkDivBull = _tkCur > 0.58 && !_priceUp; // buyers active but price not rising = accumulation
+      const _tkDivBear = _tkCur < 0.42 && _priceUp;  // sellers dominate while price rises = distribution
+
+      if (_tkCur > 0.68) {
+        score += 1.2;
+        sigs.push({l:`🟢 主动买盘极强(${(_tkCur*100).toFixed(0)}%)·机构主动吃单`, c:'sig-bull'});
+      } else if (_tkCur > 0.58) {
+        score += 0.6;
+        sigs.push({l:`主动买盘(${(_tkCur*100).toFixed(0)}%)`, c:'sig-bull'});
+      } else if (_tkCur < 0.32) {
+        score -= 1.2;
+        sigs.push({l:`🔴 主动卖盘极强(${((1-_tkCur)*100).toFixed(0)}%)·机构主动出货`, c:'sig-bear'});
+      } else if (_tkCur < 0.42) {
+        score -= 0.6;
+        sigs.push({l:`主动卖盘(${((1-_tkCur)*100).toFixed(0)}%)`, c:'sig-bear'});
+      }
+      // Divergence signals — high value
+      if (_tkDivBull) {
+        score += 0.8;
+        sigs.push({l:`⚡ 主买+价格未涨=隐性吸筹·看多`, c:'sig-bull'});
+      } else if (_tkDivBear) {
+        score -= 0.8;
+        sigs.push({l:`⚠️ 主卖+价格未跌=隐性出货·看空`, c:'sig-bear'});
+      }
+      // Taker ratio trend shift (momentum reversal early warning)
+      if (_tkTrend > 0.08) {
+        sigs.push({l:`买盘动能加速中`, c:'sig-bull'});
+      } else if (_tkTrend < -0.08) {
+        sigs.push({l:`买盘动能衰减中`, c:'sig-neut'});
+      }
+    }
   }
+  // ── END v101 INSTITUTIONAL SIGNALS ───────────────────────────────────────
 
   // ── v51 PILLAR G: Smart Money Concepts (Order Block / FVG / Sweep) ──────
   // These are independent institutional signals — not correlated with RSI/MACD
@@ -11507,7 +11704,7 @@ function _doRenderStrategy(res){
       <div>
         <div style="font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:4px">🦅 FINCH · ${tm.lbl}</div>
         <div style="font-size:26px;font-weight:800;color:${actionColor};line-height:1;letter-spacing:-0.5px">${actionIcon} ${actionWord}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:5px">净票 ${res.score>0?'+':''}${res.score.toFixed(1)} · ${allTFs_chk.filter(t=>tfResults[t]===true).length}多 ${allTFs_chk.filter(t=>tfResults[t]===false).length}空</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:5px">净票 ${(res.score||0)>0?'+':''}${(res.score||0).toFixed(1)} · ${allTFs_chk.filter(t=>tfResults[t]===true).length}多 ${allTFs_chk.filter(t=>tfResults[t]===false).length}空</div>
       </div>
       <div style="text-align:right;flex-shrink:0">
         <div style="font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:3px">置信度</div>
@@ -12093,7 +12290,7 @@ function _doRenderStrategy(res){
         <div style="font-size:9px;letter-spacing:1.5px;color:var(--gold);text-transform:uppercase;margin-bottom:7px">🔮 多维战略矩阵</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;font-size:11px">
           ${[
-            {icon:'📊',lbl:'技术指标',col:'var(--blue)',body:`RSI <strong style="color:${res.rsi<35?'var(--green)':res.rsi>65?'var(--red)':'var(--muted)'}">${res.rsi.toFixed(0)}</strong> · MACD <strong style="color:${res.macdD.hist>0?'var(--green)':'var(--red)'}">${res.macdD.hist>0?'多':'空'}</strong><br>Vegas: ${res.vegas?res.vegas.above?'▲云上':res.vegas.below?'▼云下':'⚡云中':'N/A'} · ADX: ${res.adx?.adx?.toFixed(0)||'--'}`},
+            {icon:'📊',lbl:'技术指标',col:'var(--blue)',body:`RSI <strong style="color:${res.rsi<35?'var(--green)':res.rsi>65?'var(--red)':'var(--muted)'}">${(res.rsi||0).toFixed(0)}</strong> · MACD <strong style="color:${(res.macdD?.hist||0)>0?'var(--green)':'var(--red)'}">${(res.macdD?.hist||0)>0?'多':'空'}</strong><br>Vegas: ${res.vegas?res.vegas.above?'▲云上':res.vegas.below?'▼云下':'⚡云中':'N/A'} · ADX: ${res.adx?.adx?.toFixed(0)||'--'}`},
             {icon:'🔱',lbl:'缠论结构',col:'var(--teal)',body:`${res.chan?.bullDiv?'⚡底背驰':res.chan?.bearDiv?'⚡顶背驰':res.chan?.bullBi?'↗上升笔':'↘下降笔'}<br>中枢: ${res.chan?.zhLo&&res.chan?.zhHi?fmtP(res.chan.zhLo)+'–'+fmtP(res.chan.zhHi):'未成形'}`},
             {icon:'🌀',lbl:'斐波那契',col:'var(--gold)',body:`φ61.8%: <strong style="color:var(--violet)">${fmtP(res.fib618)}</strong><br>${res.nF618?'⚡ 黄金共振位':'区间: '+fmtP(res.fibLo)+'–'+fmtP(res.fibHi)}`},
             {icon:'📈',lbl:'OBV/CVD',col:'var(--teal)',body:`OBV ${res.obv?.obvTrend===1?'↑多头':'↓空头'}${res.obv?.obvDiv?' ⚡背驰':''}<br>CVD: ${res.cvd?.bullishDelta?'买盘主导':'卖盘主导'}`},
@@ -12210,8 +12407,8 @@ function _Γ8p(res){
   const confluences=[];
   if(isBull){
     if(rsi<40)confluences.push(`RSI ${rsi.toFixed(0)} 超卖`);
-    if(macdD.hist>0)confluences.push('MACD多头');
-    if(macdD.bullDiv)confluences.push('MACD底背驰');
+    if(macdD?.hist>0)confluences.push('MACD多头');
+    if(macdD?.bullDiv)confluences.push('MACD底背驰');
     if(vegas?.above)confluences.push('Vegas通道上方');
     if(chan?.bullDiv)confluences.push('缠论底背驰');
     if(chan?.bullBi)confluences.push('缠论上升笔');
@@ -12220,8 +12417,8 @@ function _Γ8p(res){
     if(swingLows?.length)confluences.push(`结构低点 ${fmtP(swingLows[0])}`);
   } else {
     if(rsi>60)confluences.push(`RSI ${rsi.toFixed(0)} 超买`);
-    if(macdD.hist<0)confluences.push('MACD空头');
-    if(macdD.bearDiv)confluences.push('MACD顶背驰');
+    if(macdD?.hist<0)confluences.push('MACD空头');
+    if(macdD?.bearDiv)confluences.push('MACD顶背驰');
     if(vegas?.below)confluences.push('Vegas通道下方');
     if(chan?.bearDiv)confluences.push('缠论顶背驰');
     if(!chan?.bullBi)confluences.push('缠论下降笔');
@@ -13200,6 +13397,7 @@ function renderSummary(){
     </div>`;
   }).join('');
 
+  const mainVerdict = res; // alias for template sections below
   if(sb)sb.innerHTML=`
   <!-- ════════════════════════════════════════
        FINCH SNAPSHOT — Smart Summary Card
@@ -13418,6 +13616,7 @@ function _renderTDAssetInfoCard() {
       </div>`;
   }
 
+  if(!infoEl) return;
   infoEl.style.display = 'block';
   infoEl.innerHTML = `
   <div style="background:var(--card);border:1px solid var(--card-bd);border-left:3px solid ${clsColor};border-radius:8px;padding:12px 14px;margin-bottom:10px;box-shadow:var(--shadow);">
@@ -13505,8 +13704,8 @@ async function triggerAIAnalysis(res){
 
 当前市场数据（${sym}/USDT，${res.tf}周期）：
 - 现价：${fmtP(res.price)}，方向判断：${direction}，置信度：${Math.round(res.conf)}%，评分：${res.score?.toFixed(2)}
-- RSI：${res.rsi.toFixed(1)}（${res.rsi<30?'深度超卖，恐慌抛售':res.rsi<38?'超卖区':res.rsi>72?'深度超买，过热':res.rsi>62?'超买区':'中性区间'}）
-- MACD：${res.macdD.hist>0?'多头动能(正柱)':'空头动能(负柱)'}${res.macdD.bullDiv?' ⚡底背驰(关键反转信号)':res.macdD.bearDiv?' ⚡顶背驰(见顶信号)':''}
+- RSI：${(res.rsi||0).toFixed(1)}（${(res.rsi||0)<30?'深度超卖，恐慌抛售':(res.rsi||0)<38?'超卖区':(res.rsi||0)>72?'深度超买，过热':(res.rsi||0)>62?'超买区':'中性区间'}）
+- MACD：${res.macdD?.hist>0?'多头动能(正柱)':'空头动能(负柱)'}${res.macdD?.bullDiv?' ⚡底背驰(关键反转信号)':res.macdD?.bearDiv?' ⚡顶背驰(见顶信号)':''}
 - ${adxInfo}
 - ${stInfo}
 - Vegas通道：${res.vegas?res.vegas.above?'价格在EMA144/169上方(强势多头)':res.vegas.below?'价格在EMA144/169下方(弱势空头)':'价格在通道内(整理)':'数据不足'}
@@ -14249,12 +14448,12 @@ function buildWAText(){
   if(!res)return`🐦 FINCH — ${sym}/USDT\n${now}\n⏳ 加载中...`;
   return`🐦 FINCH · ${sym}/USDT
 ⏰ ${now} UTC | ${res.tf}
-${res.isBull?'🟢 LONG':'🔴 SHORT'} · ${Math.round(res.conf)}% · Score:${res.score>0?'+':''}${res.score.toFixed(1)}
+${res.isBull?'🟢 LONG':'🔴 SHORT'} · ${Math.round(res.conf)}% · Score:${(res.score||0)>0?'+':''}${(res.score||0).toFixed(1)}
 💰 Entry: ${fmtP(res.entry)} [${res.entryType.toUpperCase()}]
 🎯 TP1:${res.tps&&res.tps[0]?fmtP(res.tps[0].p):'--'} TP2:${res.tps&&res.tps[1]?fmtP(res.tps[1].p):'--'} TP3:${res.tps&&res.tps[2]?fmtP(res.tps[2].p):'--'}
 🛑 SL1:${res.sls&&res.sls[0]?fmtP(res.sls[0].p):'--'} SL2:${res.sls&&res.sls[1]?fmtP(res.sls[1].p):'--'}
-⚖️ R:R=${res.rr.toFixed(2)}:1
-📊 RSI:${res.rsi.toFixed(0)} MACD:${res.macdD.hist>0?'▲':'▼'} Vegas:${res.vegas?res.vegas.above?'▲':res.vegas.below?'▼':'⚡':'--'}
+⚖️ R:R=${(res.rr||0).toFixed(2)}:1
+📊 RSI:${(res.rsi||0).toFixed(0)} MACD:${res.macdD&&res.macdD.hist!=null?(res.macdD.hist>0?'▲':'▼'):'--'} Vegas:${res.vegas?res.vegas.above?'▲':res.vegas.below?'▼':'⚡':'--'}
 🐦 FINCH Analysis`;
 }
 function sendWA(){if(!S.waPhone){alert('请先设置手机号');return;}window.open(`https://wa.me/${S.waPhone}?text=${encodeURIComponent(buildWAText())}`,'_blank');}
@@ -20196,6 +20395,7 @@ function _injectV43Badge() {
 // CONSOLE SUMMARY on load
 function _v43Init() {
   _injectV43Badge();
+}
 
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', _v43Init);
@@ -21205,6 +21405,7 @@ if (_prevClosePos) {
 // CONSOLE SUMMARY
 setTimeout(function() {
   const p = V44_STATE.getProfile();
+}, 0);
 
 })(); // end FINCH v44 IIFE
 </script>
@@ -21848,6 +22049,7 @@ setTimeout(function() {
   // Update title
   document.title = 'FINCH v48 — 全维度市场分析 · 信号窗口追踪';
 
+}, 800);
 
 })(); // end FINCH v45 IIFE
 
@@ -22707,7 +22909,11 @@ window.FINCH_V46.druckenmiller = {
     // version label removed
     document.title = 'FINCH v52 — 全维度市场分析 · Regime-Adaptive Signal Engine';
 
-})();
+  }, 0);
+
+}
+
+})(); // end inner inject IIFE
 
 })(); // end FINCH v46 IIFE
 </script>
@@ -23599,7 +23805,9 @@ setTimeout(function() {
 
 // === PATCH v53 END ===
 
-})();
+}, 0);
+
+})(); // end FINCH v53 IIFE
 </script>
 
 
@@ -25869,7 +26077,7 @@ function _renderVotePanel(sym, tf) {
   }
 
   html += `<div style="margin-top:8px;font-size:9px;color:var(--dim);text-align:center">
-    ADX${_safe(()=>window.S?.modData?.tech?.adx?.ranging)?'<20 震荡市':''>20 趋势市'} · 门槛 ${vote.threshold}票 · 权重加权投票系统
+    ADX${_safe(()=>window.S?.modData?.tech?.adx?.ranging)?'<20 震荡市':'>20 趋势市'} · 门槛 ${vote.threshold}票 · 权重加权投票系统
   </div>`;
 
   el.innerHTML = html;
@@ -26310,7 +26518,7 @@ function _v70Init() {
       _fetchOIFRMatrix(sym).catch(()=>{});
     }, 60000);
   }, 4000);
-
+}
 
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => setTimeout(_v70Init, 1200));
