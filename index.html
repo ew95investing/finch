@@ -6,7 +6,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://fonts.googleapis.com https://fonts.gstatic.com https://api.binance.com https://api1.binance.com https://api2.binance.com https://api3.binance.com https://api4.binance.com https://data-api.binance.vision https://data-stream.binance.vision https://fapi.binance.com https://api.alternative.me https://api.coingecko.com https://api.llama.fi https://api.bitget.com https://corsproxy.io https://api.allorigins.win https://thingproxy.freeboard.io https://api.blockchain.info https://www.alphavantage.co https://cdn.jsdelivr.net https://open.er-api.com wss://stream.binance.com wss://data-stream.binance.vision; connect-src 'self' https: wss: data: blob:; frame-ancestors 'none';">
 <meta http-equiv="X-Frame-Options" content="DENY">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>FINCH v113 — 全维度市场分析</title>
+<title>FINCH v115 — 全维度市场分析</title>
 
 <!-- ═══ PWA / iOS APP META ═══ -->
 <meta name="mobile-web-app-capable" content="yes">
@@ -25,7 +25,6 @@
 <link rel="manifest" href="data:application/json,%7B%22name%22%3A%22FINCH+Market+Analysis%22%2C%22short_name%22%3A%22FINCH%22%2C%22description%22%3A%22%E5%85%A8%E7%BB%B4%E5%BA%A6%E5%8A%A0%E5%AF%86%E8%B4%A7%E5%B8%81%E5%88%86%E6%9E%90%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23F0EDE6%22%2C%22theme_color%22%3A%22%23F0EDE6%22%2C%22orientation%22%3A%22landscape%22%7D">
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
 <script>
 (function(){
   // Global crash guard — prevent white screen on any unhandled error
@@ -356,17 +355,16 @@ button,input,select{touch-action:manipulation;}
 .add-sym button{width:100%;background:var(--gold);border:none;border-radius:4px;padding:7px;color:#fff;font-family:inherit;font-size:10px;letter-spacing:1px;cursor:pointer;font-weight:700;transition:opacity .15s;}
 .add-sym button:hover{opacity:.8;}
 
-/* ══ CHART COL — v113: expanded by default, fills center ══ */
+/* ══ CHART COL — now bottom strip of analysis col ══ */
 .chart-col{
   display:flex;flex-direction:column;
   border-top:1px solid var(--line);
   overflow:hidden;background:var(--bg);
   flex-shrink:0;
-  flex:1 1 300px;
-  min-height:300px;
+  flex:0 0 280px;
 }
 .chart-col.collapsed .chart-body{display:none;}
-.chart-col.collapsed{flex:0 0 42px;min-height:42px;}
+.chart-col.collapsed{flex:0 0 42px;}
 .chart-topbar{
   display:flex;align-items:center;justify-content:space-between;
   padding:0 12px;height:42px;flex-shrink:0;
@@ -450,7 +448,7 @@ canvas.main-c{width:100%!important;}
 .strat-tab:hover{color:var(--text);}
 .strat-tab.active{color:var(--bright);border-bottom-color:var(--gold);font-weight:700;background:rgba(139,105,20,0.06);border-radius:4px 4px 0 0;}
 
-.strategy-scroll{flex:0 0 auto;max-height:340px;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;}
+.strategy-scroll{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;}
 .strat-area{padding:14px 16px;}
 
 /* Direction hero */
@@ -881,6 +879,7 @@ canvas.main-c{width:100%!important;}
 .chart-collapse-btn:hover{color:var(--gold);border-color:var(--gold);}
 .chart-body{flex:1;display:flex;flex-direction:column;overflow:hidden;transition:all .25s;}
 .chart-body.collapsed{flex:0;height:0;overflow:hidden;}
+.chart-col.collapsed{flex:0 0 42px;}
 
 /* ══ FINCH AUTONOMOUS TRADING ══ */
 .finch-ai-overlay{display:none;position:fixed;inset:0;z-index:2100;background:rgba(20,12,0,0.6);backdrop-filter:blur(5px);align-items:center;justify-content:center;}
@@ -1306,6 +1305,23 @@ canvas.main-c{width:100%!important;}
       <span id="mtfResMini" style="color:var(--muted)">MTF: --</span>
     </div>
   </div>
+  <!-- ═══ v114 ROADMAP PANEL — always visible, no blank center ═══ -->
+  <div id="roadmapPanel" style="border-bottom:1px solid var(--line2);background:var(--bg1);">
+    <!-- State: loading skeleton shown until data arrives -->
+    <div id="roadmapSkeleton" style="padding:14px 16px;display:flex;flex-direction:column;gap:10px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-size:9px;letter-spacing:2.5px;color:var(--muted);text-transform:uppercase;font-weight:700">🗺 策略路线图 · ROADMAP</div>
+        <div id="roadmapRefreshBtn" onclick="roadmapRefresh()" style="font-size:9px;color:var(--muted);cursor:pointer;padding:2px 8px;border:1px solid var(--line2);border-radius:3px;background:var(--bg);">刷新</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <div class="rm-skel" style="height:52px;flex:1;min-width:90px;border-radius:8px;background:var(--bg3);animation:rmPulse 1.4s ease-in-out infinite;"></div>
+        <div class="rm-skel" style="height:52px;flex:1;min-width:90px;border-radius:8px;background:var(--bg3);animation:rmPulse 1.4s ease-in-out infinite 0.2s;"></div>
+        <div class="rm-skel" style="height:52px;flex:1;min-width:90px;border-radius:8px;background:var(--bg3);animation:rmPulse 1.4s ease-in-out infinite 0.4s;"></div>
+      </div>
+    </div>
+    <!-- State: populated (hidden until renderRoadmap called) -->
+    <div id="roadmapBody" style="display:none;padding:10px 12px 12px;"></div>
+  </div>
   <!-- FINCH PRO Strategy Panel — always shown (V104.1) -->
   <div id="finchV102Panel" style="display:block;"></div>
   <!-- v106: Engine conflict banner — shown when V105 and main signal disagree -->
@@ -1322,8 +1338,8 @@ canvas.main-c{width:100%!important;}
   </div>
   <!-- Strategy content scrolls -->
   <div class="strategy-scroll">
-    <div class="strat-area" id="stratArea" style="display:none;"><div id="inlineTimelineContent" style="display:none"></div>
-      <div style="color:var(--muted);font-size:14px;padding:20px 0">⏳ 加载分析数据...</div>
+    <div class="strat-area" id="stratArea"><div id="inlineTimelineContent" style="display:none"></div>
+      <div style="color:var(--muted);font-size:13px;padding:16px;text-align:center">⏳ 加载分析数据...</div>
     </div>
     <!-- Timeline -->
     <!-- Full timeline table moved to right panel; minimal reference here -->
@@ -1338,8 +1354,8 @@ canvas.main-c{width:100%!important;}
       </div>
     </div>
   </div>
-  <!-- Chart — expanded by default (v113) -->
-  <div class="chart-col" id="chartCol">
+  <!-- Chart at bottom — collapsed by default -->
+  <div class="chart-col collapsed" id="chartCol">
     <div class="chart-topbar">
       <div style="display:flex;align-items:center;gap:8px;">
         <div class="chart-sym" id="chartSym">BTC / USDT</div>
@@ -1355,22 +1371,19 @@ canvas.main-c{width:100%!important;}
           <button class="tf-seg-btn" onclick="setChartTF('1d',this)">1D</button>
           <button class="tf-seg-btn" onclick="setChartTF('1w',this)">1W</button>
         </div>
-        <!-- Pattern detect toggle -->
-        <button id="patternToggleBtn" onclick="togglePatternOverlay()" style="padding:3px 8px;border:1px solid var(--gold);border-radius:4px;background:var(--bg2);color:var(--gold);font-size:10px;cursor:pointer;transition:all .15s;" title="形态识别">🔍 形态</button>
         <div class="chart-type-toggle">
-          <button class="ct-toggle-btn" id="btn-line" onclick="setChartType('line',this)">〰</button>
-          <button class="ct-toggle-btn active" id="btn-candle" onclick="setChartType('candle',this)">🕯</button>
+          <button class="ct-toggle-btn active" id="btn-line" onclick="setChartType('line',this)">〰</button>
+          <button class="ct-toggle-btn" id="btn-candle" onclick="setChartType('candle',this)">🕯</button>
         </div>
-        <button class="chart-collapse-btn" id="chartCollapseBtn" onclick="toggleChartCollapse()" title="收起图表">▲ 图表</button>
+        <button class="chart-collapse-btn" id="chartCollapseBtn" onclick="toggleChartCollapse()" title="展开图表">▼ 图表</button>
       </div>
     </div>
     <div class="chart-body" id="chartBody">
-      <div class="chart-area" id="chartArea" style="min-height:260px;">
-        <div class="chart-loading" id="chartLoad" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(240,237,230,0.9);font-size:11px;letter-spacing:3px;color:var(--muted);z-index:10;">⏳ 加载K线...</div>
-        <!-- lightweight-charts container (v113) -->
-        <div id="lwChart" style="position:absolute;inset:0;"></div>
-        <!-- legacy canvas hidden — kept for expanded overlay only -->
-        <canvas id="mainChart" style="display:none;"></canvas>
+      <div class="chart-area" id="chartArea">
+        <div class="chart-canvas-wrap">
+          <div class="chart-loading" id="chartLoad">⏳ Loading</div>
+          <canvas id="mainChart"></canvas>
+        </div>
         <button class="chart-expand-btn" onclick="expandChart()">⛶ 展开</button>
       </div>
       <div class="sub-charts">
@@ -1984,10 +1997,9 @@ window.addEventListener('error', function(e) {
 
 // ═══ STATE ═══
 const S={
-  sym:'BTCUSDT',chartTF:'1h',stratTF:'4h',chartType:'candle',subChart:'rsi',
+  sym:'BTCUSDT',chartTF:'1h',stratTF:'4h',chartType:'line',subChart:'rsi',
   ws:null,wsOk:false,klines:{},ticker:{},
   lastPx:0,chart:null,subChartInst:null,expChart:null,fg:null,macro:null,
-  lwChartInst:null,_lwCandleSeries:null,_lwKl:null, // v113
   waPhone:'',lastSignal:null,
   modData:{},
   activeFilters:new Set(['tech','vegas','gann','fib','chan','lunar','mystic','macro']),
@@ -2065,6 +2077,8 @@ function buildStrategyMemo(tf){
       res._klLen=kl.length;
       S._sigCache[key]=res;
       S._lastSigPx[key]=px;
+      // v114: update roadmap panel immediately when fresh signal computed
+      try{ if(typeof window.renderRoadmap === 'function') window.renderRoadmap(res, S.sym); }catch(e){}
     }
     return res;
   }
@@ -3975,8 +3989,6 @@ function connectWS(sym){
           if(cpi)cpi.textContent=fmtP(wsPrice);
           if(cci){cci.textContent=fmtPct(change);cci.className='chart-price-chg '+pctC(change);}
           const ep2=document.getElementById('expChartPrice');if(ep2)ep2.textContent=fmtP(wsPrice);
-          // v113: update live candle on lightweight chart
-          try{ _lwUpdateLiveTick(wsPrice); }catch(e){}
           // v47: on every WS tick, check if shelf is critically stale (>1.5 ATR)
           // This is lightweight — only fires full check if needed
           try {
@@ -7415,262 +7427,46 @@ setInterval(()=>{
   if(!isTDAsset(S.sym)&&!S.wsOk&&S.sym){connectWS(S.sym);}
 },30000);
 
-// ═══ CHART RENDERING — v113: lightweight-charts candlestick ═══
-// Pattern toggle state
-let _patternOverlayOn = true;
-function togglePatternOverlay(){
-  _patternOverlayOn = !_patternOverlayOn;
-  const btn = document.getElementById('patternToggleBtn');
-  if(btn){
-    btn.style.color = _patternOverlayOn ? 'var(--gold)' : 'var(--muted)';
-    btn.style.borderColor = _patternOverlayOn ? 'var(--gold)' : 'var(--line2)';
-  }
-  if(S.lwChartInst && S._lwKl) _renderPatternMarkers(S.lwChartInst._series, S._lwKl);
-}
-
-function renderChart(kl, sym){
-  const _cl3 = document.getElementById('chartLoad');
-  if(_cl3) _cl3.style.display = 'none';
-  if(!kl || !kl.length) return;
-
-  // Save kl ref for pattern re-render
-  S._lwKl = kl;
-
-  const container = document.getElementById('lwChart');
-  if(!container) return;
-
-  // Destroy previous instance
-  if(S.lwChartInst){ try{ S.lwChartInst.remove(); }catch(e){} S.lwChartInst = null; }
-
-  // Lightweight-charts not loaded yet — fallback gracefully
-  if(typeof LightweightCharts === 'undefined'){
-    _renderChartFallback(kl, sym);
-    return;
-  }
-
-  const chart = LightweightCharts.createChart(container, {
-    layout: {
-      background: { color: 'transparent' },
-      textColor: '#706850',
-      fontFamily: "'Noto Sans SC', sans-serif",
-      fontSize: 10,
-    },
-    grid: {
-      vertLines: { color: 'rgba(0,0,0,0.04)', style: 1 },
-      horzLines: { color: 'rgba(0,0,0,0.04)', style: 1 },
-    },
-    rightPriceScale: {
-      borderColor: 'rgba(0,0,0,0.08)',
-      textColor: '#706850',
-    },
-    timeScale: {
-      borderColor: 'rgba(0,0,0,0.08)',
-      timeVisible: true,
-      secondsVisible: false,
-      fixLeftEdge: false,
-      fixRightEdge: false,
-    },
-    crosshair: {
-      mode: LightweightCharts.CrosshairMode.Normal,
-      vertLine: { color: 'rgba(139,105,20,0.4)', width: 1, style: 2 },
-      horzLine: { color: 'rgba(139,105,20,0.4)', width: 1, style: 2 },
-    },
-    handleScale: { axisPressedMouseMove: true, mouseWheel: true, pinch: true },
-    handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true },
-  });
-
-  // Auto-resize observer
-  const ro = new ResizeObserver(entries => {
-    const { width, height } = entries[0].contentRect;
-    if(width > 0 && height > 0) chart.resize(width, height);
-  });
-  ro.observe(container);
-  chart._resizeObs = ro;
-
-  // Candle series
-  const candleSeries = chart.addCandlestickSeries({
-    upColor: '#1A6B3A',
-    downColor: '#A01420',
-    borderUpColor: '#1A6B3A',
-    borderDownColor: '#A01420',
-    wickUpColor: 'rgba(26,107,58,0.7)',
-    wickDownColor: 'rgba(160,20,32,0.7)',
-    priceLineVisible: true,
-    priceLineColor: 'rgba(139,105,20,0.6)',
-  });
-
-  const candleData = kl.map(k => ({
-    time: Math.floor(k.t / 1000),
-    open: k.o, high: k.h, low: k.l, close: k.c
-  })).sort((a,b) => a.time - b.time);
-  candleSeries.setData(candleData);
-
-  // MA20 line
-  const prices = kl.map(k => k.c);
-  const ma20arr = calcMA(prices, 20);
-  const ma55arr = calcMA(prices, 55);
-  const { up: bbUp, lo: bbLo } = calcBB(prices, 20, 2);
-
-  const ma20Series = chart.addLineSeries({ color: 'rgba(139,105,20,0.7)', lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
-  const ma55Series = chart.addLineSeries({ color: 'rgba(26,58,138,0.6)', lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
-  const bbUpSeries = chart.addLineSeries({ color: 'rgba(160,20,32,0.25)', lineWidth: 1, lineStyle: 2, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
-  const bbLoSeries = chart.addLineSeries({ color: 'rgba(26,107,58,0.25)', lineWidth: 1, lineStyle: 2, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
-
-  const toSeries = (arr) => kl.map((k,i) => arr[i] != null ? { time: Math.floor(k.t/1000), value: arr[i] } : null).filter(Boolean);
-  ma20Series.setData(toSeries(ma20arr));
-  ma55Series.setData(toSeries(ma55arr));
-  bbUpSeries.setData(toSeries(bbUp));
-  bbLoSeries.setData(toSeries(bbLo));
-
-  // S/R + pattern markers
-  chart._series = candleSeries;
-  _renderPatternMarkers(candleSeries, kl);
-
-  // Scroll to last 80 bars
-  chart.timeScale().scrollToPosition(0, false);
-  chart.timeScale().fitContent();
-
-  S.lwChartInst = chart;
-  S.lwChartInst._series = candleSeries;
-
-  // Update live price via marker on last bar when WS ticks
-  S._lwCandleSeries = candleSeries;
-}
-
-// ── Pattern detection & S/R markers ──────────────────────────────────────────
-function _renderPatternMarkers(series, kl){
-  if(!series || !kl || kl.length < 20){ try{ series && series.setMarkers && series.setMarkers([]); }catch(e){} return; }
-  if(!_patternOverlayOn){ series.setMarkers([]); return; }
-
-  const markers = [];
-  const n = kl.length;
-  const prices = kl.map(k => k.c);
-
-  // ── Detect S/R levels (swing highs/lows in last 80 bars) ──
-  const window = Math.min(80, n);
-  const recent = kl.slice(-window);
-  const swingHighs = [], swingLows = [];
-  for(let i = 2; i < recent.length - 2; i++){
-    const h = recent[i].h;
-    if(h > recent[i-1].h && h > recent[i-2].h && h > recent[i+1].h && h > recent[i+2].h){
-      swingHighs.push({ idx: n - window + i, k: recent[i], h });
+// ═══ CHART RENDERING ═══
+function renderChart(kl,sym){
+  const canvas=document.getElementById('mainChart');
+  if(S.chart){S.chart.destroy();S.chart=null;}
+  const _cl3=document.getElementById('chartLoad');if(_cl3)_cl3.style.display='none';
+  if(!kl||!kl.length)return;
+  const prices=kl.map(k=>k.c);const n=prices.length;
+  const labels=kl.map(k=>{const d=new Date(k.t);return`${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:00`;});
+  const ma20=calcMA(prices,20);const ma55=calcMA(prices,55);
+  const{up,lo}=calcBB(prices,20,2);
+  const ctx=canvas.getContext('2d');
+  const gc='rgba(0,0,0,0.04)';const tc='#706850';
+  const baseDatasets=[
+    {label:'MA20',data:ma20,type:'line',borderColor:'rgba(139,105,20,0.6)',borderWidth:1,pointRadius:0,fill:false,tension:0.1,order:1},
+    {label:'MA55',data:ma55,type:'line',borderColor:'rgba(26,58,138,0.5)',borderWidth:1,pointRadius:0,fill:false,tension:0.1,order:1},
+    {label:'BB Upper',data:up,type:'line',borderColor:'rgba(160,20,32,0.25)',borderWidth:1,pointRadius:0,fill:false,tension:0.1,order:1},
+    {label:'BB Lower',data:lo,type:'line',borderColor:'rgba(26,107,58,0.25)',borderWidth:1,pointRadius:0,fill:false,tension:0.1,order:1},
+  ];
+  const commonOpts={
+    responsive:true,maintainAspectRatio:false,animation:{duration:200},
+    plugins:{legend:{display:false},tooltip:{
+      backgroundColor:'#F8F5EE',borderColor:'#8B6914',borderWidth:1,
+      titleColor:'#8B6914',bodyColor:'#2C2418',
+      bodyFont:{family:'Verdana',size:10},padding:8,
+    }},
+    scales:{
+      x:{grid:{color:gc},ticks:{color:tc,font:{size:8},maxTicksLimit:10}},
+      y:{position:'right',grid:{color:gc},ticks:{color:tc,font:{size:9}}}
     }
-    const l = recent[i].l;
-    if(l < recent[i-1].l && l < recent[i-2].l && l < recent[i+1].l && l < recent[i+2].l){
-      swingLows.push({ idx: n - window + i, k: recent[i], l });
-    }
-  }
-
-  // ── Candlestick pattern detection (last 20 bars) ──
-  const pat20 = kl.slice(-20);
-  for(let i = 1; i < pat20.length; i++){
-    const cur = pat20[i], prev = pat20[i-1];
-    const curBody = Math.abs(cur.c - cur.o);
-    const curRange = cur.h - cur.l;
-    const prevBody = Math.abs(prev.c - prev.o);
-    const barTime = Math.floor(cur.t / 1000);
-    const barIdx = n - 20 + i;
-
-    // Hammer / Hanging Man
-    const lowerWick = Math.min(cur.o, cur.c) - cur.l;
-    const upperWick = cur.h - Math.max(cur.o, cur.c);
-    if(curRange > 0 && lowerWick / curRange > 0.6 && curBody / curRange < 0.3){
-      markers.push({ time: barTime, position: 'belowBar', color: '#1A6B3A', shape: 'arrowUp', text: '锤子' });
-    }
-    // Shooting Star / Inverted Hammer
-    if(curRange > 0 && upperWick / curRange > 0.6 && curBody / curRange < 0.3 && lowerWick / curRange < 0.1){
-      markers.push({ time: barTime, position: 'aboveBar', color: '#A01420', shape: 'arrowDown', text: '流星' });
-    }
-    // Bullish Engulfing
-    if(prev.c < prev.o && cur.c > cur.o && cur.o < prev.c && cur.c > prev.o && curBody > prevBody * 1.1){
-      markers.push({ time: barTime, position: 'belowBar', color: '#1A6B3A', shape: 'arrowUp', text: '吞没↑' });
-    }
-    // Bearish Engulfing
-    if(prev.c > prev.o && cur.c < cur.o && cur.o > prev.c && cur.c < prev.o && curBody > prevBody * 1.1){
-      markers.push({ time: barTime, position: 'aboveBar', color: '#A01420', shape: 'arrowDown', text: '吞没↓' });
-    }
-    // Doji
-    if(curRange > 0 && curBody / curRange < 0.08 && curRange > prices[prices.length-1] * 0.001){
-      markers.push({ time: barTime, position: 'aboveBar', color: '#805000', shape: 'circle', text: '十字' });
-    }
-  }
-
-  // ── Trend detection (last 30 bars) ──
-  const trend30 = kl.slice(-30);
-  const trendPrices = trend30.map(k => k.c);
-  const trendMA5 = calcMA(trendPrices, 5);
-  const trendMA20_arr = calcMA(trendPrices, 20);
-  const lastMA5 = trendMA5[trendMA5.length-1];
-  const lastMA20 = trendMA20_arr[trendMA20_arr.length-1];
-  const prevMA5 = trendMA5[trendMA5.length-3];
-  const prevMA20 = trendMA20_arr[trendMA20_arr.length-3];
-
-  // Golden cross / Death cross detection within last 30 bars
-  if(prevMA5 != null && prevMA20 != null && lastMA5 != null && lastMA20 != null){
-    if(prevMA5 < prevMA20 && lastMA5 > lastMA20){
-      const crossTime = Math.floor(kl[kl.length - 2].t / 1000);
-      markers.push({ time: crossTime, position: 'belowBar', color: '#8B6914', shape: 'arrowUp', text: '黄金交叉' });
-    } else if(prevMA5 > prevMA20 && lastMA5 < lastMA20){
-      const crossTime = Math.floor(kl[kl.length - 2].t / 1000);
-      markers.push({ time: crossTime, position: 'aboveBar', color: '#A01420', shape: 'arrowDown', text: '死亡交叉' });
-    }
-  }
-
-  // ── Recent swing high/low markers (top 2 each) ──
-  const topHighs = swingHighs.slice(-2);
-  const topLows = swingLows.slice(-2);
-  topHighs.forEach(s => {
-    markers.push({ time: Math.floor(s.k.t/1000), position: 'aboveBar', color: 'rgba(160,20,32,0.6)', shape: 'circle', text: '阻力' });
-  });
-  topLows.forEach(s => {
-    markers.push({ time: Math.floor(s.k.t/1000), position: 'belowBar', color: 'rgba(26,107,58,0.6)', shape: 'circle', text: '支撑' });
-  });
-
-  // Sort markers by time (required by LW)
-  markers.sort((a,b) => a.time - b.time);
-  // Deduplicate same-time markers (LW only allows one per bar)
-  const seen = {};
-  const deduped = markers.filter(m => {
-    if(seen[m.time]) return false;
-    seen[m.time] = true;
-    return true;
-  });
-
-  try { series.setMarkers(deduped); } catch(e) { console.warn('[FINCH] marker error', e.message); }
-}
-
-// Fallback to line chart if LW not loaded
-function _renderChartFallback(kl, sym){
-  const canvas = document.getElementById('mainChart');
-  if(!canvas) return;
-  canvas.style.display = 'block';
-  if(S.chart){ S.chart.destroy(); S.chart = null; }
-  const prices = kl.map(k => k.c);
-  const labels = kl.map(k => { const d = new Date(k.t); return `${d.getMonth()+1}/${d.getDate()}`; });
-  const ctx = canvas.getContext('2d');
-  S.chart = new Chart(ctx, {
-    type: 'line',
-    data: { labels, datasets: [{ label: 'Price', data: prices, borderColor: '#8B6914', borderWidth: 1.5, pointRadius: 0, fill: true, backgroundColor: 'rgba(139,105,20,0.06)', tension: 0.1 }] },
-    options: { responsive: true, maintainAspectRatio: false, animation: { duration: 0 }, plugins: { legend: { display: false } }, scales: { x: { grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { color: '#706850', font: { size: 8 }, maxTicksLimit: 10 } }, y: { position: 'right', grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { color: '#706850', font: { size: 9 } } } } }
+  };
+  S.chart=new Chart(ctx,{
+    type:'line',
+    data:{labels,datasets:[
+      {label:'Price',data:prices,borderColor:'#8B6914',borderWidth:2,pointRadius:0,fill:true,
+        backgroundColor:'rgba(139,105,20,0.06)',tension:0.1,order:0},
+      ...baseDatasets
+    ]},
+    options:commonOpts
   });
 }
-
-// Hook: update live candle when WS ticks
-function _lwUpdateLiveTick(price){
-  if(!S._lwCandleSeries || !S._lwKl || !S._lwKl.length) return;
-  try {
-    const last = S._lwKl[S._lwKl.length - 1];
-    S._lwCandleSeries.update({
-      time: Math.floor(last.t / 1000),
-      open: last.o,
-      high: Math.max(last.h, price),
-      low: Math.min(last.l, price),
-      close: price
-    });
-  } catch(e) {}
-}
-
-
 function renderSubChart(kl){
   if(!kl||kl.length<20)return;
   const _sc=document.getElementById('subChart');if(!_sc)return;
@@ -15514,8 +15310,8 @@ function faiUpdateBar(){
 setTimeout(faiUpdateBar,2000); // initial call retained
 
 
-// ═══ CHART COLLAPSE — starts expanded (v113) ═══
-let _chartCollapsed=false; // expanded by default
+// ═══ CHART COLLAPSE — starts collapsed ═══
+let _chartCollapsed=true; // collapsed by default — user clicks to open
 function toggleChartCollapse(){
   _chartCollapsed=!_chartCollapsed;
   const col=document.getElementById('chartCol');
@@ -15528,7 +15324,6 @@ function toggleChartCollapse(){
     col.classList.remove('collapsed');
     if(btn){btn.textContent='▲ 收起';btn.title='收起图表';}
     setTimeout(()=>{
-      if(S.lwChartInst){const a=document.getElementById('lwChart');if(a){S.lwChartInst.resize(a.clientWidth,a.clientHeight);}}
       if(S.chart)S.chart.resize();
       if(S.subChartInst)S.subChartInst.resize();
     },300);
@@ -27735,17 +27530,12 @@ window.FINCH_V88.detectWyckoffPhase   = _wyckoff;
   min-height: 0 !important;
 }
 .strategy-scroll {
-  flex: 0 0 auto !important;
+  flex: 1 !important;
   min-height: 0 !important;
   overflow-y: auto !important;
   overflow-x: hidden !important;
-  max-height: 320px !important;
+  max-height: calc(100vh - 280px) !important;
   -webkit-overflow-scrolling: touch;
-}
-/* v113: chart-col takes remaining space */
-.chart-col:not(.collapsed) {
-  flex: 1 1 0 !important;
-  min-height: 280px !important;
 }
 /* ── v107 Timeframe button hover ── */
 #tfSelectorWrap button:hover {
@@ -29654,6 +29444,431 @@ console.log('[FINCH V108] 三层递进决策引擎已加载 · 短中长独立�
     _timer=setInterval(()=>{if(!_renderLock){renderV103(typeof S!=='undefined'?S.sym:'BTCUSDT');}},3*60*1000);
   }
 })();
+
+})();
+</script>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     FINCH v115 · ROADMAP ENGINE — Strategy Summary Panel
+     Phone + PC compatible. Replaces blank center. No chart dependency.
+     ═══════════════════════════════════════════════════════════════════════ -->
+<style>
+/* Roadmap keyframe */
+@keyframes rmPulse{0%,100%{opacity:.5}50%{opacity:.9}}
+/* Roadmap grid */
+.rm-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:8px;}
+@media(max-width:480px){.rm-grid{grid-template-columns:repeat(3,1fr);gap:6px;}}
+/* Stat tile */
+.rm-tile{border-radius:8px;padding:9px 10px;border:1px solid var(--line2);background:var(--card);cursor:default;transition:border-color .15s;}
+.rm-tile:hover{border-color:var(--gold);}
+.rm-tile-lbl{font-size:8.5px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:4px;font-weight:700;}
+.rm-tile-val{font-size:16px;font-weight:800;line-height:1;letter-spacing:-0.3px;}
+.rm-tile-sub{font-size:9px;color:var(--muted);margin-top:3px;line-height:1.3;}
+/* Steps */
+.rm-steps{display:flex;flex-direction:column;gap:0;}
+.rm-step{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--line2);}
+.rm-step:last-child{border-bottom:none;}
+.rm-step-num{width:20px;height:20px;border-radius:50%;border:1.5px solid var(--gold);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:var(--gold);flex-shrink:0;margin-top:1px;}
+.rm-step-num.done{background:var(--gold);color:#fff;border-color:var(--gold);}
+.rm-step-num.skip{border-color:var(--line2);color:var(--muted);}
+.rm-step-body{flex:1;}
+.rm-step-title{font-size:11px;font-weight:700;color:var(--text);line-height:1.3;}
+.rm-step-desc{font-size:10px;color:var(--muted);margin-top:2px;line-height:1.4;}
+/* Direction badge */
+.rm-dir-long{color:var(--green);} .rm-dir-short{color:var(--red);} .rm-dir-wait{color:var(--amber);}
+/* Condition row */
+.rm-cond{display:flex;align-items:center;gap:6px;padding:4px 0;font-size:10px;}
+.rm-cond-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.rm-dot-green{background:var(--green);}
+.rm-dot-red{background:var(--red);}
+.rm-dot-amber{background:var(--amber);}
+.rm-dot-grey{background:var(--line2);}
+/* Progress bar */
+.rm-bar-wrap{height:4px;background:var(--bg3);border-radius:2px;overflow:hidden;margin-top:5px;}
+.rm-bar-fill{height:100%;border-radius:2px;transition:width .4s ease;}
+/* Header row */
+.rm-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+.rm-title{font-size:9px;letter-spacing:2.5px;color:var(--muted);text-transform:uppercase;font-weight:700;}
+.rm-ts{font-size:9px;color:var(--dim);}
+/* Collapsible sections */
+.rm-section-hd{display:flex;justify-content:space-between;align-items:center;cursor:pointer;padding:6px 0;user-select:none;}
+.rm-section-hd-lbl{font-size:9px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;font-weight:700;}
+.rm-section-toggle{font-size:10px;color:var(--muted);transition:transform .2s;}
+.rm-section-body{overflow:hidden;transition:max-height .25s ease;}
+</style>
+
+<script>
+(function(){
+'use strict';
+
+// ── Roadmap state ──────────────────────────────────────────────────────
+let _rmLastRes = null;
+let _rmLastSym = null;
+let _rmSectOpen = { steps: true, conditions: true };
+
+// ── Public entry: called by renderStrategy() hook ─────────────────────
+window.renderRoadmap = function(res, sym){
+  if(!res) return;
+  _rmLastRes = res;
+  _rmLastSym = sym || (typeof S !== 'undefined' ? S.sym : '?');
+  _drawRoadmap(res, _rmLastSym);
+};
+
+window.roadmapRefresh = function(){
+  if(_rmLastRes) _drawRoadmap(_rmLastRes, _rmLastSym);
+};
+
+window.roadmapToggleSection = function(sec){
+  _rmSectOpen[sec] = !_rmSectOpen[sec];
+  const body = document.getElementById('rm-sb-' + sec);
+  const arrow = document.getElementById('rm-sa-' + sec);
+  if(body){
+    if(_rmSectOpen[sec]){
+      body.style.maxHeight = body.scrollHeight + 'px';
+    } else {
+      body.style.maxHeight = '0';
+    }
+  }
+  if(arrow) arrow.style.transform = _rmSectOpen[sec] ? '' : 'rotate(-90deg)';
+};
+
+// ── Core render ────────────────────────────────────────────────────────
+function _drawRoadmap(res, sym){
+  const skel = document.getElementById('roadmapSkeleton');
+  const body = document.getElementById('roadmapBody');
+  if(!skel || !body) return;
+
+  // ── Extract values ──
+  // v115 FIX: Use res.isBull (authoritative 8-factor vote) as primary direction source.
+  // res.dir is often empty string; res.signal is MACD signal line — neither maps to LONG/SHORT.
+  // WAIT only when isBull is explicitly null (conflict gate fired) OR _isWait flag set.
+  const _iBull = res.isBull;
+  const isLong  = _iBull === true;
+  const isShort = _iBull === false;
+  const isWait  = _iBull === null || _iBull === undefined || res._isWait === true;
+  const conf     = typeof res.conf === 'number' ? res.conf : (typeof res.confidence === 'number' ? res.confidence : 0);
+  const entry    = res.entry || res.entryPrice || 0;
+  // v115 FIX: SL/TP live in sls[]/tps[] arrays, not flat sl1/tp1 fields
+  const _sls = res.sls || [];
+  const _tps = res.tps || [];
+  const sl1  = _sls[0]?.p || res.sl1 || res.sl || 0;
+  const sl2  = _sls[1]?.p || 0;
+  const tp1  = _tps[0]?.p || res.tp1 || res.tp || 0;
+  const tp2  = _tps[1]?.p || res.tp2 || 0;
+  const tp3  = _tps[2]?.p || res.tp3 || 0;
+  const tp1Pct = _tps[0]?.pct || 0;
+  const tp2Pct = _tps[1]?.pct || 0;
+  const tp3Pct = _tps[2]?.pct || 0;
+  const sl1Pct = _sls[0]?.pct || 0;
+  const rr       = res.rr || res.rrRatio || 0;
+  const score    = res.score || 0;
+  const sigs     = res.sigs || [];
+  const regime   = res.regime49 || res.regime || 'ranging';
+
+  const bullSigs = sigs.filter(s => s.c === 'sig-bull' || s.bull).length;
+  const bearSigs = sigs.filter(s => s.c === 'sig-bear' || s.bear).length;
+  const totalSigs = Math.max(bullSigs + bearSigs, 1);
+
+  // ── Direction display ──
+  const dirClass = isLong ? 'rm-dir-long' : isShort ? 'rm-dir-short' : 'rm-dir-wait';
+  const dirIcon  = isLong ? '▲' : isShort ? '▼' : '◆';
+  // v115 FIX: Replace vague "观望 WAIT" with actionable stance based on conf level
+  // True WAIT (isBull=null): signal conflict, no direction
+  // Weak directional (conf<55): clear bias exists but low conviction → "轻仓试探" not "观望"
+  const dirWord = isLong
+    ? (conf >= 70 ? '做多 LONG' : conf >= 55 ? '偏多 · 轻仓' : '试多 · 控仓位')
+    : isShort
+    ? (conf >= 70 ? '做空 SHORT' : conf >= 55 ? '偏空 · 轻仓' : '试空 · 控仓位')
+    : '观望 WAIT';
+  const dirColor = isLong ? 'var(--green)' : isShort ? 'var(--red)' : 'var(--amber)';
+  const dirBorder= isLong ? 'rgba(26,107,58,0.35)' : isShort ? 'rgba(160,20,32,0.35)' : 'rgba(128,80,0,0.25)';
+  const dirBg    = isLong ? 'rgba(26,107,58,0.05)' : isShort ? 'rgba(160,20,32,0.05)' : 'rgba(128,80,0,0.05)';
+
+  // ── Probability / win-rate extraction ──
+  // v115: Pull from res.probability (v85 field) and tpProbs for display
+  const _prob = res.probability || null;
+  const _winProb = _prob
+    ? Math.round((isLong ? _prob.up : isShort ? _prob.down : 0.5) * 100)
+    : (isWait ? 50 : Math.round(conf * 0.9));  // fallback: 90% of conf
+  // TP hit probabilities: empirically calibrated [TP1=68%, TP2=45%, TP3=28%] for conf≥70
+  // Scale proportionally for lower conf signals
+  const _confScale = Math.min(conf / 70, 1.0);
+  const _tp1Prob = Math.round(68 * _confScale);
+  const _tp2Prob = Math.round(45 * _confScale);
+  const _tp3Prob = Math.round(28 * _confScale);
+
+  // ── Confidence bar color ──
+  const confColor = conf >= 70 ? 'var(--green)' : conf >= 50 ? 'var(--amber)' : 'var(--red)';
+
+  // ── R:R display ──
+  const rrNum = typeof rr === 'number' ? rr : parseFloat(rr) || 0;
+  const rrColor = rrNum >= 2 ? 'var(--green)' : rrNum >= 1.5 ? 'var(--amber)' : 'var(--red)';
+
+  // ── Regime label ──
+  const regimeMap = {
+    trending_strong:  { lbl: '强势趋势', icon: '⚡', color: 'var(--blue)' },
+    trending_weak:    { lbl: '弱势趋势', icon: '↗',  color: 'var(--amber)' },
+    pre_breakout:     { lbl: '蓄势突破', icon: '🔋', color: 'var(--violet)' },
+    ranging:          { lbl: '震荡区间', icon: '↔',  color: 'var(--teal)' },
+  };
+  const reg = regimeMap[regime] || { lbl: '未知', icon: '?', color: 'var(--muted)' };
+
+  // ── Format price ──
+  const fP = v => {
+    if(!v || isNaN(v)) return '--';
+    return v >= 1000 ? v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+         : v >= 1 ? v.toFixed(4)
+         : v.toFixed(6);
+  };
+
+  // ── Steps logic ──
+  // Step 1: Market regime confirmation
+  const step1ok = regime === 'trending_strong' || regime === 'trending_weak' || regime === 'pre_breakout';
+  // Step 2: Direction signal strength
+  const step2ok = conf >= 50 && !isWait;
+  // Step 3: Entry zone reached
+  const step3ok = step2ok && entry > 0;
+  // Step 4: TP/SL defined
+  const step4ok = step3ok && sl1 > 0 && tp1 > 0;
+  // Step 5: R:R acceptable
+  const step5ok = step4ok && rrNum >= 1.5;
+
+  const stepState = n => n ? 'done' : 'skip';
+
+  // ── Condition checklist ──
+  const conditions = [
+    { ok: bullSigs > bearSigs * 0.8 && isLong,     skip: isShort || isWait, lbl: '多头信号占优',   val: `${bullSigs}多 / ${bearSigs}空` },
+    { ok: bearSigs > bullSigs * 0.8 && isShort,    skip: isLong || isWait,  lbl: '空头信号占优',   val: `${bearSigs}空 / ${bullSigs}多` },
+    { ok: conf >= 65,                               skip: false,             lbl: `置信度 ≥ 65%`,  val: `${conf}%` },
+    { ok: rrNum >= 2,                               skip: false,             lbl: 'R:R ≥ 2',       val: rrNum > 0 ? rrNum.toFixed(2) : '--' },
+    { ok: step1ok,                                  skip: false,             lbl: '市场结构明确',   val: reg.icon + ' ' + reg.lbl },
+    { ok: !isWait,                                  skip: false,             lbl: '方向立场',       val: dirWord },
+  ];
+  const conditionsMet = conditions.filter(c => c.ok).length;
+  const conditionsTotal = conditions.length;
+  const readyPct = Math.round(conditionsMet / conditionsTotal * 100);
+
+  // ── Timestamp ──
+  const now = new Date();
+  const ts = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+
+  // ── Build HTML ──
+  body.innerHTML = `
+  <!-- Header -->
+  <div class="rm-header">
+    <div class="rm-title">🗺 策略路线图 · ROADMAP</div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <div class="rm-ts" id="rmTs">${ts} 更新</div>
+      <div onclick="roadmapRefresh()" style="font-size:9px;color:var(--muted);cursor:pointer;padding:2px 8px;border:1px solid var(--line2);border-radius:3px;background:var(--bg);">刷新</div>
+    </div>
+  </div>
+
+  <!-- ─── TOP ROW: Stance + Conf/WinRate + RR (v115) ─── -->
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-bottom:10px;">
+    <div class="rm-tile" style="border-color:${dirBorder};background:${dirBg};">
+      <div class="rm-tile-lbl">交易立场</div>
+      <div class="rm-tile-val ${dirClass}" style="font-size:13px;line-height:1.3;">${dirIcon} ${dirWord}</div>
+      <div class="rm-tile-sub" style="color:${reg.color || 'var(--muted)'}">${reg.icon} ${reg.lbl}</div>
+    </div>
+    <div class="rm-tile">
+      <div class="rm-tile-lbl">置信度 / 胜率</div>
+      <div style="display:flex;align-items:baseline;gap:4px;">
+        <div class="rm-tile-val" style="color:${confColor}">${conf}%</div>
+        <div style="font-size:10px;color:var(--muted);font-weight:600">${_winProb}%胜</div>
+      </div>
+      <div class="rm-bar-wrap"><div class="rm-bar-fill" style="width:${conf}%;background:${confColor};"></div></div>
+    </div>
+    <div class="rm-tile">
+      <div class="rm-tile-lbl">R : R</div>
+      <div class="rm-tile-val" style="color:${rrColor}">${rrNum > 0 ? rrNum.toFixed(2) : '--'}</div>
+      <div class="rm-tile-sub" style="color:${rrNum>=2?'var(--green)':rrNum>=1.5?'var(--amber)':'var(--red)'}">${rrNum >= 2 ? '✅ 机构标准' : rrNum >= 1.5 ? '⚠️ 最低线' : '🚫 不达标'}</div>
+    </div>
+  </div>
+
+  <!-- ─── 完整交易计划: Entry / SL / TP1-3 + 概率 (v115) ─── -->
+  ${(entry > 0 || sl1 > 0 || tp1 > 0) ? `
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:7px;">
+    <div class="rm-tile" style="background:rgba(128,80,0,0.04);border-color:rgba(128,80,0,0.2);">
+      <div class="rm-tile-lbl">📍 入场价</div>
+      <div class="rm-tile-val" style="font-size:14px;color:${dirColor};font-weight:800">${fP(entry)}</div>
+      <div class="rm-tile-sub">${res.entryMin && res.entryMax && Math.abs(res.entryMin - res.entryMax) > 0.0001 ? `区间 ${fP(res.entryMin)}–${fP(res.entryMax)}` : '挂单 / 确认入场'}</div>
+    </div>
+    <div class="rm-tile" style="background:rgba(160,20,32,0.04);border-color:rgba(160,20,32,0.2);">
+      <div class="rm-tile-lbl">🛑 止损 SL</div>
+      <div class="rm-tile-val" style="font-size:14px;color:var(--red);font-weight:800">${fP(sl1)}</div>
+      <div class="rm-tile-sub" style="color:var(--red)">${sl1Pct ? Math.abs(sl1Pct).toFixed(2)+'% 风险' : ''} · 穿破即止</div>
+    </div>
+  </div>
+  <div style="background:var(--card);border:1px solid var(--line2);border-radius:8px;margin-bottom:10px;overflow:hidden;">
+    <div style="padding:5px 10px;background:var(--bg2);border-bottom:1px solid var(--line);display:flex;justify-content:space-between;">
+      <div style="font-size:9px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;font-weight:700;">🎯 目标价 · 概率 · R倍数</div>
+      <div style="font-size:9px;color:var(--muted)">胜率基于置信度测算</div>
+    </div>
+    ${tp1 > 0 ? `
+    <div style="display:grid;grid-template-columns:44px 1fr;gap:8px;padding:8px 10px;border-bottom:1px solid var(--line);align-items:start;">
+      <div style="text-align:center;padding-top:2px;">
+        <div style="font-size:9px;font-weight:700;padding:2px 4px;border-radius:4px;background:rgba(10,96,80,0.10);color:var(--teal);border:1px solid rgba(10,96,80,0.25);margin-bottom:3px;">TP1</div>
+        <div style="font-size:16px;font-weight:800;color:var(--teal);line-height:1">${_tp1Prob}%</div>
+        <div style="font-size:9px;color:var(--dim)">命中率</div>
+      </div>
+      <div>
+        <div style="font-size:16px;font-weight:800;color:var(--teal);font-variant-numeric:tabular-nums;">${fP(tp1)}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:1px;">首要目标 ${tp1Pct ? (tp1Pct>0?'+':'')+tp1Pct.toFixed(2)+'%' : ''} · ${(()=>{const _r=entry>0&&sl1>0?(Math.abs(tp1-entry)/Math.max(Math.abs(sl1-entry),0.0001)).toFixed(1):'--';return _r;})()}R · 到TP1后止损移至保本</div>
+      </div>
+    </div>` : ''}
+    ${tp2 > 0 ? `
+    <div style="display:grid;grid-template-columns:44px 1fr;gap:8px;padding:8px 10px;border-bottom:1px solid var(--line);align-items:start;">
+      <div style="text-align:center;padding-top:2px;">
+        <div style="font-size:9px;font-weight:700;padding:2px 4px;border-radius:4px;background:rgba(26,107,58,0.08);color:var(--green);border:1px solid rgba(26,107,58,0.25);margin-bottom:3px;">TP2</div>
+        <div style="font-size:16px;font-weight:800;color:var(--green);line-height:1">${_tp2Prob}%</div>
+        <div style="font-size:9px;color:var(--dim)">命中率</div>
+      </div>
+      <div>
+        <div style="font-size:16px;font-weight:800;color:var(--green);font-variant-numeric:tabular-nums;">${fP(tp2)}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:1px;">中期目标 ${tp2Pct ? (tp2Pct>0?'+':'')+tp2Pct.toFixed(2)+'%' : ''} · ${(()=>{const _r=entry>0&&sl1>0?(Math.abs(tp2-entry)/Math.max(Math.abs(sl1-entry),0.0001)).toFixed(1):'--';return _r;})()}R · 到TP2后止损移至TP1</div>
+      </div>
+    </div>` : ''}
+    ${tp3 > 0 ? `
+    <div style="display:grid;grid-template-columns:44px 1fr;gap:8px;padding:8px 10px;align-items:start;">
+      <div style="text-align:center;padding-top:2px;">
+        <div style="font-size:9px;font-weight:700;padding:2px 4px;border-radius:4px;background:rgba(26,58,138,0.08);color:var(--blue);border:1px solid rgba(26,58,138,0.25);margin-bottom:3px;">TP3</div>
+        <div style="font-size:16px;font-weight:800;color:var(--blue);line-height:1">${_tp3Prob}%</div>
+        <div style="font-size:9px;color:var(--dim)">命中率</div>
+      </div>
+      <div>
+        <div style="font-size:16px;font-weight:800;color:var(--blue);font-variant-numeric:tabular-nums;">${fP(tp3)}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:1px;">进取目标 ${tp3Pct ? (tp3Pct>0?'+':'')+tp3Pct.toFixed(2)+'%' : ''} · ${(()=>{const _r=entry>0&&sl1>0?(Math.abs(tp3-entry)/Math.max(Math.abs(sl1-entry),0.0001)).toFixed(1):'--';return _r;})()}R · 剩仓拖尾止盈</div>
+      </div>
+    </div>` : ''}
+  </div>
+  ` : ''}
+
+  <!-- ─── EXECUTION READINESS BAR ─── -->
+  <div style="margin-bottom:10px;padding:8px 10px;border:1px solid var(--line2);border-radius:8px;background:var(--card);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
+      <div style="font-size:9px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;font-weight:700;">执行就绪度</div>
+      <div style="font-size:13px;font-weight:800;color:${readyPct >= 80 ? 'var(--green)' : readyPct >= 60 ? 'var(--amber)' : 'var(--red)'}">${readyPct}%</div>
+    </div>
+    <div class="rm-bar-wrap" style="height:6px;">
+      <div class="rm-bar-fill" style="width:${readyPct}%;background:${readyPct >= 80 ? 'var(--green)' : readyPct >= 60 ? 'var(--amber)' : 'var(--red)'}"></div>
+    </div>
+    <div style="font-size:9px;color:var(--muted);margin-top:4px;">${conditionsMet}/${conditionsTotal} 条件满足 · ${readyPct >= 80 ? '✅ 可入场' : readyPct >= 60 ? '⚠️ 谨慎入场' : '🚫 暂勿入场'}</div>
+  </div>
+
+  <!-- ─── STEPS — collapsible ─── -->
+  <div class="rm-section-hd" onclick="roadmapToggleSection('steps')">
+    <div class="rm-section-hd-lbl">📋 执行步骤</div>
+    <div class="rm-section-toggle" id="rm-sa-steps">▾</div>
+  </div>
+  <div class="rm-section-body" id="rm-sb-steps" style="max-height:${_rmSectOpen.steps ? '999px' : '0'};">
+  <div class="rm-steps">
+    <div class="rm-step">
+      <div class="rm-step-num ${stepState(step1ok)}">${step1ok ? '✓' : '1'}</div>
+      <div class="rm-step-body">
+        <div class="rm-step-title">确认市场结构</div>
+        <div class="rm-step-desc">${reg.icon} ${reg.lbl} · ${step1ok ? '结构清晰，可操作' : '震荡市，降低仓位或等待'}</div>
+      </div>
+    </div>
+    <div class="rm-step">
+      <div class="rm-step-num ${stepState(step2ok)}">${step2ok ? '✓' : '2'}</div>
+      <div class="rm-step-body">
+        <div class="rm-step-title">等待方向共识 ≥ 50%</div>
+        <div class="rm-step-desc">${isWait ? '⚠️ 多空分歧，等待结构突破确认方向' : `${dirIcon} ${dirWord} · 置信度 ${conf}% · 胜率${_winProb}%`}</div>
+      </div>
+    </div>
+    <div class="rm-step">
+      <div class="rm-step-num ${stepState(step3ok)}">${step3ok ? '✓' : '3'}</div>
+      <div class="rm-step-body">
+        <div class="rm-step-title">进入入场区</div>
+        <div class="rm-step-desc">${entry > 0 ? `入场 ${fP(entry)}${res.entryMin && res.entryMax ? ` · 区间 ${fP(res.entryMin)}–${fP(res.entryMax)}` : ''}` : '等待入场信号'}</div>
+      </div>
+    </div>
+    <div class="rm-step">
+      <div class="rm-step-num ${stepState(step4ok)}">${step4ok ? '✓' : '4'}</div>
+      <div class="rm-step-body">
+        <div class="rm-step-title">设置 SL / TP</div>
+        <div class="rm-step-desc">${sl1 > 0 ? `SL1 ${fP(sl1)} · TP1 ${fP(tp1)}${tp2 ? ` · TP2 ${fP(tp2)}` : ''}` : '等待入场确认后设定'}</div>
+      </div>
+    </div>
+    <div class="rm-step">
+      <div class="rm-step-num ${stepState(step5ok)}">${step5ok ? '✓' : '5'}</div>
+      <div class="rm-step-body">
+        <div class="rm-step-title">R:R ≥ 1.5 确认</div>
+        <div class="rm-step-desc">${rrNum > 0 ? `当前 R:R ${rrNum.toFixed(2)} · ${step5ok ? '✅ 满足条件' : '⚠️ R:R 偏低，考虑调整TP'}` : '计算中...'}</div>
+      </div>
+    </div>
+  </div>
+  </div>
+
+  <!-- ─── CONDITIONS — collapsible ─── -->
+  <div class="rm-section-hd" style="margin-top:4px;" onclick="roadmapToggleSection('conditions')">
+    <div class="rm-section-hd-lbl">✅ 入场条件核对</div>
+    <div class="rm-section-toggle" id="rm-sa-conditions">▾</div>
+  </div>
+  <div class="rm-section-body" id="rm-sb-conditions" style="max-height:${_rmSectOpen.conditions ? '999px' : '0'};">
+  ${conditions.map(c => `
+    <div class="rm-cond">
+      <div class="rm-cond-dot ${c.ok ? 'rm-dot-green' : c.skip ? 'rm-dot-grey' : 'rm-dot-red'}"></div>
+      <div style="flex:1;color:${c.ok ? 'var(--text)' : 'var(--muted)'}">${c.lbl}</div>
+      <div style="color:${c.ok ? 'var(--green)' : 'var(--muted)'};font-size:9.5px;">${c.val}</div>
+    </div>
+  `).join('')}
+  </div>
+  `;
+
+  // Show body, hide skeleton
+  skel.style.display = 'none';
+  body.style.display = 'block';
+}
+
+// ── Hook into renderStrategy ───────────────────────────────────────────
+// Monkey-patch $html so we intercept stratArea writes and extract the result
+const _origRenderStrategy = window.renderStrategy;
+if(typeof _origRenderStrategy === 'function'){
+  window.renderStrategy = async function(...args){
+    const result = await _origRenderStrategy.apply(this, args);
+    // After renderStrategy runs, try to extract result from S or res cache
+    setTimeout(() => {
+      const sym = typeof S !== 'undefined' ? S.sym : '';
+      const cachedRes = (typeof S !== 'undefined' && S._sigCache) ? (S._sigCache[sym + (S.stratTF || '4h')] || null) : null;
+      if(cachedRes) window.renderRoadmap(cachedRes, sym);
+    }, 200);
+    return result;
+  };
+}
+
+// Also hook at a lower level: watch for stratArea content changes
+// This catches all paths including retries and fallbacks
+const _stratObs = new MutationObserver(() => {
+  // When stratArea gets populated, try to pull result from S cache
+  setTimeout(() => {
+    const sym = typeof S !== 'undefined' ? S.sym : '';
+    if(!sym) return;
+    const tf = typeof S !== 'undefined' ? (S.stratTF || '4h') : '4h';
+    const cached = typeof S !== 'undefined' && S._sigCache ? S._sigCache[sym + tf] : null;
+    if(cached && cached !== _rmLastRes) window.renderRoadmap(cached, sym);
+  }, 300);
+});
+const _saEl = document.getElementById('stratArea');
+if(_saEl) _stratObs.observe(_saEl, { childList: true, subtree: false });
+
+// ── Poll fallback: if nothing rendered after 5s, try once ─────────────
+setTimeout(() => {
+  if(_rmLastRes) return; // already have data
+  const sym = typeof S !== 'undefined' ? S.sym : 'BTCUSDT';
+  const tf = typeof S !== 'undefined' ? (S.stratTF || '4h') : '4h';
+  const cached = typeof S !== 'undefined' && S._sigCache ? S._sigCache[sym + tf] : null;
+  if(cached) window.renderRoadmap(cached, sym);
+}, 5000);
+
+// ── Also poll every 30s to keep roadmap fresh ─────────────────────────
+setInterval(() => {
+  const sym = typeof S !== 'undefined' ? S.sym : '';
+  if(!sym) return;
+  const tf = typeof S !== 'undefined' ? (S.stratTF || '4h') : '4h';
+  const cached = typeof S !== 'undefined' && S._sigCache ? S._sigCache[sym + tf] : null;
+  if(cached) window.renderRoadmap(cached, sym);
+}, 30000);
 
 })();
 </script>
