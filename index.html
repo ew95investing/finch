@@ -6,7 +6,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://fonts.googleapis.com https://fonts.gstatic.com https://api.binance.com https://api1.binance.com https://api2.binance.com https://api3.binance.com https://api4.binance.com https://data-api.binance.vision https://data-stream.binance.vision https://fapi.binance.com https://api.alternative.me https://api.coingecko.com https://api.llama.fi https://api.bitget.com https://corsproxy.io https://api.allorigins.win https://thingproxy.freeboard.io https://api.blockchain.info https://www.alphavantage.co https://cdn.jsdelivr.net https://open.er-api.com wss://stream.binance.com wss://data-stream.binance.vision; connect-src 'self' https: wss: data: blob:; frame-ancestors 'none';">
 <meta http-equiv="X-Frame-Options" content="DENY">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>FINCH v110 — 全维度市场分析</title>
+<title>FINCH v113 — 全维度市场分析</title>
 
 <!-- ═══ PWA / iOS APP META ═══ -->
 <meta name="mobile-web-app-capable" content="yes">
@@ -25,6 +25,7 @@
 <link rel="manifest" href="data:application/json,%7B%22name%22%3A%22FINCH+Market+Analysis%22%2C%22short_name%22%3A%22FINCH%22%2C%22description%22%3A%22%E5%85%A8%E7%BB%B4%E5%BA%A6%E5%8A%A0%E5%AF%86%E8%B4%A7%E5%B8%81%E5%88%86%E6%9E%90%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23F0EDE6%22%2C%22theme_color%22%3A%22%23F0EDE6%22%2C%22orientation%22%3A%22landscape%22%7D">
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
 <script>
 (function(){
   // Global crash guard — prevent white screen on any unhandled error
@@ -355,16 +356,17 @@ button,input,select{touch-action:manipulation;}
 .add-sym button{width:100%;background:var(--gold);border:none;border-radius:4px;padding:7px;color:#fff;font-family:inherit;font-size:10px;letter-spacing:1px;cursor:pointer;font-weight:700;transition:opacity .15s;}
 .add-sym button:hover{opacity:.8;}
 
-/* ══ CHART COL — now bottom strip of analysis col ══ */
+/* ══ CHART COL — v113: expanded by default, fills center ══ */
 .chart-col{
   display:flex;flex-direction:column;
   border-top:1px solid var(--line);
   overflow:hidden;background:var(--bg);
   flex-shrink:0;
-  flex:0 0 280px;
+  flex:1 1 300px;
+  min-height:300px;
 }
 .chart-col.collapsed .chart-body{display:none;}
-.chart-col.collapsed{flex:0 0 42px;}
+.chart-col.collapsed{flex:0 0 42px;min-height:42px;}
 .chart-topbar{
   display:flex;align-items:center;justify-content:space-between;
   padding:0 12px;height:42px;flex-shrink:0;
@@ -448,7 +450,7 @@ canvas.main-c{width:100%!important;}
 .strat-tab:hover{color:var(--text);}
 .strat-tab.active{color:var(--bright);border-bottom-color:var(--gold);font-weight:700;background:rgba(139,105,20,0.06);border-radius:4px 4px 0 0;}
 
-.strategy-scroll{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;}
+.strategy-scroll{flex:0 0 auto;max-height:340px;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;}
 .strat-area{padding:14px 16px;}
 
 /* Direction hero */
@@ -879,7 +881,6 @@ canvas.main-c{width:100%!important;}
 .chart-collapse-btn:hover{color:var(--gold);border-color:var(--gold);}
 .chart-body{flex:1;display:flex;flex-direction:column;overflow:hidden;transition:all .25s;}
 .chart-body.collapsed{flex:0;height:0;overflow:hidden;}
-.chart-col.collapsed{flex:0 0 42px;}
 
 /* ══ FINCH AUTONOMOUS TRADING ══ */
 .finch-ai-overlay{display:none;position:fixed;inset:0;z-index:2100;background:rgba(20,12,0,0.6);backdrop-filter:blur(5px);align-items:center;justify-content:center;}
@@ -1337,8 +1338,8 @@ canvas.main-c{width:100%!important;}
       </div>
     </div>
   </div>
-  <!-- Chart at bottom — collapsed by default -->
-  <div class="chart-col collapsed" id="chartCol">
+  <!-- Chart — expanded by default (v113) -->
+  <div class="chart-col" id="chartCol">
     <div class="chart-topbar">
       <div style="display:flex;align-items:center;gap:8px;">
         <div class="chart-sym" id="chartSym">BTC / USDT</div>
@@ -1354,19 +1355,22 @@ canvas.main-c{width:100%!important;}
           <button class="tf-seg-btn" onclick="setChartTF('1d',this)">1D</button>
           <button class="tf-seg-btn" onclick="setChartTF('1w',this)">1W</button>
         </div>
+        <!-- Pattern detect toggle -->
+        <button id="patternToggleBtn" onclick="togglePatternOverlay()" style="padding:3px 8px;border:1px solid var(--gold);border-radius:4px;background:var(--bg2);color:var(--gold);font-size:10px;cursor:pointer;transition:all .15s;" title="形态识别">🔍 形态</button>
         <div class="chart-type-toggle">
-          <button class="ct-toggle-btn active" id="btn-line" onclick="setChartType('line',this)">〰</button>
-          <button class="ct-toggle-btn" id="btn-candle" onclick="setChartType('candle',this)">🕯</button>
+          <button class="ct-toggle-btn" id="btn-line" onclick="setChartType('line',this)">〰</button>
+          <button class="ct-toggle-btn active" id="btn-candle" onclick="setChartType('candle',this)">🕯</button>
         </div>
-        <button class="chart-collapse-btn" id="chartCollapseBtn" onclick="toggleChartCollapse()" title="展开图表">▼ 图表</button>
+        <button class="chart-collapse-btn" id="chartCollapseBtn" onclick="toggleChartCollapse()" title="收起图表">▲ 图表</button>
       </div>
     </div>
     <div class="chart-body" id="chartBody">
-      <div class="chart-area" id="chartArea">
-        <div class="chart-canvas-wrap">
-          <div class="chart-loading" id="chartLoad">⏳ Loading</div>
-          <canvas id="mainChart"></canvas>
-        </div>
+      <div class="chart-area" id="chartArea" style="min-height:260px;">
+        <div class="chart-loading" id="chartLoad" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(240,237,230,0.9);font-size:11px;letter-spacing:3px;color:var(--muted);z-index:10;">⏳ 加载K线...</div>
+        <!-- lightweight-charts container (v113) -->
+        <div id="lwChart" style="position:absolute;inset:0;"></div>
+        <!-- legacy canvas hidden — kept for expanded overlay only -->
+        <canvas id="mainChart" style="display:none;"></canvas>
         <button class="chart-expand-btn" onclick="expandChart()">⛶ 展开</button>
       </div>
       <div class="sub-charts">
@@ -1980,9 +1984,10 @@ window.addEventListener('error', function(e) {
 
 // ═══ STATE ═══
 const S={
-  sym:'BTCUSDT',chartTF:'1h',stratTF:'4h',chartType:'line',subChart:'rsi',
+  sym:'BTCUSDT',chartTF:'1h',stratTF:'4h',chartType:'candle',subChart:'rsi',
   ws:null,wsOk:false,klines:{},ticker:{},
   lastPx:0,chart:null,subChartInst:null,expChart:null,fg:null,macro:null,
+  lwChartInst:null,_lwCandleSeries:null,_lwKl:null, // v113
   waPhone:'',lastSignal:null,
   modData:{},
   activeFilters:new Set(['tech','vegas','gann','fib','chan','lunar','mystic','macro']),
@@ -1992,6 +1997,59 @@ const S={
 };
 
 // Cached buildStrategy — only recalculates if price changed >0.05% or klines updated
+// ═══════════════════════════════════════════════════════════════
+// v112 GLOBAL DIRECTION ARBITER — THE SINGLE SOURCE OF TRUTH
+// ALL UI components must call _getCanonicalSignal() to get direction.
+// Never read isBull from multiple engine outputs directly.
+// ═══════════════════════════════════════════════════════════════
+function _getCanonicalSignal(tf) {
+  try {
+    // Step 1: Fresh _Φ9x run (PRO TRADER patched version — most authoritative)
+    if (typeof window._Φ9x === 'function') {
+      const _tfUse = tf || (typeof S !== 'undefined' ? S.stratTF : '4h') || '4h';
+      const res = window._Φ9x(_tfUse);
+      if (res && !res._isWait && res.isBull !== null && res.isBull !== undefined && res.conf > 0) {
+        // Enforce confCap from MTF if available
+        let finalConf = res.conf;
+        if (res.mtfResonance && res.mtfResonance.confCap && res.mtfResonance.confCap < 100) {
+          finalConf = Math.min(finalConf, res.mtfResonance.confCap);
+        }
+        // Enforce: conf < 45 = no actionable signal, only observation
+        const actionable = finalConf >= 45;
+        return {
+          isBull: res.isBull,
+          conf: Math.round(finalConf),
+          actionable,
+          grade: res.signalGrade || (finalConf >= 75 ? 'A' : finalConf >= 60 ? 'B' : 'C'),
+          sizePct: res.positionSizePct || (actionable ? 30 : 0),
+          mtfMultiplier: res.mtfResonance ? (res.mtfResonance.final_multiplier || 1.0) : 1.0,
+          regime: res.regime49 || 'unknown',
+          entry: res.entry, tps: res.tps, sls: res.sls, rr: res.rr,
+          _source: 'phi9x_fresh',
+        };
+      }
+    }
+    // Step 2: Use cached S.lastSignal
+    if (typeof S !== 'undefined' && S.lastSignal && !S.lastSignal._isWait &&
+        S.lastSignal.isBull !== null && S.lastSignal.isBull !== undefined) {
+      const finalConf = S.lastSignal.conf || 50;
+      return {
+        isBull: S.lastSignal.isBull,
+        conf: Math.round(finalConf),
+        actionable: finalConf >= 45,
+        grade: 'C', sizePct: 25, mtfMultiplier: 1.0,
+        regime: S.lastSignal.regime49 || 'unknown',
+        entry: S.lastSignal.entry, tps: S.lastSignal.tps, sls: S.lastSignal.sls,
+        _source: 'lastSignal_cache',
+      };
+    }
+  } catch(e) {}
+  return null; // No signal available — UI should show loading state
+}
+
+// Expose globally
+window._getCanonicalSignal = _getCanonicalSignal;
+
 function buildStrategyMemo(tf){
   const key=S.sym+tf;
   const px=S.lastPx;
@@ -3917,6 +3975,8 @@ function connectWS(sym){
           if(cpi)cpi.textContent=fmtP(wsPrice);
           if(cci){cci.textContent=fmtPct(change);cci.className='chart-price-chg '+pctC(change);}
           const ep2=document.getElementById('expChartPrice');if(ep2)ep2.textContent=fmtP(wsPrice);
+          // v113: update live candle on lightweight chart
+          try{ _lwUpdateLiveTick(wsPrice); }catch(e){}
           // v47: on every WS tick, check if shelf is critically stale (>1.5 ATR)
           // This is lightweight — only fires full check if needed
           try {
@@ -7355,46 +7415,262 @@ setInterval(()=>{
   if(!isTDAsset(S.sym)&&!S.wsOk&&S.sym){connectWS(S.sym);}
 },30000);
 
-// ═══ CHART RENDERING ═══
-function renderChart(kl,sym){
-  const canvas=document.getElementById('mainChart');
-  if(S.chart){S.chart.destroy();S.chart=null;}
-  const _cl3=document.getElementById('chartLoad');if(_cl3)_cl3.style.display='none';
-  if(!kl||!kl.length)return;
-  const prices=kl.map(k=>k.c);const n=prices.length;
-  const labels=kl.map(k=>{const d=new Date(k.t);return`${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:00`;});
-  const ma20=calcMA(prices,20);const ma55=calcMA(prices,55);
-  const{up,lo}=calcBB(prices,20,2);
-  const ctx=canvas.getContext('2d');
-  const gc='rgba(0,0,0,0.04)';const tc='#706850';
-  const baseDatasets=[
-    {label:'MA20',data:ma20,type:'line',borderColor:'rgba(139,105,20,0.6)',borderWidth:1,pointRadius:0,fill:false,tension:0.1,order:1},
-    {label:'MA55',data:ma55,type:'line',borderColor:'rgba(26,58,138,0.5)',borderWidth:1,pointRadius:0,fill:false,tension:0.1,order:1},
-    {label:'BB Upper',data:up,type:'line',borderColor:'rgba(160,20,32,0.25)',borderWidth:1,pointRadius:0,fill:false,tension:0.1,order:1},
-    {label:'BB Lower',data:lo,type:'line',borderColor:'rgba(26,107,58,0.25)',borderWidth:1,pointRadius:0,fill:false,tension:0.1,order:1},
-  ];
-  const commonOpts={
-    responsive:true,maintainAspectRatio:false,animation:{duration:200},
-    plugins:{legend:{display:false},tooltip:{
-      backgroundColor:'#F8F5EE',borderColor:'#8B6914',borderWidth:1,
-      titleColor:'#8B6914',bodyColor:'#2C2418',
-      bodyFont:{family:'Verdana',size:10},padding:8,
-    }},
-    scales:{
-      x:{grid:{color:gc},ticks:{color:tc,font:{size:8},maxTicksLimit:10}},
-      y:{position:'right',grid:{color:gc},ticks:{color:tc,font:{size:9}}}
+// ═══ CHART RENDERING — v113: lightweight-charts candlestick ═══
+// Pattern toggle state
+let _patternOverlayOn = true;
+function togglePatternOverlay(){
+  _patternOverlayOn = !_patternOverlayOn;
+  const btn = document.getElementById('patternToggleBtn');
+  if(btn){
+    btn.style.color = _patternOverlayOn ? 'var(--gold)' : 'var(--muted)';
+    btn.style.borderColor = _patternOverlayOn ? 'var(--gold)' : 'var(--line2)';
+  }
+  if(S.lwChartInst && S._lwKl) _renderPatternMarkers(S.lwChartInst._series, S._lwKl);
+}
+
+function renderChart(kl, sym){
+  const _cl3 = document.getElementById('chartLoad');
+  if(_cl3) _cl3.style.display = 'none';
+  if(!kl || !kl.length) return;
+
+  // Save kl ref for pattern re-render
+  S._lwKl = kl;
+
+  const container = document.getElementById('lwChart');
+  if(!container) return;
+
+  // Destroy previous instance
+  if(S.lwChartInst){ try{ S.lwChartInst.remove(); }catch(e){} S.lwChartInst = null; }
+
+  // Lightweight-charts not loaded yet — fallback gracefully
+  if(typeof LightweightCharts === 'undefined'){
+    _renderChartFallback(kl, sym);
+    return;
+  }
+
+  const chart = LightweightCharts.createChart(container, {
+    layout: {
+      background: { color: 'transparent' },
+      textColor: '#706850',
+      fontFamily: "'Noto Sans SC', sans-serif",
+      fontSize: 10,
+    },
+    grid: {
+      vertLines: { color: 'rgba(0,0,0,0.04)', style: 1 },
+      horzLines: { color: 'rgba(0,0,0,0.04)', style: 1 },
+    },
+    rightPriceScale: {
+      borderColor: 'rgba(0,0,0,0.08)',
+      textColor: '#706850',
+    },
+    timeScale: {
+      borderColor: 'rgba(0,0,0,0.08)',
+      timeVisible: true,
+      secondsVisible: false,
+      fixLeftEdge: false,
+      fixRightEdge: false,
+    },
+    crosshair: {
+      mode: LightweightCharts.CrosshairMode.Normal,
+      vertLine: { color: 'rgba(139,105,20,0.4)', width: 1, style: 2 },
+      horzLine: { color: 'rgba(139,105,20,0.4)', width: 1, style: 2 },
+    },
+    handleScale: { axisPressedMouseMove: true, mouseWheel: true, pinch: true },
+    handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true },
+  });
+
+  // Auto-resize observer
+  const ro = new ResizeObserver(entries => {
+    const { width, height } = entries[0].contentRect;
+    if(width > 0 && height > 0) chart.resize(width, height);
+  });
+  ro.observe(container);
+  chart._resizeObs = ro;
+
+  // Candle series
+  const candleSeries = chart.addCandlestickSeries({
+    upColor: '#1A6B3A',
+    downColor: '#A01420',
+    borderUpColor: '#1A6B3A',
+    borderDownColor: '#A01420',
+    wickUpColor: 'rgba(26,107,58,0.7)',
+    wickDownColor: 'rgba(160,20,32,0.7)',
+    priceLineVisible: true,
+    priceLineColor: 'rgba(139,105,20,0.6)',
+  });
+
+  const candleData = kl.map(k => ({
+    time: Math.floor(k.t / 1000),
+    open: k.o, high: k.h, low: k.l, close: k.c
+  })).sort((a,b) => a.time - b.time);
+  candleSeries.setData(candleData);
+
+  // MA20 line
+  const prices = kl.map(k => k.c);
+  const ma20arr = calcMA(prices, 20);
+  const ma55arr = calcMA(prices, 55);
+  const { up: bbUp, lo: bbLo } = calcBB(prices, 20, 2);
+
+  const ma20Series = chart.addLineSeries({ color: 'rgba(139,105,20,0.7)', lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
+  const ma55Series = chart.addLineSeries({ color: 'rgba(26,58,138,0.6)', lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
+  const bbUpSeries = chart.addLineSeries({ color: 'rgba(160,20,32,0.25)', lineWidth: 1, lineStyle: 2, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
+  const bbLoSeries = chart.addLineSeries({ color: 'rgba(26,107,58,0.25)', lineWidth: 1, lineStyle: 2, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
+
+  const toSeries = (arr) => kl.map((k,i) => arr[i] != null ? { time: Math.floor(k.t/1000), value: arr[i] } : null).filter(Boolean);
+  ma20Series.setData(toSeries(ma20arr));
+  ma55Series.setData(toSeries(ma55arr));
+  bbUpSeries.setData(toSeries(bbUp));
+  bbLoSeries.setData(toSeries(bbLo));
+
+  // S/R + pattern markers
+  chart._series = candleSeries;
+  _renderPatternMarkers(candleSeries, kl);
+
+  // Scroll to last 80 bars
+  chart.timeScale().scrollToPosition(0, false);
+  chart.timeScale().fitContent();
+
+  S.lwChartInst = chart;
+  S.lwChartInst._series = candleSeries;
+
+  // Update live price via marker on last bar when WS ticks
+  S._lwCandleSeries = candleSeries;
+}
+
+// ── Pattern detection & S/R markers ──────────────────────────────────────────
+function _renderPatternMarkers(series, kl){
+  if(!series || !kl || kl.length < 20){ try{ series && series.setMarkers && series.setMarkers([]); }catch(e){} return; }
+  if(!_patternOverlayOn){ series.setMarkers([]); return; }
+
+  const markers = [];
+  const n = kl.length;
+  const prices = kl.map(k => k.c);
+
+  // ── Detect S/R levels (swing highs/lows in last 80 bars) ──
+  const window = Math.min(80, n);
+  const recent = kl.slice(-window);
+  const swingHighs = [], swingLows = [];
+  for(let i = 2; i < recent.length - 2; i++){
+    const h = recent[i].h;
+    if(h > recent[i-1].h && h > recent[i-2].h && h > recent[i+1].h && h > recent[i+2].h){
+      swingHighs.push({ idx: n - window + i, k: recent[i], h });
     }
-  };
-  S.chart=new Chart(ctx,{
-    type:'line',
-    data:{labels,datasets:[
-      {label:'Price',data:prices,borderColor:'#8B6914',borderWidth:2,pointRadius:0,fill:true,
-        backgroundColor:'rgba(139,105,20,0.06)',tension:0.1,order:0},
-      ...baseDatasets
-    ]},
-    options:commonOpts
+    const l = recent[i].l;
+    if(l < recent[i-1].l && l < recent[i-2].l && l < recent[i+1].l && l < recent[i+2].l){
+      swingLows.push({ idx: n - window + i, k: recent[i], l });
+    }
+  }
+
+  // ── Candlestick pattern detection (last 20 bars) ──
+  const pat20 = kl.slice(-20);
+  for(let i = 1; i < pat20.length; i++){
+    const cur = pat20[i], prev = pat20[i-1];
+    const curBody = Math.abs(cur.c - cur.o);
+    const curRange = cur.h - cur.l;
+    const prevBody = Math.abs(prev.c - prev.o);
+    const barTime = Math.floor(cur.t / 1000);
+    const barIdx = n - 20 + i;
+
+    // Hammer / Hanging Man
+    const lowerWick = Math.min(cur.o, cur.c) - cur.l;
+    const upperWick = cur.h - Math.max(cur.o, cur.c);
+    if(curRange > 0 && lowerWick / curRange > 0.6 && curBody / curRange < 0.3){
+      markers.push({ time: barTime, position: 'belowBar', color: '#1A6B3A', shape: 'arrowUp', text: '锤子' });
+    }
+    // Shooting Star / Inverted Hammer
+    if(curRange > 0 && upperWick / curRange > 0.6 && curBody / curRange < 0.3 && lowerWick / curRange < 0.1){
+      markers.push({ time: barTime, position: 'aboveBar', color: '#A01420', shape: 'arrowDown', text: '流星' });
+    }
+    // Bullish Engulfing
+    if(prev.c < prev.o && cur.c > cur.o && cur.o < prev.c && cur.c > prev.o && curBody > prevBody * 1.1){
+      markers.push({ time: barTime, position: 'belowBar', color: '#1A6B3A', shape: 'arrowUp', text: '吞没↑' });
+    }
+    // Bearish Engulfing
+    if(prev.c > prev.o && cur.c < cur.o && cur.o > prev.c && cur.c < prev.o && curBody > prevBody * 1.1){
+      markers.push({ time: barTime, position: 'aboveBar', color: '#A01420', shape: 'arrowDown', text: '吞没↓' });
+    }
+    // Doji
+    if(curRange > 0 && curBody / curRange < 0.08 && curRange > prices[prices.length-1] * 0.001){
+      markers.push({ time: barTime, position: 'aboveBar', color: '#805000', shape: 'circle', text: '十字' });
+    }
+  }
+
+  // ── Trend detection (last 30 bars) ──
+  const trend30 = kl.slice(-30);
+  const trendPrices = trend30.map(k => k.c);
+  const trendMA5 = calcMA(trendPrices, 5);
+  const trendMA20_arr = calcMA(trendPrices, 20);
+  const lastMA5 = trendMA5[trendMA5.length-1];
+  const lastMA20 = trendMA20_arr[trendMA20_arr.length-1];
+  const prevMA5 = trendMA5[trendMA5.length-3];
+  const prevMA20 = trendMA20_arr[trendMA20_arr.length-3];
+
+  // Golden cross / Death cross detection within last 30 bars
+  if(prevMA5 != null && prevMA20 != null && lastMA5 != null && lastMA20 != null){
+    if(prevMA5 < prevMA20 && lastMA5 > lastMA20){
+      const crossTime = Math.floor(kl[kl.length - 2].t / 1000);
+      markers.push({ time: crossTime, position: 'belowBar', color: '#8B6914', shape: 'arrowUp', text: '黄金交叉' });
+    } else if(prevMA5 > prevMA20 && lastMA5 < lastMA20){
+      const crossTime = Math.floor(kl[kl.length - 2].t / 1000);
+      markers.push({ time: crossTime, position: 'aboveBar', color: '#A01420', shape: 'arrowDown', text: '死亡交叉' });
+    }
+  }
+
+  // ── Recent swing high/low markers (top 2 each) ──
+  const topHighs = swingHighs.slice(-2);
+  const topLows = swingLows.slice(-2);
+  topHighs.forEach(s => {
+    markers.push({ time: Math.floor(s.k.t/1000), position: 'aboveBar', color: 'rgba(160,20,32,0.6)', shape: 'circle', text: '阻力' });
+  });
+  topLows.forEach(s => {
+    markers.push({ time: Math.floor(s.k.t/1000), position: 'belowBar', color: 'rgba(26,107,58,0.6)', shape: 'circle', text: '支撑' });
+  });
+
+  // Sort markers by time (required by LW)
+  markers.sort((a,b) => a.time - b.time);
+  // Deduplicate same-time markers (LW only allows one per bar)
+  const seen = {};
+  const deduped = markers.filter(m => {
+    if(seen[m.time]) return false;
+    seen[m.time] = true;
+    return true;
+  });
+
+  try { series.setMarkers(deduped); } catch(e) { console.warn('[FINCH] marker error', e.message); }
+}
+
+// Fallback to line chart if LW not loaded
+function _renderChartFallback(kl, sym){
+  const canvas = document.getElementById('mainChart');
+  if(!canvas) return;
+  canvas.style.display = 'block';
+  if(S.chart){ S.chart.destroy(); S.chart = null; }
+  const prices = kl.map(k => k.c);
+  const labels = kl.map(k => { const d = new Date(k.t); return `${d.getMonth()+1}/${d.getDate()}`; });
+  const ctx = canvas.getContext('2d');
+  S.chart = new Chart(ctx, {
+    type: 'line',
+    data: { labels, datasets: [{ label: 'Price', data: prices, borderColor: '#8B6914', borderWidth: 1.5, pointRadius: 0, fill: true, backgroundColor: 'rgba(139,105,20,0.06)', tension: 0.1 }] },
+    options: { responsive: true, maintainAspectRatio: false, animation: { duration: 0 }, plugins: { legend: { display: false } }, scales: { x: { grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { color: '#706850', font: { size: 8 }, maxTicksLimit: 10 } }, y: { position: 'right', grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { color: '#706850', font: { size: 9 } } } } }
   });
 }
+
+// Hook: update live candle when WS ticks
+function _lwUpdateLiveTick(price){
+  if(!S._lwCandleSeries || !S._lwKl || !S._lwKl.length) return;
+  try {
+    const last = S._lwKl[S._lwKl.length - 1];
+    S._lwCandleSeries.update({
+      time: Math.floor(last.t / 1000),
+      open: last.o,
+      high: Math.max(last.h, price),
+      low: Math.min(last.l, price),
+      close: price
+    });
+  } catch(e) {}
+}
+
+
 function renderSubChart(kl){
   if(!kl||kl.length<20)return;
   const _sc=document.getElementById('subChart');if(!_sc)return;
@@ -8840,11 +9116,13 @@ function _Φ9x(tf){
   // 弱共振 (0.30–0.50): conf 惩罚
   if (!_mtfRes.block && _mtfRes.confBoost < 0) {
     conf = Math.max(30, conf + _mtfRes.confBoost);
+    // v112: enforce confCap from MTF resonance (1w/1d conflict→cap55, <0.30→cap50)
+    if (_mtfRes.confCap && _mtfRes.confCap < 100) conf = Math.min(conf, _mtfRes.confCap);
     sigs.push({ l: `⚠️ MTF弱共振(${((_mtfRes.score||0)*100).toFixed(0)}%)·置信降至${conf}%`, c: 'sig-neut' });
   }
   // 强/全共振 (≥0.70): conf 加成
   if (!_mtfRes.block && _mtfRes.confBoost > 0 && !_mtfRes.skipReason) {
-    const _confCap = _mtfRes.confBoost >= 15 ? 92 : 88;
+    const _confCap = _mtfRes.confCap || (_mtfRes.confBoost >= 15 ? 92 : 88);
     conf = Math.min(_confCap, conf + _mtfRes.confBoost);
     const _sigCol = isBull ? 'sig-bull' : 'sig-bear';
     sigs.push({ l: `${_mtfRes.grade} · ${_mtfRes.tfSummary}`, c: _sigCol });
@@ -15236,8 +15514,8 @@ function faiUpdateBar(){
 setTimeout(faiUpdateBar,2000); // initial call retained
 
 
-// ═══ CHART COLLAPSE — starts collapsed ═══
-let _chartCollapsed=true; // collapsed by default — user clicks to open
+// ═══ CHART COLLAPSE — starts expanded (v113) ═══
+let _chartCollapsed=false; // expanded by default
 function toggleChartCollapse(){
   _chartCollapsed=!_chartCollapsed;
   const col=document.getElementById('chartCol');
@@ -15250,6 +15528,7 @@ function toggleChartCollapse(){
     col.classList.remove('collapsed');
     if(btn){btn.textContent='▲ 收起';btn.title='收起图表';}
     setTimeout(()=>{
+      if(S.lwChartInst){const a=document.getElementById('lwChart');if(a){S.lwChartInst.resize(a.clientWidth,a.clientHeight);}}
       if(S.chart)S.chart.resize();
       if(S.subChartInst)S.subChartInst.resize();
     },300);
@@ -24308,6 +24587,17 @@ window._Φ9x = function(tf) {
   if (baseConflict > 0.40) conf -= 10;
   else if (baseConflict > 0.30) conf -= 5;
 
+  // v112: apply confCap from MTF resonance in PRO TRADER too
+  try {
+    const _proMtfRes = (typeof S !== 'undefined' && S.modData) ? S.modData.mtfResonance : null;
+    if (_proMtfRes && _proMtfRes.confCap && _proMtfRes.confCap < 100) {
+      conf = Math.min(conf, _proMtfRes.confCap);
+    }
+    // Also apply sizeMult from MTF to positionSizePct (computed later)
+    if (_proMtfRes && _proMtfRes.final_multiplier && _proMtfRes.final_multiplier < 1.0) {
+      conf = Math.min(conf, conf); // no-op placeholder; positionSizePct adjusted below
+    }
+  } catch(e) {}
   conf = Math.min(90, Math.max(30, Math.round(conf)));
 
   // LAYER 3 — 精准入场引擎 (Precise Entry)
@@ -24713,6 +25003,15 @@ window._Φ9x = function(tf) {
     gradeReason = '弱方向信号·轻仓试探';
     positionSizePct = 15;
   }
+  // v112: apply MTF final_multiplier to positionSizePct — ensures sizing is consistent
+  // with the MTF resonance gate (weak resonance → automatically reduce size)
+  try {
+    const _sizeRes = (typeof S !== 'undefined' && S.modData) ? S.modData.mtfResonance : null;
+    if (_sizeRes && typeof _sizeRes.final_multiplier === 'number' && _sizeRes.final_multiplier < 1.0) {
+      positionSizePct = Math.max(5, Math.round(positionSizePct * _sizeRes.final_multiplier));
+      gradeReason += ` · MTF共振${((_sizeRes.score||0)*100).toFixed(0)}%·仓位×${_sizeRes.final_multiplier}`;
+    }
+  } catch(e) {}
 
   // v85: Vegas冲突 → 降低置信度，不拒绝
   if (vegasConflicts && conf < 70 && signalGrade !== 'A') {
@@ -24877,8 +25176,27 @@ if (typeof window._SH === 'undefined') {
 
 // ── v75 信号质量徽章注入 ─────────────────────────────────────────────────
 // 在strategy area顶部添加信号质量和仓位建议
+// v112: Hook _doRenderStrategy → trigger V108 re-render when direction changes
+// This ensures V108 card ALWAYS reflects the latest main signal direction
 const _origDoRender = window._doRenderStrategy;
 window._doRenderStrategy = function(res) {
+  // After main render completes, force V108 refresh if direction changed
+  try {
+    const _prevDir = (typeof S !== 'undefined' && S.lastSignal) ? S.lastSignal._v112LastDir : null;
+    const _newDir  = res && res.isBull !== undefined && res.isBull !== null ? (res.isBull ? 'bull' : 'bear') : null;
+    if (_newDir && _newDir !== _prevDir) {
+      if (typeof S !== 'undefined') {
+        if (!S.lastSignal) S.lastSignal = {};
+        S.lastSignal._v112LastDir = _newDir;
+      }
+      // V108 panel visible → re-render with correct direction in 100ms
+      const _v108Panel = document.getElementById('finchV102Panel');
+      if (_v108Panel && _v108Panel.style.display !== 'none' && typeof renderV103 === 'function') {
+        const _sym = (typeof S !== 'undefined') ? S.sym : 'BTCUSDT';
+        setTimeout(() => { if (!_renderLock) renderV103(_sym); }, 100);
+      }
+    }
+  } catch(e) {}
   try {
     // 注入v75质量徽章到biasBadge
     if (res && !res._isWait && res.signalGrade && res.isBull !== null) {
@@ -27417,12 +27735,17 @@ window.FINCH_V88.detectWyckoffPhase   = _wyckoff;
   min-height: 0 !important;
 }
 .strategy-scroll {
-  flex: 1 !important;
+  flex: 0 0 auto !important;
   min-height: 0 !important;
   overflow-y: auto !important;
   overflow-x: hidden !important;
-  max-height: calc(100vh - 280px) !important;
+  max-height: 320px !important;
   -webkit-overflow-scrolling: touch;
+}
+/* v113: chart-col takes remaining space */
+.chart-col:not(.collapsed) {
+  flex: 1 1 0 !important;
+  min-height: 280px !important;
 }
 /* ── v107 Timeframe button hover ── */
 #tfSelectorWrap button:hover {
@@ -28122,7 +28445,9 @@ function buildStrategy(klines, tfKlines, price, atr, adx, fundingRate, oiChange,
     const conf=calcConfidence(l1,l2,l3,decision,volRatio,oiChange);
     const time1=estimateTime(Math.abs(l3.tp1-l3.entry),atr,adx);
     const posCoeff=decision.posCoeff*posMulti;
-    return{label,desc,timeframeName,l1,l2,l3,decision,conf,time1,posCoeff,volRatio,atr,adx,currentPrice:price};
+    // v112: mark whether direction was forced by main signal (for conflict detection in renderCard)
+    return{label,desc,timeframeName,l1,l2,l3,decision,conf,time1,posCoeff,volRatio,atr,adx,currentPrice:price,
+      _forceDir: !!forceDir, _forceDirValue: forceDir};
   }catch(e){
     console.error('[V108 buildStrategy]',timeframeName,e.message);
     const l2=_emptyL2(price);
@@ -28190,6 +28515,20 @@ function renderLayerStrip(l1,l2,decision,mainDir){
 function renderCard(s, cardLabel){
   const{l1,l2,l3,decision,conf,time1,posCoeff}=s;
   const isBull=decision.finalDir==='bull';
+  // v112 ARBITRATION CHECK: V108 card direction MUST match main signal
+  // If forceDir was set, direction is guaranteed consistent. If not (data race),
+  // detect here and show a warning overlay instead of a contradictory card.
+  const _mainSignalDir = (typeof S !== 'undefined' && S.lastSignal && !S.lastSignal._isWait)
+    ? (S.lastSignal.isBull ? 'bull' : 'bear') : null;
+  const _v108Dir = decision.finalDir;
+  const _dirConflict = _mainSignalDir && _mainSignalDir !== _v108Dir && !s._forceDir;
+  if (_dirConflict) {
+    // Return a conflict warning card instead of a contradictory trading card
+    return `<div style="border:1px solid var(--amber);border-radius:8px;padding:14px 16px;margin:6px 0;background:rgba(128,80,0,0.06)">
+      <div style="font-size:12px;font-weight:700;color:var(--amber)">⚠️ 信号同步中 · 方向计算完成后自动刷新</div>
+      <div style="font-size:10px;color:var(--dim);margin-top:4px">主信号引擎: <b style="color:${_mainSignalDir==='bull'?'var(--green)':'var(--red)'}">${_mainSignalDir==='bull'?'▲ 做多':'▼ 做空'}</b> · 结构引擎: <b>${_v108Dir==='bull'?'▲':'▼'} ${_v108Dir}</b> · 以主信号为准</div>
+    </div>`;
+  }
   const dirLabel=isBull?'LONG ▲':'SHORT ▼';
   const dirCls=isBull?'long':'short';
   const cardCls=isBull?'bull':'bear';
@@ -28395,16 +28734,49 @@ async function _renderV105Body(sym,panel){
   const klinesLongRaw = klines.filter((_,i) => i % 6 === 0); // 1D equivalent
   const klinesLong   = klinesLongRaw.length>=30 ? klinesLongRaw : klines; // fallback if too short
 
-  // ── v108: Read main signal direction as the single source of truth ──────
-  // The V108 three-layer engine defers to the main signal engine's direction.
-  // This eliminates the "one says LONG, other says SHORT" contradiction.
-  // Only falls back to its own L1/L2 calculation when main signal is absent.
+  // ── v112 ARBITRATION: _Φ9x is the SINGLE SOURCE OF TRUTH ───────────────
+  // V108 NEVER self-computes direction. It only outputs TP/SL/structure.
+  // If _Φ9x hasn't run yet, run it now synchronously before proceeding.
+  // This eliminates ALL direction conflicts permanently.
   let mainDir = null;
-  try{
-    if(typeof S!=='undefined' && S.lastSignal && !S.lastSignal._isWait){
-      mainDir = S.lastSignal.isBull ? 'bull' : 'bear';
+  let _phi9xRes = null;
+  try {
+    // Step 1: Try to get a fresh result from the authoritative engine
+    if (typeof window._Φ9x === 'function') {
+      const _tf_main = (typeof S !== 'undefined' ? S.stratTF : null) || '4h';
+      _phi9xRes = window._Φ9x(_tf_main);
+      if (_phi9xRes && !_phi9xRes._isWait && _phi9xRes.isBull !== undefined && _phi9xRes.isBull !== null) {
+        mainDir = _phi9xRes.isBull ? 'bull' : 'bear';
+        // Sync S.lastSignal immediately so all downstream reads are consistent
+        if (typeof S !== 'undefined') {
+          if (!S.lastSignal) S.lastSignal = {};
+          S.lastSignal.isBull = _phi9xRes.isBull;
+          S.lastSignal.conf   = _phi9xRes.conf;
+          S.lastSignal._fromV112Arb = true;
+        }
+      }
     }
-  }catch(e){}
+  } catch(e) {}
+  // Step 2: If _Φ9x unavailable, fall back to S.lastSignal (cached)
+  if (!mainDir) {
+    try {
+      if (typeof S !== 'undefined' && S.lastSignal && !S.lastSignal._isWait &&
+          S.lastSignal.isBull !== null && S.lastSignal.isBull !== undefined) {
+        mainDir = S.lastSignal.isBull ? 'bull' : 'bear';
+      }
+    } catch(e) {}
+  }
+  // Step 3: If still null (truly no data), defer V108 render until signal available
+  if (!mainDir) {
+    const _checkPanel = document.getElementById('finchV102Panel');
+    if (_checkPanel) {
+      _checkPanel.innerHTML = '<div style="padding:20px;text-align:center;color:var(--amber);font-size:12px">⏳ 等待主信号引擎完成首次计算...<br><span style="font-size:10px;color:var(--dim)">通常需要3-8秒，K线数据加载完成后自动刷新</span></div>';
+    }
+    // Retry in 2s — by then _Φ9x should have run
+    setTimeout(() => { if (!_renderLock) renderV103(sym); }, 2000);
+    _renderLock = false;
+    return;
+  }
 
   const short=buildStrategy(klines,klinesShort,price,atr_short,adx,fundingRate,oiChange,{label:'📈 短线策略',desc:'持仓数小时~1天',posMulti:1.0,tpMult:1.2,slMult:0.8,timeframeName:'短线',forceDir:mainDir});
   const medium=buildStrategy(klines,klinesMiddle,price,atr_mid,adx,fundingRate,oiChange,{label:'📊 中线策略',desc:'持仓3~7天',posMulti:0.8,tpMult:2.0,slMult:1.5,timeframeName:'中线',forceDir:mainDir});
@@ -28457,6 +28829,21 @@ async function _renderV105Body(sym,panel){
       <span style="color:var(--dim)">江恩时间节点:</span>
       ${gannNodes.slice(0,7).map(n=>`<span class="v105-tn ${n.near?'near':''}">${n.cycle}日 · ${n.date} (${n.daysFromNow>=0?'+':''}${n.daysFromNow}天)</span>`).join('')}
     </div>`:''}
+
+    ${(function(){
+      // v112: Quality gate banner — shown when signal quality is below actionable threshold
+      const _cs = (typeof _getCanonicalSignal === 'function') ? _getCanonicalSignal() : null;
+      const _adxWeak = adx < 20;
+      const _confLow = _cs && _cs.conf < 55;
+      const _ranging = (typeof S !== 'undefined' && S.modData && S.modData.phi9xRegime === 'ranging');
+      if (_adxWeak && _ranging && _confLow) {
+        return \`<div style="border-left:3px solid var(--amber);background:rgba(128,80,0,0.06);padding:10px 14px;margin:0 0 2px 0;font-size:11px">
+          <b style="color:var(--amber)">⚠️ 震荡市 · ADX \${adx.toFixed(0)} · 趋势强度不足</b>
+          <span style="color:var(--dim);margin-left:8px">当前为区间震荡，结构信号仅供参考，建议等待趋势确认或仅在区间边缘操作</span>
+        </div>\`;
+      }
+      return '';
+    })()}
 
     <div id="v110-quant-plan" style="padding:0">
       <div id="v110-qp-loading" style="display:flex;align-items:center;justify-content:center;gap:10px;padding:28px 16px;color:var(--gold);font-size:12px;font-weight:700;letter-spacing:1px">
@@ -29194,7 +29581,7 @@ window.toggleV102View=function(){
     const sym=typeof S!=='undefined'?S.sym:'BTCUSDT';
     setTimeout(()=>renderV103(sym),300);
     if(_timer)clearInterval(_timer);
-    _timer=setInterval(()=>{if(!_renderLock){renderV103(typeof S!=='undefined'?S.sym:'BTCUSDT');}},30*60*1000);
+    _timer=setInterval(()=>{if(!_renderLock){renderV103(typeof S!=='undefined'?S.sym:'BTCUSDT');}},3*60*1000);
   }else{
     panel.style.display='none';
     if(stratArea)stratArea.style.display='';
@@ -29264,7 +29651,7 @@ console.log('[FINCH V108] 三层递进决策引擎已加载 · 短中长独立�
     document.addEventListener('DOMContentLoaded',()=>setTimeout(_try,800));
   }else{setTimeout(_try,800);}
   if(!_timer){
-    _timer=setInterval(()=>{if(!_renderLock){renderV103(typeof S!=='undefined'?S.sym:'BTCUSDT');}},30*60*1000);
+    _timer=setInterval(()=>{if(!_renderLock){renderV103(typeof S!=='undefined'?S.sym:'BTCUSDT');}},3*60*1000);
   }
 })();
 
