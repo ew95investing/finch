@@ -6,7 +6,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://fonts.googleapis.com https://fonts.gstatic.com https://api.binance.com https://api1.binance.com https://api2.binance.com https://api3.binance.com https://api4.binance.com https://data-api.binance.vision https://data-stream.binance.vision https://fapi.binance.com https://api.alternative.me https://api.coingecko.com https://api.llama.fi https://api.bitget.com https://corsproxy.io https://api.allorigins.win https://thingproxy.freeboard.io https://api.blockchain.info https://www.alphavantage.co https://cdn.jsdelivr.net https://open.er-api.com wss://stream.binance.com wss://data-stream.binance.vision; connect-src 'self' https: wss: data: blob:; frame-ancestors 'none';">
 <meta http-equiv="X-Frame-Options" content="DENY">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>FINCH v117 — 全维度市场分析</title>
+<title>FINCH v118 — 全维度市场分析</title>
 
 <!-- ═══ PWA / iOS APP META ═══ -->
 <meta name="mobile-web-app-capable" content="yes">
@@ -88,6 +88,9 @@
   --fs-base:16px;--fs-sm:14px;--fs-xs:13px;--fs-xxs:12px;--fs-label:12px;
   --radius:6px;--radius-lg:10px;
 }
+/* v118: rebound banner pulse animation */
+@keyframes finch-pulse-red{0%,100%{box-shadow:0 0 0 0 rgba(160,20,32,0.0)}50%{box-shadow:0 0 0 4px rgba(160,20,32,0.18)}}
+@keyframes finch-gate-flash{0%,100%{opacity:1}50%{opacity:0.7}}
 /* inst-research CSS removed v41 */
 .inst-tag{
   display:inline-block;font-size:9px;font-weight:700;padding:1px 5px;border-radius:2px;
@@ -11987,6 +11990,79 @@ function _doRenderStrategy(res){
   ${_probHTML}
 
   <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- UPGRADE 1: REBOUND / RETRACE DANGER BANNER (v118)                 -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  ${(()=>{
+    const adv = res.advStruct || {};
+    const isReb = adv.isRebound;
+    const isRet = adv.isRetrace;
+    if (!isReb && !isRet) return '';
+    if (isReb) return `
+    <div id="finch-rebound-banner" style="
+      display:flex;align-items:center;gap:10px;
+      background:rgba(160,20,32,0.10);
+      border:2px solid rgba(160,20,32,0.55);
+      border-radius:10px;margin-bottom:8px;padding:12px 14px;
+      animation:finch-pulse-red 2.2s ease-in-out infinite;
+    ">
+      <div style="font-size:22px;flex-shrink:0">⚠️</div>
+      <div>
+        <div style="font-size:13px;font-weight:900;color:var(--red);letter-spacing:0.5px;margin-bottom:3px">
+          次级反弹 · 大级别趋势仍为空头
+        </div>
+        <div style="font-size:11px;color:var(--muted);line-height:1.6">
+          当前上涨是大级别下跌中的反弹，<strong style="color:var(--text)">不是趋势反转</strong>。
+          做市商惯用手法：拉高诱多后继续下跌。此信号若进场，<strong style="color:var(--red)">仓位上限50%，SL1必须严守</strong>。
+        </div>
+      </div>
+    </div>`;
+    if (isRet) return `
+    <div id="finch-retrace-banner" style="
+      display:flex;align-items:center;gap:10px;
+      background:rgba(128,80,0,0.09);
+      border:1.5px solid rgba(128,80,0,0.4);
+      border-radius:10px;margin-bottom:8px;padding:10px 14px;
+    ">
+      <div style="font-size:20px;flex-shrink:0">📉</div>
+      <div>
+        <div style="font-size:12px;font-weight:800;color:var(--amber);margin-bottom:2px">
+          大级别回调 · 顺势做多机会窗口
+        </div>
+        <div style="font-size:11px;color:var(--muted);line-height:1.6">
+          大趋势为多头，当前下跌是正常回调。可关注回调结束信号后<strong style="color:var(--text)">顺势做多</strong>，等缠论背驰或支撑确认。
+        </div>
+      </div>
+    </div>`;
+    return '';
+  })()}
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- UPGRADE 2: R:R GATE BANNER — block low R:R entries (v118)         -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  ${(()=>{
+    if (!rr || !isFinite(rr)) return '';
+    if (rr >= 1.8) return '';
+    const rrColor = rr < 1.2 ? 'var(--red)' : 'var(--orange)';
+    const rrBg    = rr < 1.2 ? 'rgba(160,20,32,0.09)' : 'rgba(138,48,16,0.09)';
+    const rrBd    = rr < 1.2 ? 'rgba(160,20,32,0.5)' : 'rgba(138,48,16,0.4)';
+    const rrMsg   = rr < 1.2
+      ? `R:R=${rr.toFixed(2)} 极低 — 即使60%胜率，长期期望值为负。此信号建议跳过，等更好入场价。`
+      : `R:R=${rr.toFixed(2)} 不达标（门槛1.8）— 风险回报不对称，考虑调整入场区或等回调。`;
+    return `
+    <div style="
+      display:flex;align-items:center;gap:10px;
+      background:${rrBg};border:1.5px solid ${rrBd};
+      border-radius:10px;margin-bottom:8px;padding:10px 14px;
+    ">
+      <div style="font-size:20px;flex-shrink:0">🚫</div>
+      <div>
+        <div style="font-size:12px;font-weight:900;color:${rrColor};margin-bottom:2px">风险回报不足 · 不建议入场</div>
+        <div style="font-size:11px;color:var(--muted);line-height:1.6">${rrMsg}</div>
+      </div>
+    </div>`;
+  })()}
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
   <!-- LAYER 0 · COMMAND CARD — 方向 · 入场 · SL1 · TP1/2/3 一眼看懂    -->
   <!-- ═══════════════════════════════════════════════════════════════════ -->
   <div style="border:2px solid ${actionBorder};border-radius:12px;background:${actionBg};margin-bottom:10px;overflow:hidden;">
@@ -12068,6 +12144,25 @@ function _doRenderStrategy(res){
         <span style="font-size:26px;font-weight:800;color:${actionColor};font-variant-numeric:tabular-nums">${fmtP(entry)}</span>
         ${res.entryMin&&res.entryMax&&Math.abs(res.entryMin-res.entryMax)>0.0001?`<span style="font-size:12px;color:var(--muted)">区间 ${fmtP(res.entryMin)} – ${fmtP(res.entryMax)}</span>`:''}
         <span style="font-size:10px;padding:2px 8px;border-radius:8px;background:${entryType==='market'?'rgba(26,107,58,0.12)':'rgba(128,80,0,0.1)'};color:${entryType==='market'?'var(--green)':'var(--amber)'};font-weight:700">${entryType==='market'?'市价入场':'限价挂单'}</span>
+      </div>
+      <!-- v118: Conviction Grade Gate — C/D/F grade shows entry block warning -->
+      ${(()=>{
+        const _cvg = conviction?.grade || 'C';
+        if (_cvg === 'A' || _cvg === 'B') return '';
+        const _gateColor = _cvg === 'C' ? 'var(--amber)' : 'var(--red)';
+        const _gateBg    = _cvg === 'C' ? 'rgba(128,80,0,0.09)' : 'rgba(160,20,32,0.09)';
+        const _gateBd    = _cvg === 'C' ? 'rgba(128,80,0,0.4)' : 'rgba(160,20,32,0.4)';
+        const _gateMsg   = _cvg === 'C'
+          ? `信号质量C级 — 支撑柱不足，有${conviction?.weaknesses?.length||0}个弱点。建议等待更多确认后再入场，或极轻仓（≤2%）测试。`
+          : `信号质量${_cvg}级 — 论据严重不足，进场风险极高。顶级交易员会跳过此信号，等待下一个A/B级机会。`;
+        return `<div style="margin-top:6px;display:flex;align-items:flex-start;gap:8px;padding:8px 10px;background:${_gateBg};border:1.5px solid ${_gateBd};border-radius:7px">
+          <div style="font-size:18px;flex-shrink:0">${_cvg==='C'?'⚠️':'🚫'}</div>
+          <div>
+            <div style="font-size:11px;font-weight:800;color:${_gateColor};margin-bottom:2px">Conviction ${_cvg}级 · ${conviction?.gradeLabel||''}</div>
+            <div style="font-size:10px;color:var(--muted);line-height:1.5">${_gateMsg}</div>
+          </div>
+        </div>`;
+      })()}
       </div>
       <div style="font-size:11px;color:var(--muted);margin-top:2px">${entryNote}</div>
       ${(()=>{
@@ -12411,6 +12506,60 @@ function _doRenderStrategy(res){
       +'</div></div>'
       +'<div style="padding:9px 14px;background:rgba(255,255,255,0.45);border-top:1px solid var(--line)"><div style="font-size:11px;color:var(--text);line-height:1.75;border-left:3px solid '+cv.gradeColor+';padding-left:9px">'+cv.actionable+'</div></div>'
       +'</div></details>';
+  })()}
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- UPGRADE 3: PRE-TRADE 5-ITEM CHECKLIST (v118)                      -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  ${(()=>{
+    const adv = res.advStruct || {};
+    const cv  = conviction; // already computed above
+    // Compute checklist item states
+    const htfOk  = !adv.isRebound; // HTF aligned (not a counter-trend rebound)
+    const rebOk  = !adv.isRebound; // not a counter-trend rebound
+    const rrOk   = rr >= 1.8;
+    const convOk = cv.grade === 'A' || cv.grade === 'B';
+    const abortOk = res.abortPrice && isFinite(res.abortPrice) && res.abortPrice > 0;
+    const allPass = htfOk && rebOk && rrOk && convOk && abortOk;
+    const passCount = [htfOk, rebOk, rrOk, convOk, abortOk].filter(Boolean).length;
+    const abortLabel = res.abortPrice ? fmtP(res.abortPrice) : (isBull ? fmtP(sls[1]?.p || sls[0]?.p) : fmtP(sls[1]?.p || sls[0]?.p));
+    function chkRow(ok, num, label, sub) {
+      const col   = ok ? 'var(--green)' : 'var(--red)';
+      const bg    = ok ? 'rgba(26,107,58,0.06)' : 'rgba(160,20,32,0.06)';
+      const bd    = ok ? 'rgba(26,107,58,0.2)'  : 'rgba(160,20,32,0.2)';
+      const icon  = ok ? '✓' : '✗';
+      return `<div style="display:flex;align-items:flex-start;gap:9px;padding:7px 10px;background:${bg};border:1px solid ${bd};border-radius:6px;margin-bottom:5px">
+        <div style="width:20px;height:20px;border-radius:50%;background:${col};color:white;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;margin-top:1px">${icon}</div>
+        <div style="flex:1">
+          <div style="font-size:12px;font-weight:700;color:${ok?'var(--text)':'var(--red)'}">${label}</div>
+          <div style="font-size:10px;color:var(--muted);line-height:1.5;margin-top:1px">${sub}</div>
+        </div>
+      </div>`;
+    }
+    const verdictBg  = allPass ? 'rgba(26,107,58,0.1)'  : passCount>=3 ? 'rgba(128,80,0,0.1)' : 'rgba(160,20,32,0.1)';
+    const verdictBd  = allPass ? 'rgba(26,107,58,0.45)' : passCount>=3 ? 'rgba(128,80,0,0.4)' : 'rgba(160,20,32,0.45)';
+    const verdictCol = allPass ? 'var(--green)'          : passCount>=3 ? 'var(--amber)'        : 'var(--red)';
+    const verdictTxt = allPass ? '✅ 全部通过 — 可按计划入场'
+                     : passCount>=3 ? `⚠️ ${5-passCount}项未通过 — 轻仓或等待`
+                     : `🚫 ${5-passCount}项未通过 — 不建议入场`;
+    return `
+    <details style="margin-bottom:10px;" ${allPass?'':'open'}>
+      <summary style="cursor:pointer;padding:9px 14px;background:var(--card);border:1px solid var(--card-bd);border-radius:8px;display:flex;align-items:center;justify-content:space-between;list-style:none;user-select:none">
+        <span style="font-size:10px;font-weight:700;letter-spacing:2px;color:var(--gold);text-transform:uppercase">☑ 进场前5项检查</span>
+        <span style="font-size:12px;font-weight:800;color:${verdictCol}">${passCount}/5 通过</span>
+      </summary>
+      <div style="padding:10px 12px;background:var(--card);border:1px solid var(--card-bd);border-top:none;border-radius:0 0 8px 8px">
+        ${chkRow(htfOk,  1, '大时框方向一致', htfOk ? '日线+周线顺势 ✓ 顺大势交易' : '当前大时框与信号方向矛盾或处于反弹结构 — 逆势进场胜率大打折扣')}
+        ${chkRow(rebOk,  2, '非逆势反弹', rebOk ? '不是大级别下跌中的反弹 ✓' : '⚠️ isRebound=true — 做市商最爱拉高出货区域，严控仓位上限50%')}
+        ${chkRow(rrOk,   3, `R:R ≥ 1.8 达标`, rrOk ? `当前 R:R = ${rr.toFixed(2)} ✓ 风险回报合理` : `当前 R:R = ${rr.toFixed(2)} 不足1.8 — 即使60%胜率，期望值为负`)}
+        ${chkRow(convOk, 4, `信号质量 ${cv.grade}级`, convOk ? `${cv.pillars.length}根支撑柱 · ${cv.gradeLabel}` : `仅${cv.pillars.length}根支撑柱 · ${cv.weaknesses.length}个弱点 — 信号质量不足，等待更多确认`)}
+        ${chkRow(abortOk,5, `论据终止价已明确`, abortOk ? `Abort: ${abortLabel} — 到达此价立即认错离场` : `止损论据不明确 — 不知道在什么情况认错，不能进场`)}
+        <div style="margin-top:8px;padding:9px 12px;background:${verdictBg};border:1.5px solid ${verdictBd};border-radius:6px;text-align:center">
+          <div style="font-size:13px;font-weight:900;color:${verdictCol}">${verdictTxt}</div>
+          ${!allPass?`<div style="font-size:10px;color:var(--muted);margin-top:3px">顶级交易员原则：宁可不做，不做低质量信号</div>`:''}
+        </div>
+      </div>
+    </details>`;
   })()}
 
   <!-- ═══════════════════════════════════════════════════════════════════ -->
@@ -14384,6 +14533,25 @@ function openPaperTrade(){
     alert('⚠️ 当前为模拟数据 — 交易功能已禁用\n请等待真实 K 线数据加载后再开仓。');
     return;
   }
+
+  // ── v118 UPGRADE 5: Daily trade counter guard ──────────────────────
+  // Max 2 trades per day — enforce patience discipline
+  try {
+    const _today = new Date().toISOString().slice(0,10);
+    const _dtKey = 'finch_daily_trades_' + _today;
+    const _dtCount = parseInt(localStorage.getItem(_dtKey)||'0');
+    const _MAX_DAILY = 2;
+    if (_dtCount >= _MAX_DAILY) {
+      const _doAnyway = confirm(
+        `⚠️ 今日交易已达 ${_MAX_DAILY} 次上限\n\n` +
+        `顶级交易员纪律：每日只做1-2次A级信号，过度交易是散户最大亏损来源。\n\n` +
+        `今日已记录 ${_dtCount} 笔交易。\n\n` +
+        `确定要继续（强制突破今日限额）？`
+      );
+      if (!_doAnyway) return;
+    }
+  } catch(e) {}
+  // ── End v118 Upgrade 5 ─────────────────────────────────────────────
   const sym=S.sym;
   const price=S.lastPx||0;
   const entryEl=$id('pnt-entry'); const entryInput=parseFloat(entryEl?.value||0);
@@ -14432,6 +14600,12 @@ function openPaperTrade(){
   ptSave();
   renderOpenPositions();
   renderPaperStats();
+  // v118: increment daily trade counter
+  try {
+    const _today = new Date().toISOString().slice(0,10);
+    const _dtKey = 'finch_daily_trades_' + _today;
+    localStorage.setItem(_dtKey, String(parseInt(localStorage.getItem(_dtKey)||'0') + 1));
+  } catch(e) {}
   // Clear form safely
   $val('pnt-entry','');$val('pnt-tp1','');$val('pnt-sl1','');$val('pnt-note','');
   ptAutoLog(`✅ 开仓 ${sym} ${_paperDir.toUpperCase()} @ ${fmtP(entry)} · 仓位$${size} · ${lev}× · 手续费$${fee.toFixed(2)}`);
@@ -30143,7 +30317,7 @@ console.log('%c[FINCH v116] ✅ Ultimate Fix Bundle loaded — 回测已恢复 �
 
 <script>
 // ═══════════════════════════════════════════════════════════════════════════
-// FINCH v117 — 最终可靠交易模型 (ULTIMATE RELIABILITY BUNDLE)
+// FINCH v118 — 最终可靠交易模型 (CONVICTION GATE · REBOUND SHIELD · CHECKLIST ENFORCER)
 // 架构原则: 先行指标 → 方向仲裁 → 信号品质门控 → 回测验证
 // ═══════════════════════════════════════════════════════════════════════════
 (function() {
@@ -30784,7 +30958,7 @@ window.FINCH_selfTest = async function() {
   // Summary
   const total = results.length;
   const passed = results.filter(r => r.pass).length;
-  console.group(`%c[FINCH v117 自检] ${passed}/${total} 通过`, `color:${passed===total?'#1A6B3A':'#A01420'};font-weight:700;`);
+  console.group(`%c[FINCH v118 自检] ${passed}/${total} 通过`, `color:${passed===total?'#1A6B3A':'#A01420'};font-weight:700;`);
   results.forEach(r => console.log(`${r.pass ? '✅' : '❌'} ${r.name}: ${r.detail}`));
   console.groupEnd();
   return { total, passed, results };
@@ -30811,8 +30985,8 @@ window.FINCH_selfTest = async function() {
 // ═══════════════════════════════════════════════════════════════════════════
 setTimeout(() => {
   try { _v117_syncBiasBadge(); } catch(e) {}
-  console.log('%c[FINCH v117] ✅ 最终可靠交易模型已载入 — 先行指标 · 方向仲裁 · 品质门控 · WalkForward回测 · 滑点模拟', 'color:#B8860B;font-weight:700;font-size:11px;');
-  console.log('%c[FINCH v117] 运行 FINCH_selfTest() 执行完整自检', 'color:#0A5870;font-size:10px;');
+  console.log('%c[FINCH v118] ✅ 最强交易模型已载入 — Conviction Gate · Rebound Shield · R:R Gate · 5-Check Enforcer · Daily Limiter', 'color:#B8860B;font-weight:700;font-size:11px;');
+  console.log('%c[FINCH v118] 运行 FINCH_selfTest() 执行完整自检', 'color:#0A5870;font-size:10px;');
 }, 3500);
 
 })();
