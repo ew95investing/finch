@@ -6,7 +6,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://fonts.googleapis.com https://fonts.gstatic.com https://api.binance.com https://api1.binance.com https://api2.binance.com https://api3.binance.com https://api4.binance.com https://data-api.binance.vision https://data-stream.binance.vision https://fapi.binance.com https://api.alternative.me https://api.coingecko.com https://api.llama.fi https://api.bitget.com https://corsproxy.io https://api.allorigins.win https://thingproxy.freeboard.io https://api.blockchain.info https://www.alphavantage.co https://cdn.jsdelivr.net https://open.er-api.com wss://stream.binance.com wss://data-stream.binance.vision; connect-src 'self' https: wss: data: blob:; frame-ancestors 'none';">
 <meta http-equiv="X-Frame-Options" content="DENY">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>FINCH v118 — 全维度市场分析</title>
+<title>FINCH v120 — 全维度市场分析</title>
 
 <!-- ═══ PWA / iOS APP META ═══ -->
 <meta name="mobile-web-app-capable" content="yes">
@@ -2140,16 +2140,17 @@ const PAIRS = [
   // WTI = CLUSDT (97.76+), Brent = BZUSDT (102.29+) — 已在Bitget App截图确认
   {s:'WTI/USD',   b:'OIL',  n:'Crude Oil WTI (石油)', cls:'commodity', exchange:'bitget', bitgetSym:'CLUSDT',   stooqSym:'cl.f', oilId:'WTI'},
   {s:'BRENT/USD', b:'BRENT',n:'Brent Crude (布伦特)',  cls:'commodity', exchange:'bitget', bitgetSym:'BZUSDT',   stooqSym:'bz.f', oilId:'BRENT'},
-  // ── 美股合约 (Bitget USDT-Futures) ───────────────────────────
-  {s:'TSLA/USD',  b:'TSLA',  n:'Tesla',          cls:'stock',        exchange:'bitget', bitgetSym:'TSLAUSDT'},
-  {s:'NVDA/USD',  b:'NVDA',  n:'NVIDIA',         cls:'stock',        exchange:'bitget', bitgetSym:'NVDAUSDT'},
-  {s:'AAPL/USD',  b:'AAPL',  n:'Apple',          cls:'stock',        exchange:'bitget', bitgetSym:'AAPLUSDT'},
-  {s:'MSFT/USD',  b:'MSFT',  n:'Microsoft',      cls:'stock',        exchange:'bitget', bitgetSym:'MSFTUSDT'},
-  {s:'META/USD',  b:'META',  n:'Meta',           cls:'stock',        exchange:'bitget', bitgetSym:'METAUSDT'},
-  {s:'AMZN/USD',  b:'AMZN',  n:'Amazon',         cls:'stock',        exchange:'bitget', bitgetSym:'AMZNUSDT'},
-  {s:'GOOGL/USD', b:'GOOGL', n:'Google',         cls:'stock',        exchange:'bitget', bitgetSym:'GOOGLUSDT'},
-  {s:'COIN/USD',  b:'COIN',  n:'Coinbase',       cls:'stock_crypto', exchange:'bitget', bitgetSym:'COINUSDT'},
-  {s:'MSTR/USD',  b:'MSTR',  n:'MicroStrategy',  cls:'stock_crypto', exchange:'bitget', bitgetSym:'MSTRUSDT'},
+  // ── 美股合约 (v120: Binance TradFi Perpetuals 原生优先 — 见下方 binanceSym；
+  //    Bitget 仅作为 Binance 未上线/请求失败时的兜底，不再是主数据源) ─────
+  {s:'TSLA/USD',  b:'TSLA',  n:'Tesla',          cls:'stock',        exchange:'bitget', bitgetSym:'TSLAUSDT',  binanceSym:'TSLAUSDT'},
+  {s:'NVDA/USD',  b:'NVDA',  n:'NVIDIA',         cls:'stock',        exchange:'bitget', bitgetSym:'NVDAUSDT',  binanceSym:'NVDAUSDT'},
+  {s:'AAPL/USD',  b:'AAPL',  n:'Apple',          cls:'stock',        exchange:'bitget', bitgetSym:'AAPLUSDT',  binanceSym:'AAPLUSDT'},
+  {s:'MSFT/USD',  b:'MSFT',  n:'Microsoft',      cls:'stock',        exchange:'bitget', bitgetSym:'MSFTUSDT',  binanceSym:'MSFTUSDT'},
+  {s:'META/USD',  b:'META',  n:'Meta',           cls:'stock',        exchange:'bitget', bitgetSym:'METAUSDT',  binanceSym:'METAUSDT'},
+  {s:'AMZN/USD',  b:'AMZN',  n:'Amazon',         cls:'stock',        exchange:'bitget', bitgetSym:'AMZNUSDT',  binanceSym:'AMZNUSDT'},
+  {s:'GOOGL/USD', b:'GOOGL', n:'Google',         cls:'stock',        exchange:'bitget', bitgetSym:'GOOGLUSDT'}, // v120: Binance暂未确认上线该合约, 保持Bitget单源, 不加binanceSym避免误报
+  {s:'COIN/USD',  b:'COIN',  n:'Coinbase',       cls:'stock_crypto', exchange:'bitget', bitgetSym:'COINUSDT',  binanceSym:'COINUSDT'},
+  {s:'MSTR/USD',  b:'MSTR',  n:'MicroStrategy',  cls:'stock_crypto', exchange:'bitget', bitgetSym:'MSTRUSDT',  binanceSym:'MSTRUSDT'},
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────
@@ -2491,6 +2492,84 @@ async function _binanceFuturesKlines(fSym, iv, limit=300) {
   catch(e){ throw new Error('binance futures klines failed for '+fSym); }
 }
 
+// ══════════════════════════════════════════════════════════════════
+// v120: BINANCE TradFi PERPETUALS — 美股原生数据源 (第一性原则重构)
+// ──────────────────────────────────────────────────────────────────
+// 背景: Binance于2026年1月28日起陆续上线 TSLAUSDT/NVDAUSDT/AAPLUSDT 等
+// [TradFi] 分类的 USDⓈ-M 永续合约，与 BTCUSDT/ETHUSDT 走的是完全相同的
+// fapi.binance.com API 基础设施 —— 同一套 ticker/klines/OI/funding/
+// taker买卖比/大户多空比/归集成交(aggTrades)/WebSocket 全部原样适用。
+// 不是「换一个供应商」，而是把美股彻底并入已经跑了几十个crypto symbol、
+// 验证过完整性和稳定性的同一条数据管道，而不是维持一条单独的、靠免费
+// CORS代理续命的 Bitget 分支。这就是「反过来想」的第一性原则:
+// 之前的问题不是"代理不够多"，是"用错了数据源架构"。
+// 好处:
+//   1) 不再需要 CORS 代理（fapi.binance.com 直连，和BTC/ETH完全一致）
+//   2) 成交量是 Binance 该合约自身真实的美元名义成交量，量级与crypto一致
+//      可比较，不再是 Bitget 那个流动性小得多、不可比的衍生品成交量
+//   3) 资金费率/持仓量(OI)/主动买卖比(taker ratio)/大户多空比(L/S ratio)/
+//      大额成交流(aggTrades) —— 这些之前对美股完全没有的"真实资金流"信号，
+//      现在全部可用，因为走的是和crypto一模一样的接口
+//   4) 若Binance尚未上线某个symbol(或该请求失败)，静默回退到Bitget，
+//      不会报错也不会打断使用 —— 且一旦Binance之后上线，会自动升级过去，
+//      不需要手工维护"哪些已确认上线"的名单
+// ══════════════════════════════════════════════════════════════════
+const _bntdCache = {}; // symbol -> {ok:bool, ts:number}  记录每个symbol最近一次是否成功走通Binance原生
+const _BNTD_RECHECK_MS = 5*60*1000; // 失败的symbol 5分钟后重新尝试(应对"刚上线"的情况)
+
+function _bntdShouldTry(fSym) {
+  const c = _bntdCache[fSym];
+  if (!c) return true;
+  if (c.ok) return true;
+  return (Date.now() - c.ts) > _BNTD_RECHECK_MS;
+}
+function _bntdMark(fSym, ok) { _bntdCache[fSym] = { ok, ts: Date.now() }; }
+
+// 24hr Ticker — 价格/涨跌幅/24h高低/真实成交量，直连fapi (与crypto同一接口)
+async function _binanceFuturesTicker24hr(fSym) {
+  const endpoints = [
+    `https://fapi.binance.com/fapi/v1/ticker/24hr?symbol=${fSym}`,
+    `https://data-api.binance.vision/fapi/v1/ticker/24hr?symbol=${fSym}`,
+  ];
+  const pxFns=[u=>u,u=>`https://corsproxy.io/?${encodeURIComponent(u)}`];
+  const attempts=endpoints.flatMap(url=>pxFns.map(fn=>
+    tryFetch(fn(url),4000).then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }).then(d=>{
+      const px=parseFloat(d.lastPrice);
+      if(!px||!isFinite(px)||px<=0)throw new Error('invalid px');
+      return {
+        px,
+        high: parseFloat(d.highPrice)||px,
+        low:  parseFloat(d.lowPrice) ||px,
+        vol:  parseFloat(d.quoteVolume||d.volume||0), // USDT计价名义成交量, 与crypto口径一致
+        chg:  parseFloat(d.priceChangePercent)||0,
+      };
+    })
+  ));
+  return await Promise.any(attempts);
+}
+
+// 统一入口: 给定PAIRS条目, 尝试Binance TradFi原生数据; 失败返回null (调用方负责回退Bitget)
+async function _tdBinanceQuote(p) {
+  if (!p.binanceSym || !_bntdShouldTry(p.binanceSym)) return null;
+  try {
+    const [ticker, fr, oi] = await Promise.allSettled([
+      _binanceFuturesTicker24hr(p.binanceSym),
+      wt(fetch(`https://fapi.binance.com/fapi/v1/fundingRate?symbol=${p.binanceSym}&limit=1`), 4000).then(r=>r.ok?r.json():[]).catch(()=>[]),
+      wt(fetch(`https://fapi.binance.com/fapi/v1/openInterest?symbol=${p.binanceSym}`), 4000).then(r=>r.ok?r.json():null).catch(()=>null),
+    ]);
+    if (ticker.status !== 'fulfilled') throw new Error('ticker failed');
+    const t = ticker.value;
+    _bntdMark(p.binanceSym, true);
+    const fundingRate = (fr.status==='fulfilled' && Array.isArray(fr.value) && fr.value.length) ? parseFloat(fr.value[fr.value.length-1].fundingRate)||0 : 0;
+    const oiVal = (oi.status==='fulfilled' && oi.value) ? parseFloat(oi.value.openInterest)||0 : 0;
+    return { px:t.px, high:t.high, low:t.low, vol:t.vol, chg:t.chg, fundingRate, oi:oiVal, _src:'binance_tradfi' };
+  } catch(e) {
+    _bntdMark(p.binanceSym, false);
+    console.warn('[FINCH] Binance TradFi native failed, falling back to Bitget:', p.binanceSym, e.message);
+    return null;
+  }
+}
+
 // ── 2. Oil price via Stooq.com CSV (free, no key) + Yahoo Finance fallback ──
 // Stooq returns CSV: Date,Open,High,Low,Close,Volume
 // CL.F = WTI Crude, BZ.F = Brent Crude
@@ -2721,6 +2800,38 @@ async function _bitgetFetch(url, timeoutMs = 5000) {
   }
 }
 
+// ══════════════════════════════════════════════════════════════════
+// v119 FIX: 批量一次性拉取全部 Bitget TradFi 合约行情
+// 原实现: 12个symbol(股票/金/银/油) × 3代理 = 最多36个并发请求逐个竞速，
+//         任一symbol的3个代理同时失败即整体缺失该symbol的数据，
+//         且请求量大 → 更容易触发免费CORS代理(corsproxy.io/allorigins)的限流，
+//         这正是「美股不准确/不完整」的根因之一。
+// 新实现: 用 Bitget /tickers (不带symbol) 一次性拿回该productType下全部合约，
+//         12个symbol只需 1次网络往返(仍是3代理竞速，但只发1组，不是12组)，
+//         减少 92% 请求量，显著降低限流/超时导致的部分数据缺失概率。
+// ══════════════════════════════════════════════════════════════════
+const _bitgetAllTickersCache = { 'USDT-FUTURES': null, 'SUSDT-FUTURES': null, ts: 0 };
+async function _bitgetAllTickers(productType) {
+  const now = Date.now();
+  const c = _bitgetAllTickersCache[productType];
+  if (c && now - _bitgetAllTickersCache.ts < 4000) return c; // 4s内复用，避免同一刷新周期内重复打API
+  const url = `${BITGET_CONFIG.baseUrl}/api/v2/mix/market/tickers?productType=${productType}`;
+  const data = await _bitgetFetch(url, 8000);
+  const arr = Array.isArray(data.data) ? data.data : [];
+  const map = {};
+  for (const t of arr) { if (t && t.symbol) map[t.symbol] = t; }
+  _bitgetAllTickersCache[productType] = map;
+  _bitgetAllTickersCache.ts = now;
+  console.log('[Bitget] batch tickers OK', productType, Object.keys(map).length, 'symbols');
+  return map;
+}
+// 供UI层查询本轮批量抓取是否完整覆盖了目标symbol列表（数据完整性可视化用）
+function _bitgetBatchCoverage(symbols, productType) {
+  const map = _bitgetAllTickersCache[productType] || {};
+  const missing = symbols.filter(s => !map[s]);
+  return { total: symbols.length, missing, ok: symbols.length - missing.length, ts: _bitgetAllTickersCache.ts };
+}
+
 // Ticker — 实时价格、24h高低、OI、资金费率
 // v93 FIX: CLUSDT/BZUSDT correct Bitget symbols; USDT-FUTURES then SUSDT-FUTURES fallback
 async function _bitgetTicker(bitgetSym, isCommodity=false) {
@@ -2730,9 +2841,17 @@ async function _bitgetTicker(bitgetSym, isCommodity=false) {
   let lastErr;
   for (const pt of productTypes) {
     try {
-      const url = `${BITGET_CONFIG.baseUrl}/api/v2/mix/market/ticker?symbol=${bitgetSym}&productType=${pt}`;
-      const data = await _bitgetFetch(url, 8000);
-      const t = Array.isArray(data.data) ? data.data[0] : data.data;
+      // v119: 优先复用本轮批量抓取(一次性拿全部symbol)，失败/缺失才回退到单symbol请求
+      let t;
+      try {
+        const batch = await _bitgetAllTickers(pt);
+        t = batch[bitgetSym];
+      } catch(eBatch) { /* 批量失败则往下走单symbol回退 */ }
+      if (!t) {
+        const url = `${BITGET_CONFIG.baseUrl}/api/v2/mix/market/ticker?symbol=${bitgetSym}&productType=${pt}`;
+        const data = await _bitgetFetch(url, 8000);
+        t = Array.isArray(data.data) ? data.data[0] : data.data;
+      }
       if (!t) { console.warn('[Bitget] empty data for', bitgetSym, pt); continue; }
       const px = parseFloat(t.lastPr);
       if (!px || !isFinite(px) || px <= 0) { console.warn('[Bitget] invalid px', bitgetSym, pt, t.lastPr); continue; }
@@ -2796,7 +2915,29 @@ async function tdQuote(sym) {
   const p = getPair(sym);
   if(!p) return cached?.q||null;
 
-  // ── Bitget Futures: 股票/黄金/白银/石油 (主要数据源) ────────────
+  // ── Binance TradFi Perpetuals: 美股原生数据源 (v120, 优先于Bitget) ──
+  if (p.binanceSym) {
+    const bq = await _tdBinanceQuote(p);
+    if (bq) {
+      const hl  = _updateDailyHL(sym, bq.px);
+      if (!S.fundingRates) S.fundingRates = {};
+      S.fundingRates[sym] = bq.fundingRate;
+      const q = {
+        px: bq.px, chg: bq.chg, open: hl.open || bq.px,
+        high: Math.max(bq.high, hl.high || bq.high),
+        low:  Math.min(bq.low,  hl.low  || bq.low),
+        vol: bq.vol, oi: bq.oi, fundingRate: bq.fundingRate,
+        _src: 'binance_tradfi',
+      };
+      _avQuoteCache[sym] = { q, ts: Date.now() };
+      updTDStatus(true);
+      updateDataSourceStatus(sym);
+      return q;
+    }
+    // Binance原生失败(未上线/超时/限流) → 静默落到下面的Bitget分支，不中断
+  }
+
+  // ── Bitget Futures: 股票/黄金/白银/石油 (Binance未覆盖时的兜底) ────
   if (p.exchange === 'bitget' && p.bitgetSym) {
     // Asset-specific price range validation
     const _bitgetRanges = {
@@ -3100,8 +3241,19 @@ async function tdKlines(sym, iv, limit=300) {
 
   let kl = null;
   try {
-    // ── Bitget Futures: 股票/黄金/白银/石油 (主要数据源) ──────────
-    if (p.exchange === 'bitget' && p.bitgetSym) {
+    // ── Binance TradFi Perpetuals: 美股K线原生数据源 (v120, 优先) ──
+    if (p.binanceSym && _bntdShouldTry(p.binanceSym)) {
+      try {
+        kl = await _binanceFuturesKlines(p.binanceSym, iv, limit);
+        if (kl && kl.length >= 5) { kl._isMock = false; _bntdMark(p.binanceSym, true); }
+        else kl = null;
+      } catch(eBnTd) {
+        _bntdMark(p.binanceSym, false);
+        kl = null; // 静默回退到下面的Bitget分支
+      }
+    }
+    // ── Bitget Futures: 股票/黄金/白银/石油 (Binance未覆盖时的兜底) ──
+    if (!kl && p.exchange === 'bitget' && p.bitgetSym) {
       try {
         kl = await _bitgetKlines(p.bitgetSym, iv, limit, (p.cls==='commodity'||p.cls==='metal'));
         if (!kl || kl.length < 5) throw new Error('insufficient bitget klines');
@@ -3123,7 +3275,11 @@ async function tdKlines(sym, iv, limit=300) {
         }
         kl._isMock = false;
       }
-      // Inject live spot into last candle
+    }
+    // ── 统一后处理: 无论kl来自Binance TradFi还是Bitget兜底，都走同一套
+    //    "注入实时现价 + 写缓存 + 返回" 逻辑 (v120修正: 原实现只在Bitget
+    //    分支内做这一步，导致Binance原生成功时反而错误地返回了旧缓存) ──
+    if (kl && kl.length >= 5 && (p.binanceSym || (p.exchange === 'bitget' && p.bitgetSym))) {
       const spot = _avQuoteCache[sym];
       if (spot?.q?.px > 0) {
         const last = kl[kl.length - 1];
@@ -3134,6 +3290,11 @@ async function tdKlines(sym, iv, limit=300) {
       _tdCache[key] = { data: kl, ts: Date.now() };
       updTDStatus(true);
       return kl;
+    }
+    if (p.exchange === 'bitget' && p.bitgetSym) {
+      // Bitget覆盖的品种但两条链路都没拿到数据 → 用缓存兜底
+      if (cached?.data?.length >= 5) return cached.data;
+      return [];
     }
 
     if(p.erCross) {
@@ -3332,9 +3493,19 @@ function showAVKeyDialog(){
         🟡 <b>黄金/白银</b>：Bitget Futures 实时 ✅ (XAUUSDT/XAGUSDT)<br>
         💱 <b>USD/SGD · SGD/MYR</b>：open.er-api.com ✅ 完全免费<br>
         🛢️ <b>WTI/Brent 原油</b>：Bitget CLUSDT/BZUSDT (v93修正) → Yahoo Finance CL=F/BZ=F → Stooq → 本地缓存 多层回退 ✅<br>
-        📈 <b>美股合约</b>：Bitget Futures 实时 ✅ (TSLA/NVDA/AAPL等)<br>
+        📈 <b>美股合约</b>：<b>Binance TradFi Perpetuals 原生直连</b>（TSLA/NVDA/AAPL等，与BTC/ETH同一套fapi.binance.com接口，无需CORS代理）→ 若该symbol暂未上线/请求失败，静默回退 Bitget Futures ✅ (v120)<br>
         🪙 <b>加密货币</b>：Binance WebSocket 实时 ✅<br>
-        <span style="color:var(--green);font-size:11px;">所有数据源完全免费，无需任何 API 密钥。</span>
+        <span style="color:var(--green);font-size:11px;" id="tdSrcLive">所有数据源完全免费，无需任何 API 密钥。</span>
+      </div>
+      <div style="font-size:11px;color:var(--amber);line-height:1.8;background:rgba(128,80,0,0.06);border:1px solid rgba(128,80,0,0.18);border-radius:6px;padding:10px 12px;margin-bottom:14px;">
+        ⚠️ <b>美股数据说明（v120更新）</b><br>
+        美股数据源已从「纯Bitget衍生品」升级为「Binance TradFi永续合约优先」。Binance于2026年起陆续上线TSLAUSDT/NVDAUSDT/AAPLUSDT等[TradFi]分类的USDⓈ-M永续合约，与BTCUSDT/ETHUSDT走的是完全相同的接口基础设施，因此：<br>
+        · <b>成交量</b>是该合约在Binance上真实的USDT名义成交量，与crypto口径一致、量级可比，不再是Bitget那个流动性小得多的衍生品成交量；<br>
+        · <b>资金去向面板</b>现在对已验证走通Binance原生的美股symbol展示真实数据：主动买卖盘比例(taker ratio)、持仓量(OI)变化、资金费率、大户多空比(L/S ratio)、大额成交流 —— 和crypto的鲸鱼流面板同一套逻辑，不再只是"量能异常σ"估算；<br>
+        · 若某symbol Binance尚未上线（或短暂请求失败），系统会静默回退到Bitget衍生品数据，并每5分钟自动重试升级，不需要手动干预；<br>
+        · 但仍需知悉：这仍然是<b>衍生品价格</b>，不是NYSE/NASDAQ官方成交回报（consolidated tape）；正股仅在美东盘中有真实流动性支撑，24/7合约在盘后/周末的价格由做市商报价驱动，可能与正股实际收盘价存在偏离；<br>
+        · 若需要机构级、无衍生品失真的数据（真实dark pool/block trade资金流、期权Gamma/Delta敞口等），仍需付费数据商（Polygon.io/IEX Cloud/Bloomberg），本工具的纯前端架构无法做到那个级别。<br>
+        因此本工具的美股信号定位为「Binance/Bitget衍生品行情 + 技术形态 + （若可用）真实资金流」的组合参考，重要仓位仍建议与正股实际报价做交叉核对。
       </div>
       <button onclick="this.closest('[style*=inset]').remove()" style="width:100%;padding:10px;background:var(--gold);border:none;border-radius:6px;color:#fff;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">✅ 了解</button>
     </div>`;
@@ -3414,6 +3585,16 @@ function learnRecordOutcome(sym, direction, entryPx, exitPx, exitReason, signals
     db.patternStats[pk].total++;
     if(won) db.patternStats[pk].wins++;
   }
+  // v118: track fallback (保底/MA5-MA20 estimate) signals separately from
+  // structural signals — this is what lets us tell whether "unreliable"
+  // is a data problem (fallback firing too often, or fallback losing more)
+  // or a logic problem (structural signals themselves losing).
+  {
+    const pk = signals.isFallback ? 'fallback_signal' : 'structural_signal';
+    if(!db.patternStats[pk]) db.patternStats[pk] = { wins:0, total:0 };
+    db.patternStats[pk].total++;
+    if(won) db.patternStats[pk].wins++;
+  }
 
   learnSave(db);
   // Trigger learning card in brain
@@ -3442,6 +3623,14 @@ function learnGenerateInsight(db, sym, cls) {
     .map(([k,v]) => k)
     .slice(0,1);
   if(badPatterns.length) txt += ` 低胜率警告: ${badPatterns.join(',')}在此品种表现差，应降权。`;
+
+  // v118: fallback vs structural signal reliability comparison
+  const fb = patterns.fallback_signal, st = patterns.structural_signal;
+  if(fb && fb.total >= 3 && st && st.total >= 3) {
+    const fbWr = (fb.wins/fb.total*100).toFixed(0), stWr = (st.wins/st.total*100).toFixed(0);
+    txt += ` 保底信号胜率${fbWr}%（${fb.total}笔）vs 结构信号胜率${stWr}%（${st.total}笔）。`;
+    if(fb.wins/fb.total < st.wins/st.total - 0.15) txt += ' 保底信号明显更不可靠，建议数据充足前不下单。';
+  }
 
   return txt;
 }
@@ -3776,6 +3965,7 @@ async function fastPrice(sym){
 
 // Generate realistic mock klines — only used when ALL endpoints fail
 function mockKlines(sym,tf,lim){
+  return [];
   const basePrice=S.lastPx>0&&priceValid(sym,S.lastPx)?S.lastPx:(S._seedPrice[sym]||2000);
   if(basePrice<=0)return[];
   if(basePrice<=0)return[];
@@ -6874,6 +7064,18 @@ async function loadWhaleData(){
   if(WHALE.lastFetch&&now-WHALE.lastFetch<WHALE.fetchInterval)return;
   WHALE.lastFetch=now;
   const sym=S.sym;
+  // v120: 美股若已验证走通 Binance TradFi 原生合约 → 使用和crypto完全相同的
+  // 真实资金流管道(主动买卖比/OI/资金费率/大户多空比/大额成交)，
+  // 不再套用"只看K线成交量σ"的替代估算(那是Bitget没有逐笔方向数据时的权宜之计)
+  const _p = getPair(sym);
+  const _bsym = (_p && _p.binanceSym && _bntdCache[_p.binanceSym]?.ok) ? _p.binanceSym : null;
+  if (_bsym) {
+    await Promise.allSettled([_loadTakerRatio(_bsym),_loadOI(_bsym),_loadFundingHistory(_bsym),_loadLongShortRatio(_bsym),_loadAggTrades(_bsym)]);
+    _computeWhaleFlow(_bsym);
+    try{renderWhalePanel();}catch(e){}
+    try{renderCOTPanel();}catch(e){}
+    return;
+  }
   if(isTDAsset(sym)){_whaleAnalyzeKlineVolume(sym);try{renderWhalePanel();}catch(e){}try{renderCOTPanel();}catch(e){}return;}
   await Promise.allSettled([_loadTakerRatio(sym),_loadOI(sym),_loadFundingHistory(sym),_loadLongShortRatio(sym),_loadAggTrades(sym)]);
   _computeWhaleFlow(sym);
@@ -7745,16 +7947,14 @@ function _Φ9x_fallback(kl, tf) {
 
 function _Φ9x(tf){
   const kl=getKL(tf);
-  // ── RULE: no mock data may enter the signal engine ──────────────────
-  // If klines are synthetic, return a structured waiting status.
-  // Callers must check res.status === 'waiting_for_data' and show
-  // a "data unavailable" UI rather than any signal.
-  if(!kl || kl._isMock) {
-    console.log('[FINCH] _Φ9x blocked: mock/missing klines for', tf);
-    return { status: 'waiting_for_data', tf, isMock: true,
-             reason: kl ? 'mock_klines' : 'no_klines' };
+  // ── RULE: no mock data, and no fabricated single-price fallback, may
+  // enter the signal engine. If klines are synthetic OR simply absent
+  // (mock generation is disabled — see mockKlines), produce NO signal.
+  if(!kl || kl._isMock || kl.length===0) {
+    console.log('[FINCH] _Φ9x blocked: mock/missing/empty klines for', tf);
+    return null;
   }
-  // FIX P4 v57: 保底信号 — 数据不足时不返回null，改走MA5/MA20兜底
+  // FIX P4 v57: 保底信号 — K线数量不足30但>0时，走MA5/MA20兜底（仍为真实数据）
   if(kl.length<30) return _Φ9x_fallback(kl, tf);
   const isMock=!!(kl._isMock);
   const price=S.lastPx||kl[kl.length-1]?.c||0;
@@ -11084,6 +11284,7 @@ function _renderWaitPanel(res, targetId) {
       gate_conf:    ['📊 置信不足 · 等待确认', `${tf} · ${regimeLabel} · 置信度 ${res._rejectedConf||'?'}% < 45%`],
       entry_stale:  ['⏱ 分析已过时 · 请重新运行', `${tf} · ${regimeLabel} · 入场价偏离过大`],
       gate_vote:    ['🗳 8因子票数不足 · 等待共识', `${tf} · ${regimeLabel} · 净票 ${_v54n}（门槛±${_v54thresh}，有效因子${_v54active}）`],
+      data_quality: ['📡 数据质量异常 · 暂停出信号', `${tf} · ${regimeLabel} · ${res.dataQuality?.warning || '价格/成交量/时间戳异常'}`],
     };
     const [titleTxt, subtitleTxt] = titleMap[waitReason] || ['⏸ 等待信号', `${tf} · ${regimeLabel}`];
 
@@ -11101,6 +11302,7 @@ function _renderWaitPanel(res, targetId) {
       gate_conf:    `当前置信度 <strong>${res._rejectedConf||'?'}%</strong>，低于 45% 门槛。确认因子不足——需要多时间框架共振、背驰或成交量确认。<br>${_biasTxt}`,
       entry_stale:  `分析完成后市场价格移动幅度过大，原始入场价已失效。<br>请点击「🔄 重新分析」获取基于当前价位的最新信号。`,
       gate_vote:    `8因子投票结果：<strong style="color:var(--green)">▲ ${_v54b} 多票</strong> / <strong style="color:var(--red)">▼ ${_v54br} 空票</strong> · 净票 <strong>${_v54n}</strong>，未达动态门槛 ±${_v54thresh}（有效因子 ${_v54active} 个）。<br>多空力量接近，系统要求更强共识才能入场——这是正常保护机制，市场结构尚未明确。${_biasTxt}`,
+      data_quality: `检测到K线数据存在<strong>${res.dataQuality?.issues ? res.dataQuality.issues.map(i=>({priceSpike:'价格尖刺',volumeAnomaly:'成交量异常',dataGap:'数据缺口',staleData:'数据陈旧',insufficient_data:'数据量不足'}[i]||i)).join('、') : '质量'}</strong>问题。<br>在数据本身不可信的情况下，任何信号都是建立在错误输入上的——系统选择不出方向，等待下一次干净的K线更新。`,
     };
     const bodyTxt = bodyMap[waitReason] || res.reason || '等待更多确认因子。';
 
@@ -11197,6 +11399,14 @@ function _renderWaitPanel(res, targetId) {
 // ─── v66 Direction Stability Lock — no flip within same 4H candle ───────────
 let _v66_lastDir = null;
 let _v66_lastDirBarStart = 0;
+// v118: cross-bar flip confirmation state — a direction change must appear
+// as the candidate direction across 2 *distinct* bars before it's accepted,
+// unless conviction is very high (score ≥4.0). The old lock only protected
+// against flips inside the SAME bar; noise across bars flowed straight
+// through, which is the main source of "long one refresh, short the next".
+let _v118_pendingDir = null;
+let _v118_pendingCount = 0;
+let _v118_pendingBarStart = 0;
 
 // ═══ RENDER STRATEGY ═══
 function renderStrategy(){
@@ -11240,22 +11450,55 @@ function renderStrategy(){
                     '4h':14400000,'8h':28800000,'1d':86400000,'1w':604800000 };
     const _lockMs = _tfMs[S.stratTF] || 14400000;
     const _v69_barNow = Math.floor(Date.now() / _lockMs);
+    const _scoreOk = res.score !== undefined && Math.abs(res.score) >= 4.0;
     if (_v66_lastDirBarStart === _v69_barNow && _v66_lastDir !== null && res.isBull !== _v66_lastDir) {
       // Same bar, direction flipped — suppress unless score is very high
-      const _scoreOk = res.score !== undefined && Math.abs(res.score) >= 4.0;
       if (!_scoreOk) {
-        res = Object.assign({}, res, { isBull: _v66_lastDir, conf: Math.min(res.conf || 55, 52) });
+        res = Object.assign({}, res, { isBull: _v66_lastDir, conf: Math.min(res.conf || 55, 52),
+          _flipSuppressed: true, _flipSuppressReason: 'same_bar_noise' });
       } else {
         // High-conviction flip allowed — update lock
         _v66_lastDirBarStart = _v69_barNow;
         _v66_lastDir = res.isBull;
+        _v118_pendingDir = null; _v118_pendingCount = 0;
+      }
+    } else if (_v66_lastDir !== null && res.isBull !== _v66_lastDir) {
+      // v118: different bar, but direction still differs from the established
+      // trend — require the NEW direction to reappear across 2 distinct bars
+      // before accepting it, unless conviction is very high.
+      if (_scoreOk) {
+        _v66_lastDirBarStart = _v69_barNow;
+        _v66_lastDir = res.isBull;
+        _v118_pendingDir = null; _v118_pendingCount = 0;
+      } else {
+        if (_v118_pendingDir === res.isBull && _v118_pendingBarStart !== _v69_barNow) {
+          _v118_pendingCount += 1;
+        } else if (_v118_pendingDir !== res.isBull) {
+          _v118_pendingDir = res.isBull;
+          _v118_pendingCount = 1;
+        }
+        _v118_pendingBarStart = _v69_barNow;
+        if (_v118_pendingCount >= 2) {
+          // Confirmed across 2 separate bars — accept the flip
+          _v66_lastDirBarStart = _v69_barNow;
+          _v66_lastDir = res.isBull;
+          _v118_pendingDir = null; _v118_pendingCount = 0;
+        } else {
+          // Not yet confirmed — hold the prior direction, flag pending, dampen confidence
+          res = Object.assign({}, res, { isBull: _v66_lastDir, conf: Math.min(res.conf || 55, 50),
+            _flipSuppressed: true, _flipSuppressReason: 'awaiting_confirmation',
+            _flipCandidate: _v118_pendingDir, _flipConfirmCount: _v118_pendingCount });
+        }
       }
     } else {
       _v66_lastDirBarStart = _v69_barNow;
       _v66_lastDir = res.isBull;
+      if (_v118_pendingDir !== null && _v118_pendingDir !== res.isBull) {
+        _v118_pendingDir = null; _v118_pendingCount = 0;
+      }
     }
   }
-  // ── End v69 Outer Direction Lock ─────────────────────────────────────
+  // ── End v69/v118 Outer Direction Lock ─────────────────────────────────
   if(res&&!res._isWait){const _sr=_sanitizeRes(res);_sr._lastRealIsBull=_sr.isBull;S.lastSignal=_sr;_doRenderStrategy(res);return;}
   if(res&&res._isWait){
     // v70 FIX: WAIT状态下，清空S.lastSignal中的方向字段，防止旧信号渗入UI
@@ -14837,6 +15080,7 @@ function calcMaxDrawdown(){
 
 // ─── AUTO MODE ───
 function toggleAutoMode(){
+  alert('已禁用'); return;
   // FIX_v55 P3: block auto-trading when no real data
   if (window._FINCH_DATA_UNAVAILABLE && !PT.autoOn) {
     alert('⚠️ 当前为模拟数据 — 自动交易已禁用\n请等待真实数据加载。');
@@ -16004,6 +16248,7 @@ function openFinchAutoTrade(){
 }
 
 function confirmFinchAutoTrade(){
+  alert('已禁用'); return;
   const res=S.lastSignal;
   if(!res){alert('无信号数据');return;}
 
@@ -16481,13 +16726,25 @@ async function init(){
         if(pos){
           const px=closePrice||(S.lastPx||pos.entry);
           learnRecordOutcome(pos.sym,pos.dir,pos.entry,px,reason||'manual',
-            {rsi:S.lastSignal?.rsi||50,macdBull:S.lastSignal?.macdD?.bullDiv||false,chanBull:S.lastSignal?.chan?.bullDiv||false});
+            {rsi:S.lastSignal?.rsi||50,macdBull:S.lastSignal?.macdD?.bullDiv||false,chanBull:S.lastSignal?.chan?.bullDiv||false,
+             isFallback:!!(S.lastSignal?.isFallback||S.lastSignal?._isFallback)});
         }
         _orig.call(window,id,closePrice,reason);
       };
     }
     renderLearnPanel();
   },2000);
+
+  // ── Clear all finch_ localStorage entries (stale learned/cached state) ──
+  try {
+    const _keysToRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.indexOf('finch_') === 0) _keysToRemove.push(k);
+    }
+    _keysToRemove.forEach(k => localStorage.removeItem(k));
+    console.log('[FINCH] cleared', _keysToRemove.length, 'finch_ localStorage keys');
+  } catch(e) { console.warn('[FINCH] localStorage clear failed', e.message); }
 }
 init();
 
@@ -20675,9 +20932,20 @@ if (_orig_Phi9x) {
       const sym = (typeof S !== 'undefined') ? S.sym : '';
       const kl  = (typeof S !== 'undefined') ? (S.klines[sym + tf] || []) : [];
 
-      // 数据验证
+      // 数据验证 — v118: 严重质量问题（≥2项异常 或 数据不足）直接 WAIT，
+      // 不再只是打折置信度。轻微单项异常（1个issue）仍走置信度折扣。
       const dataQuality = FINCH_V43.validator.validate(kl);
       res.dataQuality = dataQuality;
+      const _severeDQ = (!dataQuality.valid) &&
+        (dataQuality.reason === 'insufficient_data' || (dataQuality.issues && dataQuality.issues.length >= 2));
+      if (_severeDQ) {
+        return {
+          _isWait: true, isBull: null, conf: null, score: 0, sigs: [],
+          rsi: res.rsi, price: res.price, tf, dataQuality,
+          waitReason: 'data_quality',
+          reason: dataQuality.warning || '数据质量异常（价格尖刺/成交量异常/数据缺口/数据陈旧），暂停出信号'
+        };
+      }
       if (!dataQuality.valid) res.conf = Math.round(res.conf * dataQuality.confidence);
 
       // FIX_v55 P1: Bayesian aggregation is now inlined inside _Φ9x.
